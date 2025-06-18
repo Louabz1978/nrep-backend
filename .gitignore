@@ -1,0 +1,17 @@
+# Ignore Python virtual environment
+venv/
+
+# Ignore Python cache files
+__pycache__/
+*.py[cod]
+
+# Byte-compiled / optimized / DLL files
+*.py[cod]
+*.pyo
+*.pyd
+
+# C extensions
+*.so
+
+# VS Code settings
+.vscode/
