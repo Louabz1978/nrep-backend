@@ -1,88 +1,183 @@
-from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel, Field, EmailStr
-from app.models import Users
-from app.database import db_depends
-from starlette import status
-from app.utils import oath_depends, oathbearer_depends, create_token, hashing, bcrypt_context
-from datetime import timedelta
+from fastapi import APIRouter, Depends, HTTPException, status, Path
+from sqlalchemy.orm import Session , joinedload
+from pydantic import BaseModel, EmailStr
+from typing import Optional, List
+from passlib.hash import bcrypt
+from enum import Enum
+from app import database,models
+from app.routers.auth import get_current_user
 
 
 router = APIRouter(
-    prefix='/user',
-    tags=['user']
+    prefix="/users",
+    tags=["Users"]
 )
 
 
-class CreateUserRequest(BaseModel):
-    first_name: str = Field(min_length=3)
-    last_name: str = Field(min_length=3)
+
+class UserRole(str, Enum):
+    admin = "admin"
+    agent = "agent"
+    buyer = "buyer"
+    seller = "seller"
+    broker="broker"
+
+    model_config = {
+        "from_attributes": True
+    }
+
+class UserCreate(BaseModel):
+    first_name: str
+    last_name: str
     email: EmailStr
-    password: str = Field(min_length=3)
+    password: str
+    role: UserRole
+    phone_number: Optional[str] = None
+    address: Optional[str] = None
+    agency_id: Optional[int] = None
+    lic_num: Optional[str] = None
+
+    model_config = {
+        "from_attributes": True
+    }
+
+
+
+
+class AgencyOut(BaseModel):
+    agency_id: int
+    name: str
+    phone_number: Optional[str] = None
+
+    model_config = {
+        "from_attributes": True
+    }
+
+class UserOut(BaseModel):
+    user_id: int
+    first_name: str
+    last_name: str
+    email: EmailStr
     role: str
+    phone_number: Optional[str] = None
+    address: Optional[str] = None
+    lic_num: Optional[str] = None
+    agency_id: Optional[int] = None
+    agency: Optional[AgencyOut]
+    is_active: Optional[bool]
 
-
-
-class Token(BaseModel):
-    access_token: str
-    token_type: str
-
-
-
-@router.post('/token', status_code=status.HTTP_202_ACCEPTED, response_model=Token)
-async def auth_user (form: oath_depends, db: db_depends):
-
-    user = db.query(Users).filter(Users.email == form.username).first()
-    if not user:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
-    if not bcrypt_context.verify(form.password, user.password): # type: ignore
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
-    token = create_token(user.email, user.id, timedelta(minutes=30)) # type: ignore
-    return {'access_token':token,
-            'token_type':'bearer'}
-
-
-@router.get('/', status_code=status.HTTP_200_OK, include_in_schema=True)
-async def get_all_users(db:db_depends):
-    users = db.query(Users).all()
-    return users
-
-
-@router.get('/email', status_code=status.HTTP_200_OK)
-async def get_user_by_email(email:str , db:db_depends):
-    users = db.query(Users).filter(Users.email ==  email)
-    return users.first()
-
-
-@router.post('/create_user', status_code=status.HTTP_201_CREATED)
-async def create_new_user(user_request:CreateUserRequest, db:db_depends):
-
-    try:
-        user_request.password = hashing(user_request.password)
-        new_user = Users(**user_request.model_dump())
-        db.add(new_user)
-        db.commit()
-        return {'details':[new_user.email, new_user.password]}
-    except :
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail='User already exists')
-
-
-@router.put('/email', status_code=status.HTTP_200_OK)
-async def update_user_by_email(update_request: CreateUserRequest,email: str, db: db_depends):
-    user = db.query(Users).filter(Users.email == email).first()
-    if not user:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+    model_config = {
+        "from_attributes": True
+    }
     
-    user.first_name = update_request.first_name # type: ignore
-    user.last_name = update_request.last_name   # type: ignore
-    user.role = update_request.role             # type: ignore
-    user.password = hashing(update_request.password) # type: ignore
+
+
+# GET /users – Admins only
+@router.get("", response_model=List[UserOut])
+def get_all_users(
+    db: Session = Depends(database.get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    if current_user.role != "admin": # type: ignore
+        raise HTTPException(status_code=403, detail="Not authorized")
+    return db.query(models.User).options(joinedload(models.User.agency)).all()
+
+
+
+# POST /users – Admins only
+@router.post("", status_code=201)
+def create_user(
+    user: UserCreate,
+    db: Session = Depends(database.get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    existing_user = db.query(models.User).filter(models.User.email == user.email).first()
+    if existing_user:
+        raise HTTPException(status_code=400, detail="Email already exists")
+
+    hashed_password = bcrypt.hash(user.password)
+
+    db_user = models.User(
+        first_name=user.first_name,
+        last_name=user.last_name,
+        email=user.email,
+        password_hash=hashed_password,
+        role=user.role,
+        phone_number=user.phone_number,
+        address=user.address,
+        lic_num=user.lic_num,
+        agency_id=user.agency_id,
+        is_active=True
+    )
+
+    db.add(db_user)
+    db.commit()
+    db.refresh(db_user)
+
+    return {"message": "User created successfully", "user_id": db_user.user_id}
+
+from fastapi import Path
+
+@router.delete("/{user_id}")
+def delete_user(
+    user_id: int,
+    db: Session = Depends(database.get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    user = db.query(models.User).filter(models.User.user_id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    db.delete(user)
+    db.commit()
+    return {"message": "User deleted"}
+
+@router.put("/{user_id}")
+def update_user(
+    user_id: int,
+    user_data: UserCreate,
+    db: Session = Depends(database.get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    if current_user.role != "admin": # type: ignore
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    user = db.query(models.User).filter(models.User.user_id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    # Hash password if it's being updated
+    user.password_hash = bcrypt.hash(user_data.password)
+    user.first_name = user_data.first_name
+    user.last_name = user_data.last_name
+    user.email = user_data.email
+    user.phone_number = user_data.phone_number
+    user.address= user_data.address
+    user.lic_num = user_data.lic_num
+    user.agency_id = user_data.agency_id
+    user.role = user_data.role
 
     db.commit()
     db.refresh(user)
-    return user
+    return {"message": "User updated", "user_id": user.user_id}
 
-
-
-@router.delete('/email', status_code=status.HTTP_200_OK)
-async def delete_user_by_email(email: str, db: db_depends):
-    pass
+@router.get("/agencies/{agency_lic}")
+def get_agency_id_by_name(
+    agency_lic: str = Path(..., description="Agency's Lic#"),
+    db: Session = Depends(database.get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    if current_user.role != "admin": # type: ignore
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    agency = db.query(models.Agency).filter(models.Agency.agency_lic == agency_lic).first()
+    if not agency:
+        raise HTTPException(status_code=404, detail="Agency not found")
+    
+    return {"agency_id": agency.agency_id, "agency_name":agency.name}
