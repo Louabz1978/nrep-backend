@@ -32,11 +32,12 @@ def get_db():
 db_depends = Annotated[Session, Depends(get_db)]
 
 
-# try:
-#     next(get_db())
-#     print("connection established")
-# except Exception as e:
-#     print(e)
+try:
+    next(get_db())
+    print("connection established")
+    print(DB_PASSWORD)
+except Exception as e:
+    print(e)
 
 
 
