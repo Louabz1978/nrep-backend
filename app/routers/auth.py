@@ -50,7 +50,16 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
 
 @router.post("/login")
 async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(database.get_db)):
+    print("Login attempt:", form_data.username)
     user = db.query(models.User).filter(models.User.email == form_data.username).first()
+    print("Received password from frontend:", repr(form_data.password))
+
+    if not user:
+        print("User not found")
+    else:
+        print("User found:", user.email)
+        print("Stored hash:", user.password_hash)
+        print("Password match:", pwd_context.verify(form_data.password, user.password_hash))
     if not user or not pwd_context.verify(form_data.password, user.password_hash):
         raise HTTPException(status_code=400, detail="Incorrect username or password")
 
@@ -60,7 +69,7 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = 
         "last_name": user.last_name,
         "email": user.email,
         "phone_number": user.phone_number,
-        "address":user.address,
+        "address_id":user.address_id,
         "lic_num": user.lic_num,
         "role": user.role,
     })
