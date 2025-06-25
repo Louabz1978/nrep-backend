@@ -69,7 +69,10 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = 
         "last_name": user.last_name,
         "email": user.email,
         "phone_number": user.phone_number,
-        "address_id":user.address_id,
+        "address":user.address,
+        "neighborhood":user.neighborhood,
+        "city":user.city,
+        "county":user.county,
         "lic_num": user.lic_num,
         "role": user.role,
     })
