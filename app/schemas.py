@@ -1,5 +1,5 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr
 
 class LoginRequest(BaseModel):
-    email: str
+    email: EmailStr   # validate email format automatically
     password: str
