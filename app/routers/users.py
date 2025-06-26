@@ -255,11 +255,15 @@ def delete_user(
     if current_user.role != "admin":
         raise HTTPException(status_code=403, detail="Not authorized")
 
-    user = db.query(models.User).filter(models.User.user_id == user_id).first()
+    sql = load_sql("get_user_by_id.sql")
+    result = db.execute(text(sql), {"user_id": user_id})
+    user = result.mappings().first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    db.delete(user)
+    delete_sql = load_sql("delete_user.sql")
+    db.execute(text(delete_sql), {"user_id": user_id})
+    
     db.commit()
     return {"message": "User deleted successfully"}
 

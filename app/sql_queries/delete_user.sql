@@ -1,0 +1,1 @@
+DELETE From users where user_id=:user_id;
