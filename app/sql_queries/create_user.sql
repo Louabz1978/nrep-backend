@@ -1,0 +1,31 @@
+INSERT INTO USERS (
+    first_name,
+    last_name,
+    email,
+    password_hash,
+    role,
+    phone_number,
+    address, 
+    neighborhood,
+    city, 
+    county, 
+    lic_num,
+    agency_id,
+    is_active 
+)
+VALUES(
+    :first_name,
+    :last_name,
+    :email,
+    :password_hash,
+    :role,
+    :phone_number,
+    :address,
+    :neighborhood,
+    :city,
+    :county,
+    :lic_num,
+    :agency_id,
+    :is_active
+)
+RETURNING user_id;
