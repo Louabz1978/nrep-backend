@@ -46,7 +46,7 @@ class AgencyCreate(BaseModel):
         return values
 
 
-@router.post("/agencies", status_code=201)
+@router.post("", status_code=201)
 def create_agency(
     agency: AgencyCreate,
     db: Session = Depends(database.get_db),
@@ -80,7 +80,7 @@ def create_agency(
 
     return {"message": "Agency created successfully", "agency_id": db_agency.agency_id}
 
-@router.get("/agencies", response_model=List[AgencyOut])
+@router.get("", response_model=List[AgencyOut])
 def get_all_agencies(
     db: Session = Depends(database.get_db),
     current_user: models.User = Depends(get_current_user)
