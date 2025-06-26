@@ -4,6 +4,8 @@ from pydantic import BaseModel, EmailStr, model_validator, Field
 from typing import Optional, List
 from passlib.hash import bcrypt
 from enum import Enum
+from app.utils.file_helper import load_sql
+from sqlalchemy import text
 
 from app import database, models
 from app.routers.auth import get_current_user
@@ -125,9 +127,36 @@ def get_user_by_id(
     if current_user.role != "admin":
         raise HTTPException(status_code=403, detail="Not authorized")
 
-    user = db.query(models.User).options(joinedload(models.User.agency)).filter(models.User.user_id == user_id).first()
-    if not user:
+    sql = load_sql("get_user_by_id.sql")
+    result = db.execute(text(sql), {"user_id": user_id})
+    row = result.mappings().first()
+    
+    if not row:
         raise HTTPException(status_code=404, detail="User not found")
+    
+    agency = None
+    if row["agency_id"]:
+        agency = AgencyOut(
+            agency_id=row["agency_id"],
+            name=row["agency_name"],
+            phone_number=row["agency_phone_number"],
+        )
+
+    user = UserOut(
+        user_id=row["user_id"],
+        first_name=row["first_name"],
+        last_name=row["last_name"],
+        email=row["email"],
+        role=row["role"],
+        phone_number=row["phone_number"],
+        address=row["address"],
+        neighborhood=row["neighborhood"],
+        city=row["city"],
+        county=row["county"],
+        lic_num=row["lic_num"],
+        agency=agency,
+        is_active=row["is_active"],
+    )
 
     return user
 
