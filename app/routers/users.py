@@ -111,11 +111,40 @@ class UserOut(BaseModel):
 @router.get("", response_model=List[UserOut])
 def get_all_users(
     db: Session = Depends(database.get_db),
-    current_user: models.User = Depends(get_current_user)
+    current_user: models.User = Depends(get_current_user),
 ):
     if current_user.role != "admin":
         raise HTTPException(status_code=403, detail="Not authorized")
-    return db.query(models.User).options(joinedload(models.User.agency)).all()
+
+    sql = load_sql("get_all_users.sql")
+    result = db.execute(text(sql))
+
+    users = []
+    for row in result.mappings():
+        agency = None
+        if row["agency_id"]:
+            agency = AgencyOut(
+                agency_id=row["agency_id"],
+                name=row["agency_name"],
+                phone_number=row["agency_phone_number"],
+            )
+        user = UserOut(
+            user_id=row["user_id"],
+            first_name=row["first_name"],
+            last_name=row["last_name"],
+            email=row["email"],
+            role=row["role"],
+            phone_number=row["phone_number"],
+            address=row["address"],
+            neighborhood=row["neighborhood"],
+            city=row["city"],
+            county=row["county"],
+            lic_num=row["lic_num"],
+            agency=agency,
+            is_active=row["is_active"],
+        )
+        users.append(user)
+    return users
 
 
 @router.get("/{user_id}", response_model=UserOut)
