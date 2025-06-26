@@ -4,6 +4,8 @@ from pydantic import BaseModel, EmailStr, model_validator, Field
 from typing import Optional, List
 from passlib.hash import bcrypt
 from enum import Enum
+from app.utils.file_helper import load_sql
+from sqlalchemy import text
 
 from app import database, models
 from app.routers.auth import get_current_user
@@ -80,14 +82,23 @@ def create_agency(
 
     return {"message": "Agency created successfully", "agency_id": db_agency.agency_id}
 
-@router.get("", response_model=List[AgencyOut])
+@router.get("", response_model=List[AgencyOut], status_code=status.HTTP_200_OK)
 def get_all_agencies(
     db: Session = Depends(database.get_db),
     current_user: models.User = Depends(get_current_user)
 ):
     if current_user.role != "admin":
         raise HTTPException(status_code=403, detail="Not authorized")
+    
+    sql = load_sql("get_all_agencies.sql")
+    result = db.execute(text(sql))
 
-    return db.query(models.Agency).all()
-
-
+    agencies = []
+    for row in result.mappings():
+        agency = AgencyOut(
+            agency_id=row["agency_id"],
+            name=row["agency_name"],
+            phone_number=row["agency_phone_number"],
+        )
+        agencies.append(agency)
+    return agencies
