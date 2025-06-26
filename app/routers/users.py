@@ -171,14 +171,16 @@ def create_user(
         raise HTTPException(status_code=403, detail="Not authorized")
 
     # Check if email exists
-    existing_user = db.query(models.User).filter(models.User.email == user.email).first()
-    if existing_user:
+    result = db.execute(text('SELECT 1 FROM USERS WHERE email = :email'), {"email": user.email})
+    row = result.mappings().first()
+    if row:
         raise HTTPException(status_code=400, detail="Email already exists")
 
     # Validate agency only if realtor
     if user.role == 'realtor':
-        agency = db.query(models.Agency).filter(models.Agency.agency_id == user.agency_id).first()
-        if not agency:
+        result = db.execute(text('SELECT 1 FROM AGENCIES WHERE agency_id = :agency_id'), {"agency_id": user.agency_id})
+        row = result.mappings().first()
+        if not row:
             raise HTTPException(status_code=400, detail="Invalid agency_id")
 
     hashed_password = bcrypt.hash(user.password)
@@ -199,11 +201,20 @@ def create_user(
         is_active=True
     )
 
-    db.add(db_user)
-    db.commit()
-    db.refresh(db_user)
+    user_data = {
+        column.name: getattr(db_user, column.name)
+        for column in db_user.__table__.columns
+        if column.name !="user_id"
+    }
 
-    return {"message": "User created successfully", "user_id": db_user.user_id}
+    sql = load_sql("create_user.sql")
+    result = db.execute(text(sql), user_data)
+    new_user_id = result.scalar()
+
+    db.commit()
+
+    return {"message": "User created successfully", "user_id": new_user_id}
+
 
 
 @router.delete("/{user_id}")
