@@ -287,23 +287,30 @@ def update_user(
         if not agency:
             raise HTTPException(status_code=400, detail="Invalid agency_id")
 
-    # Update fields
-    user.first_name = user_data.first_name
-    user.last_name = user_data.last_name
-    user.email = user_data.email
-    user.password_hash = bcrypt.hash(user_data.password)
-    user.role = user_data.role
-    user.phone_number = user_data.phone_number
-    user.address = user_data.address
-    user.neighborhood = user_data.neighborhood
-    user.city = user_data.city
-    user.county = user_data.county
-    user.lic_num = user_data.lic_num
-    user.agency_id = user_data.agency_id
+    sql = load_sql("update_user.sql")
+
+    
+    db.execute(
+        text(sql),
+        {
+            "user_id": user_id,
+            "first_name": user_data.first_name,
+            "last_name": user_data.last_name,
+            "email": user_data.email,
+            "password_hash": bcrypt.hash(user_data.password),
+            "role": user_data.role,
+            "phone_number": user_data.phone_number,
+            "address": user_data.address,
+            "neighborhood": user_data.neighborhood,
+            "city": user_data.city,
+            "county": user_data.county,
+            "lic_num": user_data.lic_num,
+            "agency_id": user_data.agency_id,
+        }
+    )
 
     db.commit()
-    db.refresh(user)
-
+    
     return {"message": "User updated successfully", "user_id": user.user_id}
 
 
