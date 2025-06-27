@@ -102,3 +102,26 @@ def get_all_agencies(
         )
         agencies.append(agency)
     return agencies
+
+@router.get("/{agency_id}", response_model=AgencyOut, status_code=status.HTTP_200_OK)
+def get_agency_by_id(
+    agency_id: int,
+    db: Session = Depends(database.get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    sql = load_sql("get_agency_by_id.sql")
+    result = db.execute(text(sql), {"agency_id": agency_id})
+    row = result.mappings().first()
+    
+    if row is None:
+        raise HTTPException(status_code=404, detail="Not found")
+    
+    agency = AgencyOut(
+        agency_id=row["agency_id"],
+        name=row["agency_name"],
+        phone_number=row["agency_phone_number"]
+    )
+    return agency
