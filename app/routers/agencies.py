@@ -146,3 +146,4 @@ def delete_agency(
     
     db.commit()
     return {"message": "Agency deleted successfully"}
+
