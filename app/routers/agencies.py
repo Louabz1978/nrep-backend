@@ -125,3 +125,25 @@ def get_agency_by_id(
         phone_number=row["agency_phone_number"]
     )
     return agency
+
+@router.delete("/{agency_id}")
+def delete_agency(
+    agency_id: int,
+    db: Session = Depends(database.get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    sql = load_sql("get_agency_by_id.sql")
+    result = db.execute(text(sql), {"agency_id": agency_id})
+    agency = result.mappings().first()
+    if not agency:
+        raise HTTPException(status_code=404, detail="Agency not found")
+
+    delete_sql = load_sql("delete_agency.sql")
+    db.execute(text(delete_sql), {"agency_id": agency_id})
+    
+    db.commit()
+    return {"message": "Agency deleted successfully"}
+
