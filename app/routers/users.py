@@ -207,7 +207,8 @@ def create_user(
 
     # Validate agency only if realtor
     if user.role == 'realtor':
-        result = db.execute(text('SELECT 1 FROM AGENCIES WHERE agency_id = :agency_id'), {"agency_id": user.agency_id})
+        sql = load_sql("get_agency_by_id.sql")
+        result = db.execute(text(sql), {"agency_id": user.agency_id})
         row = result.mappings().first()
         if not row:
             raise HTTPException(status_code=400, detail="Invalid agency_id")
