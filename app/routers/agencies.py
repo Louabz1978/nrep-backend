@@ -158,3 +158,41 @@ def delete_agency(
     db.commit()
     return {"message": "Agency deleted successfully"}
 
+@router.put("/{agency_id}")
+def update_agency(
+    agency_id: int,
+    agency_data: AgencyCreate,
+    db: Session = Depends(database.get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    agency = db.query(models.Agency).filter(models.Agency.agency_id == agency_id).first()
+    if not agency:
+        raise HTTPException(status_code=404, detail="Agency not found")
+
+    if agency_data.broker_id is not None:
+        broker = db.query(models.User).filter(models.User.user_id == agency_data.broker_id).first()
+        if not broker or broker.role != "broker":
+            raise HTTPException(status_code=400, detail="Invalid broker_id or user is not a broker")
+
+    sql = load_sql("update_agency.sql")
+
+    db.execute(
+        text(sql),
+        {
+            "agency_id": agency_id,
+            "name": agency_data.name,
+            "email": agency_data.email,
+            "phone_number": agency_data.phone_number,
+            "address": agency_data.address,
+            "neighborhood": agency_data.neighborhood,
+            "city": agency_data.city,
+            "county": agency_data.county,
+            "broker_id": agency_data.broker_id,
+        }
+    )
+    db.commit()
+
+    return {"message": "Agency updated successfully", "agency_id": agency_id}
