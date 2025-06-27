@@ -59,7 +59,9 @@ def create_agency(
 
     # Validate broker_id if provided
     if agency.broker_id:
-        broker = db.query(models.User).filter(models.User.user_id == agency.broker_id).first()
+        sql = load_sql("get_user_by_id.sql")
+        result = db.execute(text(sql), {"user_id" : agency.broker_id})
+        broker = result.mappings().first()
         if not broker:
             raise HTTPException(status_code=400, detail="Broker not found")
         if broker.role != "broker":
@@ -76,11 +78,20 @@ def create_agency(
         broker_id=agency.broker_id,
     )
 
-    db.add(db_agency)
-    db.commit()
-    db.refresh(db_agency)
+    agency_data = {
+        column.name: getattr(db_agency, column.name)
+        for column in db_agency.__table__.columns
+        if column.name !="agency_id"
+    }
 
-    return {"message": "Agency created successfully", "agency_id": db_agency.agency_id}
+    sql = load_sql("create_agency.sql")
+    result = db.execute(text(sql), agency_data)
+    new_agency_id = result.scalar()
+
+    db.commit()
+
+    return {"message": "Agency created successfully", "agency_id": new_agency_id}
+
 
 @router.get("", response_model=List[AgencyOut], status_code=status.HTTP_200_OK)
 def get_all_agencies(
