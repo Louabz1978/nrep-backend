@@ -108,7 +108,7 @@ class UserOut(BaseModel):
 
 # ----- Routes -----
 
-@router.get("", response_model=List[UserOut])
+@router.get("", response_model=List[UserOut], status_code=status.HTTP_200_OK)
 def get_all_users(
     db: Session = Depends(database.get_db),
     current_user: models.User = Depends(get_current_user),
@@ -147,7 +147,7 @@ def get_all_users(
     return users
 
 
-@router.get("/{user_id}", response_model=UserOut)
+@router.get("/{user_id}", response_model=UserOut, status_code=status.HTTP_200_OK)
 def get_user_by_id(
     user_id: int,
     db: Session = Depends(database.get_db),
@@ -190,7 +190,7 @@ def get_user_by_id(
     return user
 
 
-@router.post("", status_code=201)
+@router.post("", status_code=status.HTTP_201_CREATED)
 def create_user(
     user: UserCreate,
     db: Session = Depends(database.get_db),
@@ -247,7 +247,7 @@ def create_user(
 
 
 
-@router.delete("/{user_id}")
+@router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_user(
     user_id: int,
     db: Session = Depends(database.get_db),
@@ -268,7 +268,7 @@ def delete_user(
     db.commit()
     return {"message": "User deleted successfully"}
 
-@router.put("/{user_id}")
+@router.put("/{user_id}",status_code=status.HTTP_200_OK)
 def update_user(
     user_id: int,
     user_data: UserCreate,

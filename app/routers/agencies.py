@@ -48,7 +48,7 @@ class AgencyCreate(BaseModel):
         return values
 
 
-@router.post("", status_code=201)
+@router.post("", status_code=status.HTTP_201_CREATED)
 def create_agency(
     agency: AgencyCreate,
     db: Session = Depends(database.get_db),
@@ -137,7 +137,7 @@ def get_agency_by_id(
     )
     return agency
 
-@router.delete("/{agency_id}")
+@router.delete("/{agency_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_agency(
     agency_id: int,
     db: Session = Depends(database.get_db),
