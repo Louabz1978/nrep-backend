@@ -1,0 +1,1 @@
+DELETE From agencies where agency_id=:agency_id;
