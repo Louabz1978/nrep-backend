@@ -221,8 +221,11 @@ def get_property_details(property_id: int, db: Session = Depends(database.get_db
 
     }
 
-
-#####delete_task
+# Defines a DELETE HTTP endpoint at the path '/{listing_id}'
+# Deletes the resource identified by 'listing_id'
+# Returns HTTP status code 204 with a JSON message confirming successful deletion
+# Raises HTTP 403 Forbidden if the user is not authorized as admin
+# Raises HTTP 404 Not Found if the listing does not exist
 @router.delete("/{listing_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_listing(
     listing_id: int,
