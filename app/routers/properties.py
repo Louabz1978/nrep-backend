@@ -6,11 +6,42 @@ from app.routers.auth import get_current_user
 from app import database, models
 import os
 import shutil
+from app.utils.file_helper import load_sql
+from sqlalchemy import text
+
+from app.routers.auth import get_current_user
+
+
+from pydantic import BaseModel
+from typing import Optional
 
 router = APIRouter(
     prefix="/properties",
     tags=["Properties"]
 )
+
+class PropertyUpdate(BaseModel):
+    owner_id: int
+    agent_id: Optional[int] = None
+    address: str
+    neighborhood: str
+    city: str
+    county: str
+    description: str
+    price: float
+    property_type: Optional[str]
+    floor: Optional[int] 
+    bedrooms: int
+    bathrooms: float
+    listing_agent_commission: float
+    buyer_agent_commission: float
+    area_space: int
+    year_built: int
+    latitude: float
+    longitude: float
+    status: str
+    image_url: Optional[str]
+
 
 @router.post("/all-listings")
 async def all_listings(db: Session = Depends(database.get_db), current_user: models.User = Depends(get_current_user)):
@@ -220,3 +251,63 @@ def get_property_details(property_id: int, db: Session = Depends(database.get_db
     }
 
 
+@router.put("/listings/{listing_id}")
+def update_listing(
+    listing_id : int ,
+    property_data: PropertyUpdate ,
+    db: Session = Depends(database.get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    if current_user.role not in ("admin", "broker", "realtor"):
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    listing = db.query(models.Property).filter(models.Property.property_id == listing_id).first()
+    
+    if not listing :
+        raise HTTPException( status_code= 404 , detail="listing not found")
+    
+    owner = db.query(models.User).filter(models.User.user_id == property_data.owner_id).first()
+    
+    if not owner:
+        raise HTTPException(status_code=404, detail="Owner not found")
+    
+    if owner.role != "seller":
+        raise HTTPException(status_code=404, detail="Owner is not a seller")
+
+
+    if property_data.agent_id is not None:
+        agent = db.query(models.User).filter(models.User.user_id == property_data.agent_id).first()
+        if not agent:
+            raise HTTPException(status_code=404, detail="Agent not found")
+
+    sql = load_sql("update_listing.sql")
+
+    db.execute(
+        text(sql),
+        {
+            "listing_id": listing_id,
+            "owner_id": property_data.owner_id,
+            "agent_id": property_data.agent_id,
+            "address": property_data.address,
+            "neighborhood": property_data.neighborhood,
+            "city": property_data.city,
+            "county": property_data.county,
+            "description": property_data.description,
+            "price": property_data.price,
+            "property_type": property_data.property_type,
+            "floor": property_data.floor,
+            "bedrooms": property_data.bedrooms,
+            "bathrooms": property_data.bathrooms,
+            "listing_agent_commission": property_data.listing_agent_commission,
+            "buyer_agent_commission": property_data.buyer_agent_commission,
+            "area_space": property_data.area_space,
+            "year_built": property_data.year_built,
+            "latitude": property_data.latitude,
+            "longitude": property_data.longitude,
+            "status": property_data.status,
+            "image_url": property_data.image_url,
+        }
+    )
+    db.commit()
+
+    return {"message": "Property updated successfully", "property_id": listing_id}
