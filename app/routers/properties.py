@@ -1,9 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, status
-from typing import List
-from datetime import datetime, timezone
+from typing import List, Optional
+from datetime import datetime, timezone,date
+from sqlalchemy import text
 from sqlalchemy.orm import Session, joinedload
 from app.routers.auth import get_current_user
+from pydantic import BaseModel, model_validator
 from app import database, models
+from app.utils.file_helper import load_sql
 import os
 import shutil
 
@@ -11,6 +14,51 @@ router = APIRouter(
     prefix="/properties",
     tags=["Properties"]
 )
+
+#----- schmas -----
+
+class PropretyCreate(BaseModel):
+    owner_id: int
+    agent_id: Optional[ int ]
+    address: str
+    neighborhood: str
+    city: str
+    county: str
+    description: str
+    price: int
+    property_type: Optional[ str ] = None
+    floor: Optional[ int ] = None
+    bedrooms: int
+    bathrooms: float
+    listing_agent_commission: float
+    buyer_agent_commission: float
+    area_space: int
+    year_built: int
+    latitude: float
+    longitude: float
+    status: str
+    listed_date: date
+    last_update: datetime
+    image_url: Optional[str]
+
+    @model_validator(mode='before')
+    def validate_roles(cls, values):
+        agent_id = values.get('agent_id')
+        owner_id = values.get('owner_id')
+        # Treat 0 as no agent_id provided
+        if agent_id == 0:
+            agent_id = None
+            values['agent_id'] = None
+        # Treat 0 as no owner_id provided
+        if owner_id == 0:
+            owner_id = None
+            values['owner_id'] = None
+        #owner_id is required
+        if not owner_id:
+            raise ValueError("owner_id is required")
+
+        return values
+
 
 @router.post("/all-listings")
 async def all_listings(db: Session = Depends(database.get_db), current_user: models.User = Depends(get_current_user)):
@@ -112,6 +160,7 @@ async def upload_property(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You are not authorized to upload a property. Agent role required."
         )
+
 
     new_property = models.Property(
         agent_id=current_user.user_id,
@@ -220,3 +269,77 @@ def get_property_details(property_id: int, db: Session = Depends(database.get_db
     }
 
 
+@router.post("", status_code=status.HTTP_201_CREATED)
+def create_listing(
+    listing: PropretyCreate,
+    db: Session = Depends(database.get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    if current_user.role not in ("admin", "broker", "realtor"):
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    #validate agent_id
+
+    agent = listing.agent_id
+    if current_user.role != "realtor": 
+        if agent is None:
+            raise HTTPException(status_code=400, detail="agent_id is required")
+        
+        sql = load_sql("get_user_by_id.sql")
+        result = db.execute(text(sql), {"user_id": agent})
+        row = result.mappings().first()
+        if not row :
+            raise HTTPException(status_code=400, detail="invalid agent_id")
+        if row["role"] != "realtor":
+            raise HTTPException(status_code=400, detail="agent must be realtor")
+    else:
+        agent = current_user.user_id
+
+    #validate owner_id
+
+    sql = load_sql("get_user_by_id.sql")
+    result = db.execute(text(sql), {"user_id": listing.owner_id})
+    row = result.mappings().first()
+    if not row :
+        raise HTTPException(status_code=400, detail="invalid seller_id")
+    if row["role"] != "seller":
+        raise HTTPException(status_code=400, detail="owner must be seller")
+
+    db_listing = models.Property(
+        owner_id = listing.owner_id,
+        agent_id = agent,
+        address = listing.address,
+        neighborhood = listing.neighborhood,
+        city = listing.city,
+        county = listing.county,
+        description = listing.description,
+        price = listing.price,
+        property_type = listing.property_type,
+        floor = listing.floor,
+        bedrooms = listing.bedrooms,
+        bathrooms = listing.bathrooms,
+        listing_agent_commission = listing.listing_agent_commission,
+        buyer_agent_commission = listing.buyer_agent_commission,
+        area_space = listing.area_space,
+        year_built = listing.year_built,
+        latitude = listing.latitude,
+        longitude = listing.longitude,
+        status = listing.status,
+        listed_date = listing.listed_date,
+        last_updated = listing.last_update,
+        image_url = listing.image_url
+    )
+
+    listing_data = {
+        column.name: getattr(db_listing, column.name)
+        for column in db_listing.__table__.columns
+        if column.name !="property_id"
+    }
+
+    sql = load_sql("create_listing.sql")
+    result = db.execute(text(sql), listing_data)
+    new_listing_id = result.scalar()
+
+    db.commit()
+
+    return {"message" : "Listing created successfully", "listing_id": new_listing_id}
