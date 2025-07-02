@@ -6,9 +6,11 @@ from app.routers.auth import get_current_user
 from app import database, models
 import os
 import shutil
+from app.utils.file_helper import load_sql
+from sqlalchemy import text
 
 router = APIRouter(
-    prefix="/properties",
+    prefix="/listing",
     tags=["Properties"]
 )
 
@@ -220,3 +222,24 @@ def get_property_details(property_id: int, db: Session = Depends(database.get_db
     }
 
 
+#####delete_task
+@router.delete("/{listing_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_listing(
+    listing_id: int,
+    db: Session = Depends(database.get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    sql = load_sql("get_listing_by_id.sql")
+    result = db.execute(text(sql), {"listing_id": listing_id})
+    listing = result.mappings().first()
+    if not listing:
+        raise HTTPException(status_code=404, detail="listing not found")
+
+    delete_sql = load_sql("delete_listing.sql")
+    db.execute(text(delete_sql), {"property_id": listing_id})
+    
+    db.commit()
+    return {"message": "listing deleted successfully"}
