@@ -1,9 +1,15 @@
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, status
 from typing import List
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from sqlalchemy.orm import Session, joinedload
 from app.routers.auth import get_current_user
 from app import database, models
+from app.routers.agencies import AgencyOut
+from app.routers.users import UserOut
+from app.utils.file_helper import load_sql
+from sqlalchemy import text
+from pydantic import BaseModel
+from typing import Optional
 import os
 import shutil
 
@@ -11,6 +17,34 @@ router = APIRouter(
     prefix="/properties",
     tags=["Properties"]
 )
+
+class PropertyOut(BaseModel):
+    property_id: int
+    owner_id: int
+    agent_id: Optional[int]
+    address: str
+    neighborhood: str
+    city: str
+    county: str
+    description: str
+    price: int
+    property_type: Optional[str]
+    floor: Optional[int]
+    bedrooms: int
+    bathrooms: float
+    listing_agent_commission: float
+    buyer_agent_commission: float
+    area_space: int
+    year_built: int
+    latitude: float
+    longitude: float
+    status: str
+    listed_date: date
+    last_updated: datetime
+    image_url: Optional[str]
+
+    owner: Optional[UserOut] = None
+    agent: Optional[UserOut] = None
 
 @router.post("/all-listings")
 async def all_listings(db: Session = Depends(database.get_db), current_user: models.User = Depends(get_current_user)):
@@ -219,4 +253,83 @@ def get_property_details(property_id: int, db: Session = Depends(database.get_db
 
     }
 
+@router.get("", response_model=list[PropertyOut], status_code=status.HTTP_200_OK)
+def get_all_listings(
+    db: Session = Depends(database.get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    if current_user.role != "admin" and current_user.role != "broker" and current_user.role != "realtor":
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    sql = load_sql("get_all_listings.sql")
+    result = db.execute(text(sql))
 
+    properties = []
+    for row in result.mappings():
+        property = PropertyOut(
+            property_id=row["property_id"],
+            owner_id=row["owner_id"],
+            agent_id=row["agent_id"],
+            address=row["address"],
+            neighborhood=row["neighborhood"],
+            city=row["city"],
+            county=row["county"],
+            description=row["description"],
+            price=row["price"],
+            property_type=row.get("property_type"),
+            floor=row.get("floor"),
+            bedrooms=row["bedrooms"],
+            bathrooms=row["bathrooms"],
+            listing_agent_commission=row["listing_agent_commission"],
+            buyer_agent_commission=row["buyer_agent_commission"],
+            area_space=row["area_space"],
+            year_built=row["year_built"],
+            latitude=row["latitude"],
+            longitude=row["longitude"],
+            status=row["status"],
+            listed_date=row["listed_date"],
+            last_updated=row["last_updated"],
+            image_url=row.get("image_url"),
+            
+            owner=UserOut(
+                user_id=row["owner_id"],
+                first_name=row.get("owner_first_name"),
+                last_name=row.get("owner_last_name"),
+                email=row.get("owner_email"),
+                role=row.get("owner_role"),
+                phone_number=row.get("owner_phone_number"),
+                address=row.get("owner_address"),
+                neighborhood=row.get("owner_neighborhood"),
+                city=row.get("owner_city"),
+                county=row.get("owner_county"),
+                lic_num=row.get("owner_lic_num"),
+                is_active=row.get("owner_is_active"),
+                agency=AgencyOut(
+                    agency_id=row.get("owner_agency_id"),
+                    name=row.get("owner_agency_name"),
+                    phone_number=row.get("owner_agency_phone_number")
+                ) if row.get("owner_agency_id") else None
+            ) if row.get("owner_first_name") else None,
+            
+            agent=UserOut(
+                user_id=row["agent_id"],
+                first_name=row.get("agent_first_name"),
+                last_name=row.get("agent_last_name"),
+                email=row.get("agent_email"),
+                role=row.get("agent_role"),
+                phone_number=row.get("agent_phone_number"),
+                address=row.get("agent_address"),
+                neighborhood=row.get("agent_neighborhood"),
+                city=row.get("agent_city"),
+                county=row.get("agent_county"),
+                lic_num=row.get("agent_lic_num"),
+                is_active=row.get("agent_is_active"),
+                agency=AgencyOut(
+                    agency_id=row.get("agent_agency_id"),
+                    name=row.get("agent_agency_name"),
+                    phone_number=row.get("agent_agency_phone_number")
+                ) if row.get("agent_agency_id") else None
+            ) if row.get("agent_first_name") else None
+        )
+        properties.append(property)
+    return properties
