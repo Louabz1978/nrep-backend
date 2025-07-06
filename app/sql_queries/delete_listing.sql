@@ -1,0 +1,1 @@
+DELETE From properties where property_id=:property_id
