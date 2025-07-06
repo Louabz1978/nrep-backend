@@ -6,7 +6,9 @@ from datetime import datetime, timezone
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import text
 
-from app import database, models
+from app import database
+from ...models.user_model import User
+from ...models.property_model import Property
 from app.utils.out_helper import build_user_out
 from app.utils.file_helper import load_sql
 
@@ -32,7 +34,7 @@ router = APIRouter(
 def create_listing(
     listing: PropertyCreate,
     db: Session = Depends(database.get_db),
-    current_user: models.User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user)
 ):
     if current_user.role not in ("admin", "broker", "realtor"):
         raise HTTPException(status_code=403, detail="Not authorized")
@@ -64,7 +66,7 @@ def create_listing(
     if row["role"] != "seller":
         raise HTTPException(status_code=400, detail="owner must be seller")
 
-    db_listing = models.Property(
+    db_listing = Property(
         owner_id = listing.owner_id,
         agent_id = agent,
         address = listing.address,
@@ -112,7 +114,7 @@ def create_listing(
 def get_listing_by_id(
     listing_id: int, 
     db: Session = Depends(database.get_db),
-    current_user: models.User = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     
     if current_user.role != "admin" and current_user.role != "broker" and current_user.role != "realtor":
@@ -133,9 +135,9 @@ def get_listing_by_id(
     return property
 
 @router.post("/all-listings")
-async def all_listings(db: Session = Depends(database.get_db), current_user: models.User = Depends(get_current_user)):
-    properties = db.query(models.Property).options(
-        joinedload(models.Property.agent).joinedload(models.User.agency)
+async def all_listings(db: Session = Depends(database.get_db), current_user: User = Depends(get_current_user)):
+    properties = db.query(Property).options(
+        joinedload(Property.agent).joinedload(User.agency)
     ).all()
     if not properties:
         return {"message": "No Properties Found"}
@@ -172,8 +174,8 @@ async def all_listings(db: Session = Depends(database.get_db), current_user: mod
     return property_list
 
 @router.post("/my-listings")
-async def my_listings(db: Session = Depends(database.get_db), current_user: models.User = Depends(get_current_user)):
-    properties = db.query(models.Property).filter(models.Property.agent_id == current_user.user_id).all()
+async def my_listings(db: Session = Depends(database.get_db), current_user: User = Depends(get_current_user)):
+    properties = db.query(Property).filter(Property.agent_id == current_user.user_id).all()
     if not properties:
         return {"message": "No Properties Found"}
 
@@ -223,7 +225,7 @@ async def upload_property(
     year_built: int = Form(...),
     images: List[UploadFile] = File(...),
     db: Session = Depends(database.get_db),
-    current_user: models.User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user)
 ):
     if current_user.role != "agent": # type: ignore
         raise HTTPException(
@@ -231,7 +233,7 @@ async def upload_property(
             detail="You are not authorized to upload a property. Agent role required."
         )
 
-    new_property = models.Property(
+    new_property = Property(
         agent_id=current_user.user_id,
         title="New Property",
         description=description,
@@ -289,7 +291,7 @@ async def upload_property(
 def delete_listing(
     listing_id: int,
     db: Session = Depends(database.get_db),
-    current_user: models.User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user)
 ):
     if current_user.role != "admin":
         raise HTTPException(status_code=403, detail="Not authorized")

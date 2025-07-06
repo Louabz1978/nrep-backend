@@ -4,7 +4,9 @@ from passlib.hash import bcrypt
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 
-from app import database, models
+from app import database
+from ...models.user_model import User
+from ...models.agency_model import Agency
 from app.utils.file_helper import load_sql
 
 from ...dependencies import get_current_user
@@ -23,7 +25,7 @@ router = APIRouter(
 def create_user(
     user: UserCreate,
     db: Session = Depends(database.get_db),
-    current_user: models.User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user)
 ):
     if current_user.role != "admin":
         raise HTTPException(status_code=403, detail="Not authorized")
@@ -44,7 +46,7 @@ def create_user(
 
     hashed_password = bcrypt.hash(user.password)
 
-    db_user = models.User(
+    db_user = User(
         first_name=user.first_name,
         last_name=user.last_name,
         email=user.email,
@@ -77,7 +79,7 @@ def create_user(
 @router.get("", response_model=List[UserOut], status_code=status.HTTP_200_OK)
 def get_all_users(
     db: Session = Depends(database.get_db),
-    current_user: models.User = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     if current_user.role != "admin":
         raise HTTPException(status_code=403, detail="Not authorized")
@@ -116,7 +118,7 @@ def get_all_users(
 def get_user_by_id(
     user_id: int,
     db: Session = Depends(database.get_db),
-    current_user: models.User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user)
 ):
     if current_user.role != "admin":
         raise HTTPException(status_code=403, detail="Not authorized")
@@ -159,18 +161,18 @@ def update_user(
     user_id: int,
     user_data: UserCreate,
     db: Session = Depends(database.get_db),
-    current_user: models.User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user)
 ):
     if current_user.role != "admin":
         raise HTTPException(status_code=403, detail="Not authorized")
 
-    user = db.query(models.User).filter(models.User.user_id == user_id).first()
+    user = db.query(User).filter(User.user_id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
     # Validate agency_id existence if provided
     if user_data.agency_id is not None:
-        agency = db.query(models.Agency).filter(models.Agency.agency_id == user_data.agency_id).first()
+        agency = db.query(Agency).filter(Agency.agency_id == user_data.agency_id).first()
         if not agency:
             raise HTTPException(status_code=400, detail="Invalid agency_id")
 
@@ -203,7 +205,7 @@ def update_user(
 def delete_user(
     user_id: int,
     db: Session = Depends(database.get_db),
-    current_user: models.User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user)
 ):
     if current_user.role != "admin":
         raise HTTPException(status_code=403, detail="Not authorized")

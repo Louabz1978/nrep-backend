@@ -8,7 +8,8 @@ from passlib.context import CryptContext
 import os
 from dotenv import load_dotenv
 
-from app import database, models
+from app import database
+from ...models.user_model import User
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -31,7 +32,7 @@ def create_access_token(data: dict):
 @router.post("/login")
 async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(database.get_db)):
     print("Login attempt:", form_data.username)
-    user = db.query(models.User).filter(models.User.email == form_data.username).first()
+    user = db.query(User).filter(User.email == form_data.username).first()
     print("Received password from frontend:", repr(form_data.password))
 
     if not user:

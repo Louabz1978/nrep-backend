@@ -3,7 +3,9 @@ from sqlalchemy.orm import Session
 from typing import List
 from sqlalchemy import text
 
-from app import database, models
+from app import database
+from ...models.user_model import User
+from ...models.agency_model import Agency
 from app.utils.file_helper import load_sql
 from ...dependencies import get_current_user
 
@@ -19,7 +21,7 @@ router = APIRouter(
 def create_agency(
     agency: AgencyCreate,
     db: Session = Depends(database.get_db),
-    current_user: models.User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user)
 ):
     if current_user.role != "admin":
         raise HTTPException(status_code=403, detail="Not authorized")
@@ -34,7 +36,7 @@ def create_agency(
         if broker.role != "broker":
             raise HTTPException(status_code=400, detail="Assigned broker must have role 'broker'")
 
-    db_agency = models.Agency(
+    db_agency = Agency(
         name=agency.name,
         email=agency.email,
         phone_number=agency.phone_number,
@@ -62,7 +64,7 @@ def create_agency(
 @router.get("", response_model=List[AgencyOut], status_code=status.HTTP_200_OK)
 def get_all_agencies(
     db: Session = Depends(database.get_db),
-    current_user: models.User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user)
 ):
     if current_user.role != "admin":
         raise HTTPException(status_code=403, detail="Not authorized")
@@ -84,7 +86,7 @@ def get_all_agencies(
 def get_agency_by_id(
     agency_id: int,
     db: Session = Depends(database.get_db),
-    current_user: models.User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user)
 ):
     if current_user.role != "admin":
         raise HTTPException(status_code=403, detail="Not authorized")
@@ -108,17 +110,17 @@ def update_agency(
     agency_id: int,
     agency_data: AgencyCreate,
     db: Session = Depends(database.get_db),
-    current_user: models.User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user)
 ):
     if current_user.role != "admin":
         raise HTTPException(status_code=403, detail="Not authorized")
 
-    agency = db.query(models.Agency).filter(models.Agency.agency_id == agency_id).first()
+    agency = db.query(Agency).filter(Agency.agency_id == agency_id).first()
     if not agency:
         raise HTTPException(status_code=404, detail="Agency not found")
 
     if agency_data.broker_id is not None:
-        broker = db.query(models.User).filter(models.User.user_id == agency_data.broker_id).first()
+        broker = db.query(User).filter(User.user_id == agency_data.broker_id).first()
         if not broker or broker.role != "broker":
             raise HTTPException(status_code=400, detail="Invalid broker_id or user is not a broker")
 
@@ -146,7 +148,7 @@ def update_agency(
 def delete_agency(
     agency_id: int,
     db: Session = Depends(database.get_db),
-    current_user: models.User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user)
 ):
     if current_user.role != "admin":
         raise HTTPException(status_code=403, detail="Not authorized")
