@@ -8,6 +8,8 @@ from app.routers.properties.properties_router import router as property_route
 from app.database import engine, Base
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.models import *
+
 app = FastAPI()
 
 Base.metadata.create_all(bind=engine) 
