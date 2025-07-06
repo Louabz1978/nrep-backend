@@ -1,5 +1,6 @@
-from app.routers.users import UserOut
-from app.routers.agencies import AgencyOut
+from ..routers.users.user_out import UserOut
+
+from ..routers.agencies.agency_out import AgencyOut
 
 def build_user_out(row: dict, prefix: str) -> UserOut | None:
     if not row.get(f"{prefix}first_name"):
