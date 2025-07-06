@@ -1,58 +1,27 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session, joinedload
-from pydantic import BaseModel, EmailStr, model_validator, Field
-from typing import Optional, List
-from passlib.hash import bcrypt
-from enum import Enum
-from app.utils.file_helper import load_sql
+from sqlalchemy.orm import Session
+from typing import List
 from sqlalchemy import text
 
-from app import database, models
-from app.routers.auth import get_current_user
+from app import database
+from ...models.user_model import User
+from ...models.agency_model import Agency
+from app.utils.file_helper import load_sql
+from ...dependencies import get_current_user
+
+from .agency_create import AgencyCreate
+from .agency_out import AgencyOut
 
 router = APIRouter(
     prefix="/agencies",
     tags=["Agencies"]
 )
 
-
-class AgencyOut(BaseModel):
-    agency_id: int
-    name: str
-    phone_number: Optional[str] = None
-
-    model_config = {
-        "from_attributes": True
-    }
-
-
-
-class AgencyCreate(BaseModel):
-    name: str
-    email: EmailStr
-    phone_number: str
-    address: Optional[str] = None
-    neighborhood: Optional[str] = None
-    city: Optional[str] = None
-    county: Optional[str] = None
-    broker_id: Optional[int] = Field(
-        None,
-        description="Optional broker user_id to assign as agency broker"
-    )
-
-    @model_validator(mode='before')
-    def validate_broker(cls, values):
-        broker_id = values.get("broker_id")
-        if broker_id == 0:
-            values["broker_id"] = None
-        return values
-
-
 @router.post("", status_code=status.HTTP_201_CREATED)
 def create_agency(
     agency: AgencyCreate,
     db: Session = Depends(database.get_db),
-    current_user: models.User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user)
 ):
     if current_user.role != "admin":
         raise HTTPException(status_code=403, detail="Not authorized")
@@ -67,7 +36,7 @@ def create_agency(
         if broker.role != "broker":
             raise HTTPException(status_code=400, detail="Assigned broker must have role 'broker'")
 
-    db_agency = models.Agency(
+    db_agency = Agency(
         name=agency.name,
         email=agency.email,
         phone_number=agency.phone_number,
@@ -92,11 +61,10 @@ def create_agency(
 
     return {"message": "Agency created successfully", "agency_id": new_agency_id}
 
-
 @router.get("", response_model=List[AgencyOut], status_code=status.HTTP_200_OK)
 def get_all_agencies(
     db: Session = Depends(database.get_db),
-    current_user: models.User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user)
 ):
     if current_user.role != "admin":
         raise HTTPException(status_code=403, detail="Not authorized")
@@ -118,7 +86,7 @@ def get_all_agencies(
 def get_agency_by_id(
     agency_id: int,
     db: Session = Depends(database.get_db),
-    current_user: models.User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user)
 ):
     if current_user.role != "admin":
         raise HTTPException(status_code=403, detail="Not authorized")
@@ -137,43 +105,22 @@ def get_agency_by_id(
     )
     return agency
 
-@router.delete("/{agency_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_agency(
-    agency_id: int,
-    db: Session = Depends(database.get_db),
-    current_user: models.User = Depends(get_current_user)
-):
-    if current_user.role != "admin":
-        raise HTTPException(status_code=403, detail="Not authorized")
-
-    sql = load_sql("get_agency_by_id.sql")
-    result = db.execute(text(sql), {"agency_id": agency_id})
-    agency = result.mappings().first()
-    if not agency:
-        raise HTTPException(status_code=404, detail="Agency not found")
-
-    delete_sql = load_sql("delete_agency.sql")
-    db.execute(text(delete_sql), {"agency_id": agency_id})
-    
-    db.commit()
-    return {"message": "Agency deleted successfully"}
-
 @router.put("/{agency_id}")
 def update_agency(
     agency_id: int,
     agency_data: AgencyCreate,
     db: Session = Depends(database.get_db),
-    current_user: models.User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user)
 ):
     if current_user.role != "admin":
         raise HTTPException(status_code=403, detail="Not authorized")
 
-    agency = db.query(models.Agency).filter(models.Agency.agency_id == agency_id).first()
+    agency = db.query(Agency).filter(Agency.agency_id == agency_id).first()
     if not agency:
         raise HTTPException(status_code=404, detail="Agency not found")
 
     if agency_data.broker_id is not None:
-        broker = db.query(models.User).filter(models.User.user_id == agency_data.broker_id).first()
+        broker = db.query(User).filter(User.user_id == agency_data.broker_id).first()
         if not broker or broker.role != "broker":
             raise HTTPException(status_code=400, detail="Invalid broker_id or user is not a broker")
 
@@ -196,3 +143,24 @@ def update_agency(
     db.commit()
 
     return {"message": "Agency updated successfully", "agency_id": agency_id}
+
+@router.delete("/{agency_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_agency(
+    agency_id: int,
+    db: Session = Depends(database.get_db),
+    current_user: User = Depends(get_current_user)
+):
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    sql = load_sql("get_agency_by_id.sql")
+    result = db.execute(text(sql), {"agency_id": agency_id})
+    agency = result.mappings().first()
+    if not agency:
+        raise HTTPException(status_code=404, detail="Agency not found")
+
+    delete_sql = load_sql("delete_agency.sql")
+    db.execute(text(delete_sql), {"agency_id": agency_id})
+    
+    db.commit()
+    return {"message": "Agency deleted successfully"}
