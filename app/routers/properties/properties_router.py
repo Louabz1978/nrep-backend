@@ -105,6 +105,27 @@ def create_listing(
 
     return {"message" : "Listing created successfully", "listing_id": new_listing_id}
 
+@router.get("", response_model=list[PropertyOut], status_code=status.HTTP_200_OK)
+def get_all_properties(
+    db: Session = Depends(database.get_db),
+    current_user: User = Depends(get_current_user)
+):
+    if current_user.role != "admin" and current_user.role != "broker" and current_user.role != "realtor":
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    sql = load_sql("get_all_properties.sql")
+    result = db.execute(text(sql))
+
+    properties = []
+    for row in result.mappings():
+        property = PropertyOut(
+            **row,
+            owner=build_user_out(row, "owner_"),
+            agent=build_user_out(row, "agent_")
+        )
+        properties.append(property)
+    return properties
+
 # Defines a GET HTTP endpoint at the path '/listing/{listing_id}'
 # GET the resource identified by 'listing_id'
 # Returns HTTP status code 200 with a JSON PropertyOut
@@ -133,45 +154,6 @@ def get_listing_by_id(
         agent=build_user_out(row, "agent_")
     )
     return property
-
-@router.post("/all-listings")
-async def all_listings(db: Session = Depends(database.get_db), current_user: User = Depends(get_current_user)):
-    properties = db.query(Property).options(
-        joinedload(Property.agent).joinedload(User.agency)
-    ).all()
-    if not properties:
-        return {"message": "No Properties Found"}
-
-    property_list = []
-    for prop in properties:
-        images_folder = f"property_images/{prop.property_id}"
-        if os.path.exists(images_folder):
-            images = sorted(
-            [f"/{images_folder}/{img}" 
-             for img in os.listdir(images_folder) if img.lower().endswith((".png", ".jpg", ".jpeg", ".webp"))]
-        ) 
-        else:
-            images = []
-
-        property_list.append({
-            "property_id": prop.property_id,
-            "status":prop.status,
-            "address": prop.address,
-            "city": prop.city,
-            "state": prop.state,
-            "price": prop.price,
-            "bedrooms": prop.bedrooms,
-            "bathrooms": prop.bathrooms,
-            "listing_agent": prop.agent,
-            "broker": prop.agent.agency.name, # type: ignore
-            "listed_date": prop.listed_date,
-            "listing_agent_commission":prop.listing_agent_commission,
-            "buyer_agent_commission":prop.buyer_agent_commission,
-            "area_sqft": prop.area_sqft,
-            "images": images,  
-        })
-
-    return property_list
 
 @router.post("/my-listings")
 async def my_listings(db: Session = Depends(database.get_db), current_user: User = Depends(get_current_user)):
