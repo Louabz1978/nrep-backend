@@ -1,24 +1,24 @@
 SELECT 
     p.*,
 
-    -- Owner fields
-    u1.user_id AS owner_user_id,
-    u1.first_name AS owner_first_name,
-    u1.last_name AS owner_last_name,
-    u1.email AS owner_email,
-    u1.phone_number AS owner_phone_number,
-    u1.address AS owner_address,
-    u1.neighborhood AS owner_neighborhood,
-    u1.city AS owner_city,
-    u1.county AS owner_county,
-    u1.lic_num AS owner_lic_num,
-    u1.role AS owner_role,
-    u1.is_active AS owner_is_active,
-    a1.agency_id AS owner_agency_id,
-    a1.name AS owner_agency_name,
-    a1.phone_number AS owner_agency_phone_number,
+    -- Seller fields
+    u1.user_id AS seller_user_id,
+    u1.first_name AS seller_first_name,
+    u1.last_name AS seller_last_name,
+    u1.email AS seller_email,
+    u1.phone_number AS seller_phone_number,
+    u1.address AS seller_address,
+    u1.neighborhood AS seller_neighborhood,
+    u1.city AS seller_city,
+    u1.county AS seller_county,
+    u1.lic_num AS seller_lic_num,
+    u1.role AS seller_role,
+    u1.is_active AS seller_is_active,
+    a1.agency_id AS seller_agency_id,
+    a1.name AS seller_agency_name,
+    a1.phone_number AS seller_agency_phone_number,
 
-    -- Agent fields
+    -- Realtor fields
     u2.user_id AS realtor_user_id,
     u2.first_name AS realtor_first_name,
     u2.last_name AS realtor_last_name,

@@ -15,8 +15,8 @@ class PropertyCreate(BaseModel):
     floor: Optional[ int ] = None
     bedrooms: int
     bathrooms: float
-    property_agent_commission: float
-    buyer_agent_commission: float
+    property_realtor_commission: float
+    buyer_realtor_commission: float
     area_space: int
     year_built: int
     latitude: float

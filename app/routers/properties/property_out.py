@@ -18,8 +18,8 @@ class PropertyOut(BaseModel):
     floor: Optional[int]
     bedrooms: int
     bathrooms: float
-    property_agent_commission: float
-    buyer_agent_commission: float
+    property_realtor_commission: float
+    buyer_realtor_commission: float
     area_space: int
     year_built: int
     latitude: float
@@ -30,5 +30,5 @@ class PropertyOut(BaseModel):
     image_url: Optional[str]
 
     # Relationships
-    owner: Optional[UserOut] = None
-    agent: Optional[UserOut] = None
+    seller: Optional[UserOut] = None
+    realtor: Optional[UserOut] = None

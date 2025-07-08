@@ -21,8 +21,8 @@ class Property(Base):
     floor: Mapped[Optional[int]] = mapped_column(Integer)
     bedrooms: Mapped[int] = mapped_column(Integer)
     bathrooms: Mapped[float] = mapped_column(Float)
-    property_agent_commission: Mapped[float] = mapped_column(Float)
-    buyer_agent_commission: Mapped[float] = mapped_column(Float)
+    property_realtor_commission: Mapped[float] = mapped_column(Float)
+    buyer_realtor_commission: Mapped[float] = mapped_column(Float)
     area_space: Mapped[int] = mapped_column(Integer)
     year_built: Mapped[int] = mapped_column(Integer)
     latitude: Mapped[float] = mapped_column(Float)
@@ -33,7 +33,7 @@ class Property(Base):
     image_url: Mapped[Optional[str]] = mapped_column(String)
 
     # Relationships
-    owner = relationship("User", back_populates="properties", foreign_keys=[seller_id])
+    seller = relationship("User", back_populates="properties", foreign_keys=[seller_id])
     realtor = relationship("User", back_populates="realtor_properties", foreign_keys=[realtor_id])
     additional_details = relationship("Additional", back_populates="property", uselist=False)
     favorites = relationship("Favorite", back_populates="property")

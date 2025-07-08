@@ -29,7 +29,7 @@ router = APIRouter(
 # Raises HTTP 400 Bad Request if:
 #   - The user role is 'realtor' and realtor_id is missing, invalid, or not a realtor
 #   - The seller_id does not exist
-#   - The specified owner is not a seller
+#   - The specified user is not a seller
 @router.post("", status_code=status.HTTP_201_CREATED)
 def create_property(
     property: PropertyCreate,
@@ -51,7 +51,7 @@ def create_property(
         if not result :
             raise HTTPException(status_code=400, detail="invalid realtor_id")
         if result["role"] != "realtor":
-            raise HTTPException(status_code=400, detail="agent must be realtor")
+            raise HTTPException(status_code=400, detail="Realtor must be realtor")
     else:
         realtor = current_user.user_id
 
@@ -61,7 +61,7 @@ def create_property(
     if not result :
         raise HTTPException(status_code=400, detail="invalid seller_id")
     if result["role"] != "seller":
-        raise HTTPException(status_code=400, detail="owner must be seller")
+        raise HTTPException(status_code=400, detail="Seller must be seller")
 
     db_property = property.model_dump()
     db_property["realtor_id"] = realtor
@@ -73,7 +73,7 @@ def create_property(
     db.commit()
 
     sql = load_sql("get_property_by_id.sql")
-    created_property = db.execute(text(sql), {"listing_id": new_property_id}).mappings().first()
+    created_property = db.execute(text(sql), {"property_id": new_property_id}).mappings().first()
     property_details = PropertyOut(**created_property)
 
     return {"message" : "property created successfully","property": property_details}
@@ -94,7 +94,7 @@ def get_all_properties(
     for row in result.mappings():
         property = PropertyOut(
             **row,
-            owner=build_user_out(row, "owner_"),
+            seller=build_user_out(row, "seller_"),
             realtor=build_user_out(row, "realtor_")
         )
         properties.append(property)
@@ -124,13 +124,13 @@ def get_property_by_id(
 
     property = PropertyOut(
         **row,
-        owner=build_user_out(row, "owner_"),
+        seller=build_user_out(row, "seller_"),
         realtor=build_user_out(row, "realtor_")
     )
     return property
 
-@router.post("/my-listings")
-async def my_listings(db: Session = Depends(database.get_db), current_user: User = Depends(get_current_user)):
+@router.post("/my-properties")
+async def my_properties(db: Session = Depends(database.get_db), current_user: User = Depends(get_current_user)):
     properties = db.query(Property).filter(Property.realtor_id == current_user.user_id).all()
     if not properties:
         return {"message": "No Properties Found"}
@@ -155,8 +155,8 @@ async def my_listings(db: Session = Depends(database.get_db), current_user: User
             "price": prop.price,
             "bedrooms": prop.bedrooms,
             "bathrooms": prop.bathrooms,
-            "listing_agent_commission":prop.listing_agent_commission,
-            "buyer_agent_commission":prop.buyer_agent_commission,
+            "property_realtor_commission":prop.property_realtor_commission,
+            "buyer_realtor_commission":prop.buyer_realtor_commission,
             "area_sqft": prop.area_sqft,
             "images": images,  
         })
@@ -174,8 +174,8 @@ async def upload_property(
     property_type: str = Form(...),
     bedrooms: int = Form(...),
     bathrooms: float = Form(...),
-    listing_agent_commission: float = Form(...),
-    buyer_agent_commission: float = Form(...),
+    property_realtor_commission: float = Form(...),
+    buyer_realtor_commission: float = Form(...),
     area_sqft: int = Form(...),
     lot_size_sqft: int = Form(...),
     year_built: int = Form(...),
@@ -183,14 +183,14 @@ async def upload_property(
     db: Session = Depends(database.get_db),
     current_user: User = Depends(get_current_user)
 ):
-    if current_user.role != "agent": # type: ignore
+    if current_user.role != "realtor": # type: ignore
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="You are not authorized to upload a property. Agent role required."
+            detail="You are not authorized to upload a property. Realtor role required."
         )
 
     new_property = Property(
-        agent_id=current_user.user_id,
+        realtor_id=current_user.user_id,
         title="New Property",
         description=description,
         price=price,
@@ -201,8 +201,8 @@ async def upload_property(
         property_type=property_type,
         bedrooms=bedrooms,
         bathrooms=bathrooms,
-        listing_agent_commission=listing_agent_commission,
-        buyer_agent_commission=buyer_agent_commission,
+        property_realtor_commission=property_realtor_commission,
+        buyer_realtor_commission=buyer_realtor_commission,
         area_sqft=area_sqft,
         lot_size_sqft=lot_size_sqft,
         year_built=year_built,
