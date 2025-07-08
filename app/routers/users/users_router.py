@@ -85,19 +85,8 @@ def get_all_users(
                 phone_number=row["agency_phone_number"],
             )
         user = UserOut(
-            user_id=row["user_id"],
-            first_name=row["first_name"],
-            last_name=row["last_name"],
-            email=row["email"],
-            role=row["role"],
-            phone_number=row["phone_number"],
-            address=row["address"],
-            neighborhood=row["neighborhood"],
-            city=row["city"],
-            county=row["county"],
-            lic_num=row["lic_num"],
-            agency=agency,
-            is_active=row["is_active"],
+            **row,
+            agency=agency
         )
         users.append(user)
     return users
@@ -127,19 +116,8 @@ def get_user_by_id(
         )
 
     user = UserOut(
-        user_id=row["user_id"],
-        first_name=row["first_name"],
-        last_name=row["last_name"],
-        email=row["email"],
-        role=row["role"],
-        phone_number=row["phone_number"],
-        address=row["address"],
-        neighborhood=row["neighborhood"],
-        city=row["city"],
-        county=row["county"],
-        lic_num=row["lic_num"],
-        agency=agency,
-        is_active=row["is_active"],
+        **row,
+        agency=agency
     )
 
     return user

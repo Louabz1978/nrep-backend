@@ -26,8 +26,8 @@ class User(Base):
 
     # Relationships
     agency = relationship("Agency",back_populates="users",foreign_keys=[agency_id])
-    properties = relationship("Property", back_populates="owner", foreign_keys="Property.owner_id")
-    agent_properties = relationship("Property", back_populates="agent", foreign_keys="Property.agent_id")
+    properties = relationship("Property", back_populates="owner", foreign_keys="Property.seller_id")
+    realtor_properties = relationship("Property", back_populates="realtor", foreign_keys="Property.realtor_id")
     licenses = relationship("License", back_populates="user", uselist=False)
     favorites = relationship("Favorite", back_populates="user")
     brokered_agencies = relationship("Agency", back_populates="broker", foreign_keys="Agency.broker_id")
