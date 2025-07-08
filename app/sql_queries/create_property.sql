@@ -1,6 +1,6 @@
 INSERT INTO PROPERTIES (
-    owner_id,
-    agent_id,
+    seller_id,
+    realtor_id,
     address,
     neighborhood,
     city,
@@ -11,7 +11,7 @@ INSERT INTO PROPERTIES (
     floor,
     bedrooms,
     bathrooms,
-    listing_agent_commission,
+    property_agent_commission,
     buyer_agent_commission,
     area_space,
     year_built,
@@ -23,8 +23,8 @@ INSERT INTO PROPERTIES (
     image_url 
 )
 VALUES(
-    :owner_id,
-    :agent_id,
+    :seller_id,
+    :realtor_id,
     :address,
     :neighborhood,
     :city,
@@ -35,7 +35,7 @@ VALUES(
     :floor,
     :bedrooms,
     :bathrooms,
-    :listing_agent_commission,
+    :property_agent_commission,
     :buyer_agent_commission,
     :area_space,
     :year_built,

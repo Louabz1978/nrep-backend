@@ -18,92 +18,92 @@ from .property_create import PropertyCreate
 from .property_out import PropertyOut
 
 router = APIRouter(
-    prefix="/listing",
+    prefix="/property",
     tags=["Properties"]
 )
 
-# Defines a POST HTTP endpoint at the path '/listing'
-# Creates a new property listing
-# Returns HTTP 201 Created with a JSON message confirming success and the new_listing_id
+# Defines a POST HTTP endpoint at the path '/property'
+# Creates a new property property
+# Returns HTTP 201 Created with a JSON message confirming success and the new_property_id
 # Raises HTTP 403 Forbidden if the user is not authorized (admin, broker, or realtor)
 # Raises HTTP 400 Bad Request if:
-#   - The user role is 'realtor' and agent_id is missing, invalid, or not a realtor
-#   - The owner_id does not exist
+#   - The user role is 'realtor' and realtor_id is missing, invalid, or not a realtor
+#   - The seller_id does not exist
 #   - The specified owner is not a seller
 @router.post("", status_code=status.HTTP_201_CREATED)
-def create_listing(
-    listing: PropertyCreate,
+def create_property(
+    property: PropertyCreate,
     db: Session = Depends(database.get_db),
     current_user: User = Depends(get_current_user)
 ):
     if current_user.role not in ("admin", "broker", "realtor"):
         raise HTTPException(status_code=403, detail="Not authorized")
     
-    #validate agent_id
+    #validate realtor_id
 
-    agent = listing.agent_id
+    realtor = property.realtor_id
     if current_user.role != "realtor":
-        if agent is None:
-            raise HTTPException(status_code=400, detail="agent_id is required")
+        if realtor is None:
+            raise HTTPException(status_code=400, detail="realtor_id is required")
         
         sql = load_sql("get_user_by_id.sql")
-        result = db.execute(text(sql), {"user_id": agent})
+        result = db.execute(text(sql), {"user_id": realtor})
         row = result.mappings().first()
         if not row :
-            raise HTTPException(status_code=400, detail="invalid agent_id")
+            raise HTTPException(status_code=400, detail="invalid realtor_id")
         if row["role"] != "realtor":
             raise HTTPException(status_code=400, detail="agent must be realtor")
     else:
-        agent = current_user.user_id
+        realtor = current_user.user_id
 
-    #validate owner_id
+    #validate seller_id
 
     sql = load_sql("get_user_by_id.sql")
-    result = db.execute(text(sql), {"user_id": listing.owner_id})
+    result = db.execute(text(sql), {"user_id": property.seller_id})
     row = result.mappings().first()
     if not row :
         raise HTTPException(status_code=400, detail="invalid seller_id")
     if row["role"] != "seller":
         raise HTTPException(status_code=400, detail="owner must be seller")
 
-    db_listing = Property(
-        owner_id = listing.owner_id,
-        agent_id = agent,
-        address = listing.address,
-        neighborhood = listing.neighborhood,
-        city = listing.city,
-        county = listing.county,
-        description = listing.description,
-        price = listing.price,
-        property_type = listing.property_type,
-        floor = listing.floor,
-        bedrooms = listing.bedrooms,
-        bathrooms = listing.bathrooms,
-        listing_agent_commission = listing.listing_agent_commission,
-        buyer_agent_commission = listing.buyer_agent_commission,
-        area_space = listing.area_space,
-        year_built = listing.year_built,
-        latitude = listing.latitude,
-        longitude = listing.longitude,
-        status = listing.status,
-        listed_date = listing.listed_date,
-        last_updated = listing.last_update,
-        image_url = listing.image_url
+    db_property = Property(
+        seller_id = property.seller_id,
+        realtor_id = realtor,
+        address = property.address,
+        neighborhood = property.neighborhood,
+        city = property.city,
+        county = property.county,
+        description = property.description,
+        price = property.price,
+        property_type = property.property_type,
+        floor = property.floor,
+        bedrooms = property.bedrooms,
+        bathrooms = property.bathrooms,
+        property_agent_commission = property.property_agent_commission,
+        buyer_agent_commission = property.buyer_agent_commission,
+        area_space = property.area_space,
+        year_built = property.year_built,
+        latitude = property.latitude,
+        longitude = property.longitude,
+        status = property.status,
+        listed_date = property.listed_date,
+        last_updated = property.last_update,
+        image_url = property.image_url
     )
 
-    listing_data = {
-        column.name: getattr(db_listing, column.name)
-        for column in db_listing.__table__.columns
+    property_data = {
+        column.name: getattr(db_property, column.name)
+        for column in db_property.__table__.columns
         if column.name !="property_id"
     }
 
-    sql = load_sql("create_listing.sql")
-    result = db.execute(text(sql), listing_data)
-    new_listing_id = result.scalar()
+    sql = load_sql("create_property.sql")
+    result = db.execute(text(sql), property_data)
+    new_property_id = result.scalar()
 
     db.commit()
 
-    return {"message" : "Listing created successfully", "listing_id": new_listing_id}
+    return {"message" : "Property created successfully", "property_id": new_property_id}
 
 @router.get("", response_model=list[PropertyOut], status_code=status.HTTP_200_OK)
 def get_all_properties(
@@ -121,19 +121,19 @@ def get_all_properties(
         property = PropertyOut(
             **row,
             owner=build_user_out(row, "owner_"),
-            agent=build_user_out(row, "agent_")
+            realtor=build_user_out(row, "realtor_")
         )
         properties.append(property)
     return properties
 
-# Defines a GET HTTP endpoint at the path '/listing/{listing_id}'
-# GET the resource identified by 'listing_id'
+# Defines a GET HTTP endpoint at the path '/property/{property_id}'
+# GET the resource identified by 'property_id'
 # Returns HTTP status code 200 with a JSON PropertyOut
 # Raises HTTP 403 Forbidden if the user is not authorized as admin
-# Raises HTTP 404 Not Found if the listing does not exist
-@router.get("/{listing_id}", response_model=PropertyOut, status_code=status.HTTP_200_OK)
-def get_listing_by_id(
-    listing_id: int, 
+# Raises HTTP 404 Not Found if the property does not exist
+@router.get("/{property_id}", response_model=PropertyOut, status_code=status.HTTP_200_OK)
+def get_property_by_id(
+    property_id: int, 
     db: Session = Depends(database.get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -141,23 +141,23 @@ def get_listing_by_id(
     if current_user.role != "admin" and current_user.role != "broker" and current_user.role != "realtor":
         raise HTTPException(status_code=403, detail="Not authorized")
     
-    sql = load_sql("get_listing_by_id.sql")
-    result = db.execute(text(sql), {"listing_id": listing_id})
+    sql = load_sql("get_property_by_id.sql")
+    result = db.execute(text(sql), {"property_id": property_id})
     row = result.mappings().first()
 
     if row is None:
-        raise HTTPException(status_code=404, detail="Listing not found")
+        raise HTTPException(status_code=404, detail="Property not found")
 
     property = PropertyOut(
         **row,
         owner=build_user_out(row, "owner_"),
-        agent=build_user_out(row, "agent_")
+        realtor=build_user_out(row, "realtor_")
     )
     return property
 
 @router.post("/my-listings")
 async def my_listings(db: Session = Depends(database.get_db), current_user: User = Depends(get_current_user)):
-    properties = db.query(Property).filter(Property.agent_id == current_user.user_id).all()
+    properties = db.query(Property).filter(Property.realtor_id == current_user.user_id).all()
     if not properties:
         return {"message": "No Properties Found"}
 
@@ -264,28 +264,28 @@ async def upload_property(
 
     return {"message": "Property listed successfully", "property_id": new_property.property_id, "images": image_paths}
 
-# Defines a DELETE HTTP endpoint at the path '/listing/{listing_id}'
-# Deletes the resource identified by 'listing_id'
+# Defines a DELETE HTTP endpoint at the path '/property/{property_id}'
+# Deletes the resource identified by 'property_id'
 # Returns HTTP status code 204 with a JSON message confirming successful deletion
 # Raises HTTP 403 Forbidden if the user is not authorized as admin
-# Raises HTTP 404 Not Found if the listing does not exist
-@router.delete("/{listing_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_listing(
-    listing_id: int,
+# Raises HTTP 404 Not Found if the property does not exist
+@router.delete("/{property_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_property(
+    property_id: int,
     db: Session = Depends(database.get_db),
     current_user: User = Depends(get_current_user)
 ):
     if current_user.role != "admin":
         raise HTTPException(status_code=403, detail="Not authorized")
 
-    sql = load_sql("get_listing_by_id.sql")
-    result = db.execute(text(sql), {"listing_id": listing_id})
-    listing = result.mappings().first()
-    if not listing:
-        raise HTTPException(status_code=404, detail="listing not found")
+    sql = load_sql("get_property_by_id.sql")
+    result = db.execute(text(sql), {"property_id": property_id})
+    property = result.mappings().first()
+    if not property:
+        raise HTTPException(status_code=404, detail="Property not found")
 
-    delete_sql = load_sql("delete_listing.sql")
-    db.execute(text(delete_sql), {"property_id": listing_id})
+    delete_sql = load_sql("delete_property.sql")
+    db.execute(text(delete_sql), {"property_id": property_id})
     
     db.commit()
-    return {"message": "listing deleted successfully"}
+    return {"message": "Property deleted successfully"}

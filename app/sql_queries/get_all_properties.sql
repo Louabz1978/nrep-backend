@@ -17,25 +17,25 @@
         user_agency.name AS owner_agency_name,
         user_agency.phone_number AS owner_agency_phone_number,
 
-        agent.user_id AS agent_user_id,
-        agent.first_name AS agent_first_name,
-        agent.last_name AS agent_last_name,
-        agent.email AS agent_email,
-        agent.phone_number AS agent_phone_number,
-        agent.address AS agent_address,
-        agent.neighborhood AS agent_neighborhood,
-        agent.city AS agent_city,
-        agent.county AS agent_county,
-        agent.lic_num AS agent_lic_num,
-        agent.role AS agent_role,
-        agent.is_active AS agent_is_active,
-        agent_agencies.agency_id AS agent_agency_id,
-        agent_agencies.name AS agent_agency_name,
-        agent_agencies.phone_number AS agent_agency_phone_number
+        agent.user_id AS realtor_user_id,
+        agent.first_name AS realtor_first_name,
+        agent.last_name AS realtor_last_name,
+        agent.email AS realtor_email,
+        agent.phone_number AS realtor_phone_number,
+        agent.address AS realtor_address,
+        agent.neighborhood AS realtor_neighborhood,
+        agent.city AS realtor_city,
+        agent.county AS realtor_county,
+        agent.lic_num AS realtor_lic_num,
+        agent.role AS realtor_role,
+        agent.is_active AS realtor_is_active,
+        agent_agencies.agency_id AS realtor_agency_id,
+        agent_agencies.name AS realtor_agency_name,
+        agent_agencies.phone_number AS realtor_agency_phone_number
 
     FROM properties p
-    LEFT JOIN users owner ON p.owner_id = owner.user_id
+    LEFT JOIN users owner ON p.seller_id = owner.user_id
     LEFT JOIN agencies user_agency ON owner.agency_id = user_agency.agency_id
 
-    LEFT JOIN users agent ON p.agent_id = agent.user_id
+    LEFT JOIN users agent ON p.realtor_id = agent.user_id
     LEFT JOIN agencies agent_agencies ON agent.agency_id = agent_agencies.agency_id
