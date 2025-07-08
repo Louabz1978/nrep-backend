@@ -36,7 +36,7 @@ def create_property(
     db: Session = Depends(database.get_db),
     current_user: User = Depends(get_current_user)
 ):
-    if current_user.role not in ("admin", "broker", "realtor"):
+    if current_user.role not in ("broker", "realtor"):
         raise HTTPException(status_code=403, detail="Not authorized")
     
     #validate realtor_id
@@ -84,7 +84,7 @@ def get_all_properties(
     db: Session = Depends(database.get_db),
     current_user: User = Depends(get_current_user)
 ):
-    if current_user.role != "admin" and current_user.role != "broker" and current_user.role != "realtor":
+    if current_user.role not in ("admin", "broker", "realtor"):
         raise HTTPException(status_code=403, detail="Not authorized")
     
     sql = load_sql("get_all_properties.sql")
@@ -112,7 +112,7 @@ def get_property_by_id(
     current_user: User = Depends(get_current_user),
 ):
     
-    if current_user.role != "admin" and current_user.role != "broker" and current_user.role != "realtor":
+    if current_user.role not in ("admin", "broker", "realtor"):
         raise HTTPException(status_code=403, detail="Not authorized")
     
     sql = load_sql("get_property_by_id.sql")

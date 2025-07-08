@@ -27,7 +27,7 @@ def create_user(
     db: Session = Depends(database.get_db),
     current_user: User = Depends(get_current_user)
 ):
-    if current_user.role != "admin":
+    if current_user.role not in ("admin", "broker", "realtor"):
         raise HTTPException(status_code=403, detail="Not authorized")
 
     # Check if email exists
