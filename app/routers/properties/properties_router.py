@@ -73,9 +73,9 @@ def create_property(
 
     sql = load_sql("get_listing_by_id.sql")
     created_property = db.execute(text(sql), {"listing_id": new_property_id}).mappings().first()
-    propery_details = PropertyOut(**created_property)
+    property_details = PropertyOut(**created_property)
 
-    return {"message" : "property created successfully","property": propery_details}
+    return {"message" : "property created successfully","property": property_details}
 
 # Defines a GET HTTP endpoint at the path '/listing/{listing_id}'
 # GET the resource identified by 'listing_id'
