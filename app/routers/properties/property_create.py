@@ -23,7 +23,7 @@ class PropertyCreate(BaseModel):
     longitude: float
     status: str
     listed_date: date
-    last_update: datetime
+    last_updated: datetime
     image_url: Optional[str]
 
     @model_validator(mode='before')

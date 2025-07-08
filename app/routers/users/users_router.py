@@ -31,50 +31,38 @@ def create_user(
         raise HTTPException(status_code=403, detail="Not authorized")
 
     # Check if email exists
-    result = db.execute(text('SELECT 1 FROM USERS WHERE email = :email'), {"email": user.email})
-    row = result.mappings().first()
-    if row:
+    result = db.execute(text('SELECT 1 FROM USERS WHERE email = :email'), {"email": user.email}).mappings().first()
+    if result:
         raise HTTPException(status_code=400, detail="Email already exists")
 
     # Validate agency only if realtor
+    agency_details = None
     if user.role == 'realtor':
         sql = load_sql("get_agency_by_id.sql")
-        result = db.execute(text(sql), {"agency_id": user.agency_id})
-        row = result.mappings().first()
-        if not row:
+        agency_details = db.execute(text(sql), {"agency_id": user.agency_id}).mappings().first()
+        if not agency_details:
             raise HTTPException(status_code=400, detail="Invalid agency_id")
 
     hashed_password = bcrypt.hash(user.password)
 
-    db_user = User(
-        first_name=user.first_name,
-        last_name=user.last_name,
-        email=user.email,
-        password_hash=hashed_password,
-        role=user.role,
-        phone_number=user.phone_number,
-        address=user.address,
-        neighborhood=user.neighborhood,
-        city=user.city,
-        county=user.county,
-        lic_num=user.lic_num,
-        agency_id=user.agency_id,
-        is_active=True
-    )
-
-    user_data = {
-        column.name: getattr(db_user, column.name)
-        for column in db_user.__table__.columns
-        if column.name !="user_id"
-    }
+    db_user = user.model_dump()
+    db_user["password_hash"] = hashed_password
+    del db_user["password"]
 
     sql = load_sql("create_user.sql")
-    result = db.execute(text(sql), user_data)
+    result = db.execute(text(sql), db_user)
     new_user_id = result.scalar()
 
     db.commit()
 
-    return {"message": "User created successfully", "user_id": new_user_id}
+    sql = load_sql("get_user_by_id.sql")
+    created_user = db.execute(text(sql), {"user_id": new_user_id}).mappings().first()
+    agency = None 
+    if created_user["agency_id"]:
+        agency = AgencyOut(**agency_details, name = agency_details["agency_name"])
+    user_details = UserOut(**created_user, agency = agency)
+
+    return {"message": "User created successfully", "user": user_details}
 
 @router.get("", response_model=List[UserOut], status_code=status.HTTP_200_OK)
 def get_all_users(

@@ -31,8 +31,8 @@ router = APIRouter(
 #   - The owner_id does not exist
 #   - The specified owner is not a seller
 @router.post("", status_code=status.HTTP_201_CREATED)
-def create_listing(
-    listing: PropertyCreate,
+def create_property(
+    property: PropertyCreate,
     db: Session = Depends(database.get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -40,70 +40,42 @@ def create_listing(
         raise HTTPException(status_code=403, detail="Not authorized")
     
     #validate agent_id
-
-    agent = listing.agent_id
+    agent = property.agent_id
     if current_user.role != "realtor":
         if agent is None:
             raise HTTPException(status_code=400, detail="agent_id is required")
         
         sql = load_sql("get_user_by_id.sql")
-        result = db.execute(text(sql), {"user_id": agent})
-        row = result.mappings().first()
-        if not row :
+        result = db.execute(text(sql), {"user_id": agent}).mappings().first()
+        if not result :
             raise HTTPException(status_code=400, detail="invalid agent_id")
-        if row["role"] != "realtor":
+        if result["role"] != "realtor":
             raise HTTPException(status_code=400, detail="agent must be realtor")
     else:
         agent = current_user.user_id
 
     #validate owner_id
-
     sql = load_sql("get_user_by_id.sql")
-    result = db.execute(text(sql), {"user_id": listing.owner_id})
-    row = result.mappings().first()
-    if not row :
+    result = db.execute(text(sql), {"user_id": property.owner_id}).mappings().first()
+    if not result :
         raise HTTPException(status_code=400, detail="invalid seller_id")
-    if row["role"] != "seller":
+    if result["role"] != "seller":
         raise HTTPException(status_code=400, detail="owner must be seller")
 
-    db_listing = Property(
-        owner_id = listing.owner_id,
-        agent_id = agent,
-        address = listing.address,
-        neighborhood = listing.neighborhood,
-        city = listing.city,
-        county = listing.county,
-        description = listing.description,
-        price = listing.price,
-        property_type = listing.property_type,
-        floor = listing.floor,
-        bedrooms = listing.bedrooms,
-        bathrooms = listing.bathrooms,
-        listing_agent_commission = listing.listing_agent_commission,
-        buyer_agent_commission = listing.buyer_agent_commission,
-        area_space = listing.area_space,
-        year_built = listing.year_built,
-        latitude = listing.latitude,
-        longitude = listing.longitude,
-        status = listing.status,
-        listed_date = listing.listed_date,
-        last_updated = listing.last_update,
-        image_url = listing.image_url
-    )
-
-    listing_data = {
-        column.name: getattr(db_listing, column.name)
-        for column in db_listing.__table__.columns
-        if column.name !="property_id"
-    }
+    db_property = property.model_dump()
+    db_property["agent_id"] = agent
 
     sql = load_sql("create_listing.sql")
-    result = db.execute(text(sql), listing_data)
-    new_listing_id = result.scalar()
+    result = db.execute(text(sql), db_property)
+    new_property_id = result.scalar()
 
     db.commit()
 
-    return {"message" : "Listing created successfully", "listing_id": new_listing_id}
+    sql = load_sql("get_listing_by_id.sql")
+    created_property = db.execute(text(sql), {"listing_id": new_property_id}).mappings().first()
+    propery_details = PropertyOut(**created_property)
+
+    return {"message" : "property created successfully","property": propery_details}
 
 # Defines a GET HTTP endpoint at the path '/listing/{listing_id}'
 # GET the resource identified by 'listing_id'
