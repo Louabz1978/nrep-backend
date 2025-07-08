@@ -29,37 +29,25 @@ def create_agency(
     # Validate broker_id if provided
     if agency.broker_id:
         sql = load_sql("get_user_by_id.sql")
-        result = db.execute(text(sql), {"user_id" : agency.broker_id})
-        broker = result.mappings().first()
+        broker = db.execute(text(sql), {"user_id" : agency.broker_id}).mappings().first()
         if not broker:
             raise HTTPException(status_code=400, detail="Broker not found")
         if broker.role != "broker":
             raise HTTPException(status_code=400, detail="Assigned broker must have role 'broker'")
 
-    db_agency = Agency(
-        name=agency.name,
-        email=agency.email,
-        phone_number=agency.phone_number,
-        address=agency.address,
-        neighborhood=agency.neighborhood,
-        city=agency.city,
-        county=agency.county,
-        broker_id=agency.broker_id,
-    )
-
-    agency_data = {
-        column.name: getattr(db_agency, column.name)
-        for column in db_agency.__table__.columns
-        if column.name !="agency_id"
-    }
+    db_agency = agency.model_dump()
 
     sql = load_sql("create_agency.sql")
-    result = db.execute(text(sql), agency_data)
+    result = db.execute(text(sql), db_agency)
     new_agency_id = result.scalar()
 
     db.commit()
 
-    return {"message": "Agency created successfully", "agency_id": new_agency_id}
+    sql = load_sql("get_agency_by_id.sql")
+    created_agency = db.execute(text(sql), {"agency_id": new_agency_id}).mappings().first()
+    agency_details = AgencyOut(**created_agency, name = created_agency["agency_name"])
+
+    return {"message": "Agency created successfully", "agency": agency_details}
 
 @router.get("", response_model=List[AgencyOut], status_code=status.HTTP_200_OK)
 def get_all_agencies(

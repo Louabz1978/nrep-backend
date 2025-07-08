@@ -40,70 +40,44 @@ def create_property(
         raise HTTPException(status_code=403, detail="Not authorized")
     
     #validate realtor_id
-
     realtor = property.realtor_id
+
     if current_user.role != "realtor":
         if realtor is None:
             raise HTTPException(status_code=400, detail="realtor_id is required")
         
         sql = load_sql("get_user_by_id.sql")
-        result = db.execute(text(sql), {"user_id": realtor})
-        row = result.mappings().first()
-        if not row :
+        result = db.execute(text(sql), {"user_id": realtor}).mappings().first()
+        if not result :
             raise HTTPException(status_code=400, detail="invalid realtor_id")
-        if row["role"] != "realtor":
+        if result["role"] != "realtor":
             raise HTTPException(status_code=400, detail="agent must be realtor")
     else:
         realtor = current_user.user_id
 
     #validate seller_id
-
     sql = load_sql("get_user_by_id.sql")
-    result = db.execute(text(sql), {"user_id": property.seller_id})
-    row = result.mappings().first()
-    if not row :
+    result = db.execute(text(sql), {"user_id": property.seller_id}).mappings().first()
+    if not result :
         raise HTTPException(status_code=400, detail="invalid seller_id")
-    if row["role"] != "seller":
+    if result["role"] != "seller":
         raise HTTPException(status_code=400, detail="owner must be seller")
 
-    db_property = Property(
-        seller_id = property.seller_id,
-        realtor_id = realtor,
-        address = property.address,
-        neighborhood = property.neighborhood,
-        city = property.city,
-        county = property.county,
-        description = property.description,
-        price = property.price,
-        property_type = property.property_type,
-        floor = property.floor,
-        bedrooms = property.bedrooms,
-        bathrooms = property.bathrooms,
-        property_agent_commission = property.property_agent_commission,
-        buyer_agent_commission = property.buyer_agent_commission,
-        area_space = property.area_space,
-        year_built = property.year_built,
-        latitude = property.latitude,
-        longitude = property.longitude,
-        status = property.status,
-        listed_date = property.listed_date,
-        last_updated = property.last_update,
-        image_url = property.image_url
-    )
-
-    property_data = {
-        column.name: getattr(db_property, column.name)
-        for column in db_property.__table__.columns
-        if column.name !="property_id"
-    }
+    db_property = property.model_dump()
+    db_property["realtor_id"] = realtor
 
     sql = load_sql("create_property.sql")
-    result = db.execute(text(sql), property_data)
+    result = db.execute(text(sql), db_property)
     new_property_id = result.scalar()
 
     db.commit()
 
-    return {"message" : "Property created successfully", "property_id": new_property_id}
+    sql = load_sql("get_property_by_id.sql")
+    created_property = db.execute(text(sql), {"listing_id": new_property_id}).mappings().first()
+    property_details = PropertyOut(**created_property)
+
+    return {"message" : "property created successfully","property": property_details}
+
 
 @router.get("", response_model=list[PropertyOut], status_code=status.HTTP_200_OK)
 def get_all_properties(
