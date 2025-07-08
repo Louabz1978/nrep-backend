@@ -3,8 +3,8 @@ from datetime import date, datetime
 from typing import Optional
 
 class PropertyCreate(BaseModel):
-    owner_id: int
-    agent_id: Optional[ int ]
+    seller_id: int
+    realtor_id: Optional[ int ]
     address: str
     neighborhood: str
     city: str
@@ -15,7 +15,7 @@ class PropertyCreate(BaseModel):
     floor: Optional[ int ] = None
     bedrooms: int
     bathrooms: float
-    listing_agent_commission: float
+    property_agent_commission: float
     buyer_agent_commission: float
     area_space: int
     year_built: int
@@ -28,18 +28,18 @@ class PropertyCreate(BaseModel):
 
     @model_validator(mode='before')
     def validate_roles(cls, values):
-        agent_id = values.get('agent_id')
-        owner_id = values.get('owner_id')
-        # Treat 0 as no agent_id provided
-        if agent_id == 0:
-            agent_id = None
-            values['agent_id'] = None
-        # Treat 0 as no owner_id provided
-        if owner_id == 0:
-            owner_id = None
-            values['owner_id'] = None
-        #owner_id is required
-        if not owner_id:
-            raise ValueError("owner_id is required")
+        realtor_id = values.get('realtor_id')
+        seller_id = values.get('seller_id')
+        # Treat 0 as no realtor_id provided
+        if realtor_id == 0:
+            realtor_id = None
+            values['realtor_id'] = None
+        # Treat 0 as no seller_id provided
+        if seller_id == 0:
+            seller_id = None
+            values['seller_id'] = None
+        #seller_id is required
+        if not seller_id:
+            raise ValueError("seller_id is required")
 
         return values
