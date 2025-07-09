@@ -9,8 +9,8 @@ class Property(Base):
     __tablename__ = "properties"
 
     property_id: Mapped[int] = mapped_column(primary_key=True, index=True, autoincrement=True)
-    owner_id: Mapped[int] = mapped_column(ForeignKey("users.user_id"), nullable=False)
-    agent_id: Mapped[int] = mapped_column(ForeignKey("users.user_id"))
+    seller_id: Mapped[int] = mapped_column(ForeignKey("users.user_id"), nullable=False)
+    realtor_id: Mapped[int] = mapped_column(ForeignKey("users.user_id"))
     address: Mapped[str] = mapped_column(String(255))
     neighborhood: Mapped[str] = mapped_column(String(255))
     city: Mapped[str] = mapped_column(String(100))
@@ -21,8 +21,8 @@ class Property(Base):
     floor: Mapped[Optional[int]] = mapped_column(Integer)
     bedrooms: Mapped[int] = mapped_column(Integer)
     bathrooms: Mapped[float] = mapped_column(Float)
-    listing_agent_commission: Mapped[float] = mapped_column(Float)
-    buyer_agent_commission: Mapped[float] = mapped_column(Float)
+    property_realtor_commission: Mapped[float] = mapped_column(Float)
+    buyer_realtor_commission: Mapped[float] = mapped_column(Float)
     area_space: Mapped[int] = mapped_column(Integer)
     year_built: Mapped[int] = mapped_column(Integer)
     latitude: Mapped[float] = mapped_column(Float)
@@ -33,7 +33,7 @@ class Property(Base):
     image_url: Mapped[Optional[str]] = mapped_column(String)
 
     # Relationships
-    owner = relationship("User", back_populates="properties", foreign_keys=[owner_id])
-    agent = relationship("User", back_populates="agent_properties", foreign_keys=[agent_id])
+    seller = relationship("User", back_populates="properties", foreign_keys=[seller_id])
+    realtor = relationship("User", back_populates="realtor_properties", foreign_keys=[realtor_id])
     additional_details = relationship("Additional", back_populates="property", uselist=False)
     favorites = relationship("Favorite", back_populates="property")

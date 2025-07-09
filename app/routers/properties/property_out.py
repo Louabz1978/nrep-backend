@@ -6,8 +6,8 @@ from ..users.user_out import UserOut
 
 class PropertyOut(BaseModel):
     property_id: int
-    owner_id: int
-    agent_id: Optional[int]
+    seller_id: int
+    realtor_id: Optional[int]
     address: str
     neighborhood: str
     city: str
@@ -18,8 +18,8 @@ class PropertyOut(BaseModel):
     floor: Optional[int]
     bedrooms: int
     bathrooms: float
-    listing_agent_commission: float
-    buyer_agent_commission: float
+    property_realtor_commission: float
+    buyer_realtor_commission: float
     area_space: int
     year_built: int
     latitude: float
@@ -30,5 +30,5 @@ class PropertyOut(BaseModel):
     image_url: Optional[str]
 
     # Relationships
-    owner: Optional[UserOut] = None
-    agent: Optional[UserOut] = None
+    seller: Optional[UserOut] = None
+    realtor: Optional[UserOut] = None
