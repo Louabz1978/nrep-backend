@@ -31,3 +31,4 @@ class User(Base):
     licenses = relationship("License", back_populates="user", uselist=False)
     favorites = relationship("Favorite", back_populates="user")
     brokered_agencies = relationship("Agency", back_populates="broker", foreign_keys="Agency.broker_id")
+    roles = relationship("Role", back_populates="user", uselist=False, foreign_keys="Role.user_id")
