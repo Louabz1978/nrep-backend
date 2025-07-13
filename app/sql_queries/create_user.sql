@@ -10,8 +10,7 @@ INSERT INTO USERS (
     city, 
     county, 
     lic_num,
-    agency_id,
-    is_active 
+    agency_id
 )
 VALUES(
     :first_name,
@@ -25,7 +24,6 @@ VALUES(
     :city,
     :county,
     :lic_num,
-    :agency_id,
-    :is_active
+    :agency_id
 )
 RETURNING user_id;
