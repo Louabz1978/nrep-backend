@@ -19,11 +19,12 @@ class User(Base):
     # ForeignKey
     created_by : Mapped[Optional[int]] = mapped_column(ForeignKey("users.user_id"), nullable=False)
     address_id: Mapped[Optional[int]] = mapped_column(ForeignKey("addresses.address_id"), nullable=True)
+    role_id: Mapped[Optional[int]] = mapped_column(ForeignKey("roles.roles_id"), nullable=True)
 
     # Relationships
     creator = relationship("User", remote_side=[user_id], backref="created_users")
 
-    roles = relationship("Role", back_populates="user", uselist=False)
+    roles = relationship("Role", back_populates="user", foreign_keys=[role_id], uselist=False)
 
     licenses = relationship("License", back_populates="user", uselist=False)
 
