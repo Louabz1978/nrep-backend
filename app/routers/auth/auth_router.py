@@ -41,6 +41,7 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = 
         print("User found:", user.email)
         print("Stored hash:", user.password_hash)
         print("Password match:", pwd_context.verify(form_data.password, user.password_hash))
+        
     if not user or not pwd_context.verify(form_data.password, user.password_hash):
         raise HTTPException(status_code=400, detail="Incorrect username or password")
 
@@ -50,12 +51,8 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = 
         "last_name": user.last_name,
         "email": user.email,
         "phone_number": user.phone_number,
-        "address":user.address,
-        "neighborhood":user.neighborhood,
-        "city":user.city,
-        "county":user.county,
-        "lic_num": user.lic_num,
-        "role": user.role,
+        "created_at": user.created_at.date().isoformat()
     })
+
     return {"access_token": access_token, "token_type": "bearer"}
 

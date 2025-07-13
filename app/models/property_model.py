@@ -9,8 +9,6 @@ class Property(Base):
     __tablename__ = "properties"
 
     property_id: Mapped[int] = mapped_column(primary_key=True, index=True, autoincrement=True)
-    seller_id: Mapped[int] = mapped_column(ForeignKey("users.user_id"), nullable=False)
-    realtor_id: Mapped[int] = mapped_column(ForeignKey("users.user_id"))
     description: Mapped[str] = mapped_column(Text)
     price: Mapped[int] = mapped_column(Integer)
     property_type: Mapped[Optional[str]] = mapped_column(String(100))
@@ -27,13 +25,16 @@ class Property(Base):
     created_at: Mapped[datetime] = mapped_column(TIMESTAMP, server_default=func.now())
     last_updated: Mapped[datetime] = mapped_column(TIMESTAMP, server_default=func.now(), onupdate=func.now())
     image_url: Mapped[Optional[str]] = mapped_column(String)
+    
+    # ForeignKey
+    created_by : Mapped[Optional[int]] = mapped_column(ForeignKey("users.user_id"), nullable=False)
+    owner_id: Mapped[int] = mapped_column(ForeignKey("users.user_id"), nullable=False)
     address_id: Mapped[int] = mapped_column(ForeignKey("addresses.address_id"), nullable=False)
-    created_by : Mapped[Optional[int]] = mapped_column(ForeignKey("users.user_id"),nullable=False)
 
     # Relationships
-    address = relationship("Address", back_populates="properties")
-    created_user = relationship("User", foreign_keys=[created_by])
+    created_by_user = relationship("User", back_populates="property_created", foreign_keys=[created_by])
+    owner = relationship("User", back_populates="property", foreign_keys=[owner_id])
+
+    address = relationship("Address", back_populates="properties", foreign_keys=[address_id])
     favorites = relationship("Favorite", back_populates="property")
-    seller = relationship("User", back_populates="properties", foreign_keys=[seller_id])
-    realtor = relationship("User", back_populates="realtor_properties", foreign_keys="Property.realtor_id")
     additional_details = relationship("Additional", back_populates="property", uselist=False)

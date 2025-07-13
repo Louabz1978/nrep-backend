@@ -18,9 +18,15 @@ class Address(Base):
     city: Mapped[Optional[str]] = mapped_column(String(255))
     county: Mapped[Optional[str]] = mapped_column(String(255))
     created_at: Mapped[datetime] = mapped_column(TIMESTAMP, server_default=func.now())
-    created_by: Mapped[int] = mapped_column(ForeignKey("users.user_id"), nullable=False)
 
+    # ForeignKey
+    created_by: Mapped[Optional[int]] = mapped_column(ForeignKey("users.user_id"), nullable=False)
 
-    users = relationship("User", back_populates="address")
+    # Relationship
+    created_by_user = relationship("User", back_populates="address_created", foreign_keys=[created_by])
+    user = relationship("User", back_populates="address", foreign_keys="[User.address_id]")
+
+    agencies = relationship("Agency", back_populates="address", uselist=False)
+
     properties = relationship("Property", back_populates="address")
-    agencies = relationship("Agency", back_populates="address")
+    

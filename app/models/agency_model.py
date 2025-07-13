@@ -10,14 +10,18 @@ class Agency(Base):
 
     agency_id: Mapped[int] = mapped_column(primary_key=True, index=True, autoincrement=True)
     name: Mapped[str] = mapped_column(String(255))
-    broker_id: Mapped[Optional[int]] = mapped_column(ForeignKey("users.user_id"), nullable=True)
     email: Mapped[str] = mapped_column(String(255))
     phone_number: Mapped[str] = mapped_column(String(20))
-    address_id: Mapped[int] = mapped_column(ForeignKey("addresses.address_id"), nullable=False)
     created_at: Mapped[datetime] = mapped_column(TIMESTAMP, server_default=func.now())
-    created_by : Mapped[Optional[int]] = mapped_column(ForeignKey("users.user_id"),nullable=True)
     
+    # ForeignKey
+    created_by: Mapped[Optional[int]] = mapped_column(ForeignKey("users.user_id"), nullable=True)
+    broker_id: Mapped[Optional[int]] = mapped_column(ForeignKey("users.user_id"), nullable=True)
+    address_id: Mapped[int] = mapped_column(ForeignKey("addresses.address_id"), nullable=False)
+
     # Relationships
-    broker = relationship("User",foreign_keys=[broker_id])
-    licenses = relationship("License", back_populates="agency")
-    address = relationship("Address", back_populates="agencies")
+    created_by_user = relationship("User", back_populates="agency_created", foreign_keys=[created_by])
+    broker = relationship("User", back_populates="agency_broker", foreign_keys=[broker_id])
+    address = relationship("Address", back_populates="agencies", foreign_keys=[address_id])
+    
+    licenses = relationship("License", back_populates="agency", uselist=False)
