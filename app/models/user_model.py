@@ -9,23 +9,20 @@ class User(Base):
     __tablename__ = "users"
 
     user_id: Mapped[int] = mapped_column(primary_key=True, index=True, autoincrement=True)
-    first_name: Mapped[str] = mapped_column(String(50))
-    last_name: Mapped[str] = mapped_column(String(50))
+    first_name: Mapped[str] = mapped_column(String(50),nullable=False)
+    last_name: Mapped[str] = mapped_column(String(50),nullable=False)
     email: Mapped[str] = mapped_column(String(100), unique=True, nullable=False)
     password_hash: Mapped[str] = mapped_column(String, nullable=False)
-    role: Mapped[str] = mapped_column(String(20))
-    phone_number: Mapped[Optional[str]] = mapped_column(String(20))
-    agency_id: Mapped[Optional[int]] = mapped_column(ForeignKey("agencies.agency_id"), nullable=True, default=None)
-    address: Mapped[Optional[str]] = mapped_column(String(255))
-    neighborhood: Mapped[Optional[str]] = mapped_column(String(255))
-    city: Mapped[Optional[str]] = mapped_column(String(255))
-    county: Mapped[Optional[str]] = mapped_column(String(255))
-    lic_num: Mapped[Optional[str]] = mapped_column(String(100), unique=True, nullable=True)
-    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    phone_number: Mapped[Optional[str]] = mapped_column(String(20),nullable=False) 
+    address_id: Mapped[int] = mapped_column(ForeignKey("addresses.address_id"), nullable=False)
+    created_by : Mapped[Optional[int]] = mapped_column(ForeignKey("users.user_id"),nullable=True)
     created_at: Mapped[datetime] = mapped_column(TIMESTAMP, server_default=func.now())
+    
 
     # Relationships
-    agency = relationship("Agency",back_populates="users",foreign_keys=[agency_id])
+    creator = relationship("User", remote_side=[user_id], back_populates="created_users")
+    created_users = relationship("User", back_populates="creator")
+    address = relationship("Address", back_populates="user")
     properties = relationship("Property", back_populates="seller", foreign_keys="Property.seller_id")
     realtor_properties = relationship("Property", back_populates="realtor", foreign_keys="Property.realtor_id")
     licenses = relationship("License", back_populates="user", uselist=False)
