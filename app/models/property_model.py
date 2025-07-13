@@ -9,12 +9,6 @@ class Property(Base):
     __tablename__ = "properties"
 
     property_id: Mapped[int] = mapped_column(primary_key=True, index=True, autoincrement=True)
-    seller_id: Mapped[int] = mapped_column(ForeignKey("users.user_id"), nullable=False)
-    realtor_id: Mapped[int] = mapped_column(ForeignKey("users.user_id"))
-    address: Mapped[str] = mapped_column(String(255))
-    neighborhood: Mapped[str] = mapped_column(String(255))
-    city: Mapped[str] = mapped_column(String(100))
-    county: Mapped[str] = mapped_column(String(255))
     description: Mapped[str] = mapped_column(Text)
     price: Mapped[int] = mapped_column(Integer)
     property_type: Mapped[Optional[str]] = mapped_column(String(100))
@@ -28,12 +22,19 @@ class Property(Base):
     latitude: Mapped[float] = mapped_column(Float)
     longitude: Mapped[float] = mapped_column(Float)
     status: Mapped[str] = mapped_column(String(20), default="available")
-    listed_date: Mapped[Date] = mapped_column(Date)
+    created_at: Mapped[datetime] = mapped_column(TIMESTAMP, server_default=func.now())
     last_updated: Mapped[datetime] = mapped_column(TIMESTAMP, server_default=func.now(), onupdate=func.now())
     image_url: Mapped[Optional[str]] = mapped_column(String)
+    
+    # ForeignKey
+    created_by : Mapped[Optional[int]] = mapped_column(ForeignKey("users.user_id"), nullable=False)
+    owner_id: Mapped[int] = mapped_column(ForeignKey("users.user_id"), nullable=False)
+    address_id: Mapped[int] = mapped_column(ForeignKey("addresses.address_id"), nullable=False)
 
     # Relationships
-    seller = relationship("User", back_populates="properties", foreign_keys=[seller_id])
-    realtor = relationship("User", back_populates="realtor_properties", foreign_keys=[realtor_id])
-    additional_details = relationship("Additional", back_populates="property", uselist=False)
+    created_by_user = relationship("User", back_populates="property_created", foreign_keys=[created_by])
+    owner = relationship("User", back_populates="property", foreign_keys=[owner_id])
+
+    address = relationship("Address", back_populates="properties", foreign_keys=[address_id])
     favorites = relationship("Favorite", back_populates="property")
+    additional_details = relationship("Additional", back_populates="property", uselist=False)

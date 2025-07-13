@@ -1,6 +1,7 @@
 from pydantic import BaseModel, EmailStr
 from typing import Optional
-
+from datetime import datetime
+from .roles_enum import UserRole
 from ..agencies.agency_out import AgencyOut
 
 class UserOut(BaseModel):
@@ -8,15 +9,15 @@ class UserOut(BaseModel):
     first_name: str
     last_name: str
     email: EmailStr
-    role: str
-    phone_number: Optional[str] = None
-    address: Optional[str] = None
-    neighborhood: Optional[str] = None
-    city: Optional[str] = None
-    county: Optional[str] = None
+    phone_number: str
+    role: UserRole
+
+    address_id: int
+    created_by: int
+    created_at: datetime
+
+    agency_id: Optional[int] = None
     lic_num: Optional[str] = None
-    agency: Optional[AgencyOut]
-    is_active: Optional[bool]
 
     model_config = {
         "from_attributes": True
