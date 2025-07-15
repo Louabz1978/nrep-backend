@@ -69,25 +69,24 @@ def get_all_users(
     db: Session = Depends(database.get_db),
     current_user: User = Depends(get_current_user),
 ):
-    if current_user.role != "admin":
+    role_sql = load_sql("get_user_roles.sql")
+    roles = db.execute(text(role_sql), {"user_id": current_user.user_id}).mappings().first()
+    if roles["admin"] == False and roles["broker"] == False and roles["realtor"] == False:
         raise HTTPException(status_code=403, detail="Not authorized")
 
+    if roles["admin"] == True:
+        role = 'admin'
+    elif roles["broker"] == True:
+        role = 'broker'
+    else:
+        role = 'realtor'
+    
     sql = load_sql("get_all_users.sql")
-    result = db.execute(text(sql))
+    result = db.execute(text(sql), {"user_id": current_user.user_id, "role": role})
 
     users = []
     for row in result.mappings():
-        agency = None
-        if row["agency_id"]:
-            agency = AgencyOut(
-                agency_id=row["agency_id"],
-                name=row["agency_name"],
-                phone_number=row["agency_phone_number"],
-            )
-        user = UserOut(
-            **row,
-            agency=agency
-        )
+        user = UserOut(**row)
         users.append(user)
     return users
 

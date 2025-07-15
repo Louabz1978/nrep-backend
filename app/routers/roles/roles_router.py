@@ -22,10 +22,8 @@ def update_role(
     current_user: User = Depends(get_current_user)
 ):
     
-    user_sql = load_sql("get_user_by_id.sql")
-    cur_user = db.execute(text(user_sql), {"user_id": current_user.user_id}).mappings().first()
     role_sql = load_sql("get_user_roles.sql")
-    roles = db.execute(text(role_sql), {"role_id": cur_user["role_id"]}).mappings().first()
+    roles = db.execute(text(role_sql), {"user_id": current_user.user_id}).mappings().first()
     if roles["admin"] == False:
         raise HTTPException(status_code=403, detail="Not authorized")
     
@@ -38,7 +36,7 @@ def update_role(
     db.execute(
         text(sql), 
         {
-            "role_id": user["role_id"],
+            "user_id": user_id,
             "admin": role_data.admin,
             "broker": role_data.broker,
             "realtor": role_data.realtor,

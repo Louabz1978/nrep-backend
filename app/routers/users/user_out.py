@@ -10,15 +10,11 @@ class UserOut(BaseModel):
     last_name: str
     email: EmailStr
     phone_number: str
-    role: UserRole
-
-    address_id: int
+    address_id: Optional[int]
     created_by: int
     created_at: datetime
-
-    agency_id: Optional[int] = None
-    lic_num: Optional[str] = None
-
+    role_id: int
+    
     model_config = {
         "from_attributes": True
     }
