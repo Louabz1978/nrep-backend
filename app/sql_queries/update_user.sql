@@ -7,9 +7,5 @@ SET
     role = :role,
     phone_number = :phone_number,
     address = :address,
-    neighborhood = :neighborhood,
-    city = :city,
-    county = :county,
-    lic_num = :lic_num,
-    agency_id = :agency_id
+
 WHERE user_id = :user_id;

@@ -137,18 +137,30 @@ def update_user(
     db: Session = Depends(database.get_db),
     current_user: User = Depends(get_current_user)
 ):
-    if current_user.role != "admin":
-        raise HTTPException(status_code=403, detail="Not authorized")
-
-    user = db.query(User).filter(User.user_id == user_id).first()
+    sql = load_sql("get_user_by_id.sql")
+    result = db.execute(text(sql), {"user_id": user_id})
+    user = result.mappings().first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
+  
+    valid=False
+    result = db.execute(text(sql), {"user_id": user["created_by"]})
+    creator = result.mappings().first()
+    if current_user.role == "admin"  : 
+        valid=True
 
-    # Validate agency_id existence if provided
-    if user_data.agency_id is not None:
-        agency = db.query(Agency).filter(Agency.agency_id == user_data.agency_id).first()
-        if not agency:
-            raise HTTPException(status_code=400, detail="Invalid agency_id")
+    elif current_user.role =="realtor" :
+        if current_user.user_id == creator["user_id"] : 
+            valid= True
+     
+    elif current_user.role == "broker" :
+          if current_user.user_id == creator["user_id"] or current_user.user_id==creator["created_by"]: 
+            valid= True
+        
+          
+        
+    if not valid :
+        raise HTTPException(status_code=403, detail="Not authorized")
 
     sql = load_sql("update_user.sql")
 
@@ -163,17 +175,12 @@ def update_user(
             "role": user_data.role,
             "phone_number": user_data.phone_number,
             "address": user_data.address,
-            "neighborhood": user_data.neighborhood,
-            "city": user_data.city,
-            "county": user_data.county,
-            "lic_num": user_data.lic_num,
-            "agency_id": user_data.agency_id,
         }
     )
 
     db.commit()
     
-    return {"message": "User updated successfully", "user_id": user.user_id}
+    return {"message": "User updated successfully", "user_id": user_id}
 
 @router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_user(
