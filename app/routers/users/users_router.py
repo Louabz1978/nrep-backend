@@ -13,6 +13,8 @@ from ...dependencies import get_current_user
 
 from .user_out import UserOut
 from ..agencies.agency_out import AgencyOut
+from ..roles.roles_out import RoleOut
+from ..addresses.address_out import AddressOut
 
 from .user_create import UserCreate
 
@@ -27,40 +29,46 @@ def create_user(
     db: Session = Depends(database.get_db),
     current_user: User = Depends(get_current_user)
 ):
-    if current_user.role not in ("admin", "broker", "realtor"):
+    #authorization check
+    current_user_roles = db.execute(text("select * from roles where roles_id = :roles_id;"),{"roles_id": current_user.role_id}).mappings().first()
+    current_user_role = [key for key,value in current_user_roles.items() if value]
+    user_roles = set(user.role)
+    if not (
+        "admin" in current_user_role
+        or ("broker" in current_user_role and user_roles.issubset({"realtor","buyer","seller","tenant"}))
+        or ("realtor" in current_user_role and user_roles.issubset({"buyer","seller","tenant"}))
+    ):
         raise HTTPException(status_code=403, detail="Not authorized")
-
+    
     # Check if email exists
     result = db.execute(text('SELECT 1 FROM USERS WHERE email = :email'), {"email": user.email}).mappings().first()
     if result:
         raise HTTPException(status_code=400, detail="Email already exists")
 
-    # Validate agency only if realtor
-    agency_details = None
-    if user.role == 'realtor':
-        sql = load_sql("get_agency_by_id.sql")
-        agency_details = db.execute(text(sql), {"agency_id": user.agency_id}).mappings().first()
-        if not agency_details:
-            raise HTTPException(status_code=400, detail="Invalid agency_id")
+    #prepare role insert
+    true_roles = {role.value: True for role in user.role}
+    role_columns = ", ".join(true_roles.keys())
+    role_placeholders = ", ".join([f":{key}" for key in true_roles])
 
+    #prepare user insert
     hashed_password = bcrypt.hash(user.password)
-
-    db_user = user.model_dump()
+    db_user = user.model_dump(exclude={"password", "role"})
     db_user["password_hash"] = hashed_password
-    del db_user["password"]
+    db_user["created_by"] = current_user.user_id
+    params = {**db_user, **true_roles}
 
-    sql = load_sql("create_user.sql")
-    result = db.execute(text(sql), db_user)
-    new_user_id = result.scalar()
-
+    #insert user
+    raw_sql = load_sql("create_user.sql")
+    sql = raw_sql.format(role_columns = role_columns, role_placeholders = role_placeholders)
+    new_user_id = db.execute(text(sql), params).scalar()
     db.commit()
 
+    #fetch user data
     sql = load_sql("get_user_by_id.sql")
     created_user = db.execute(text(sql), {"user_id": new_user_id}).mappings().first()
-    agency = None 
-    if created_user["agency_id"]:
-        agency = AgencyOut(**agency_details, name = agency_details["agency_name"])
-    user_details = UserOut(**created_user, agency = agency)
+    role_fields = ["admin", "broker", "realtor", "buyer", "seller", "tenant"]
+    roles = [role for role in role_fields if created_user[role]]
+    user_details = UserOut(**created_user, role= roles, address=None)
 
     return {"message": "User created successfully", "user": user_details}
 
@@ -86,7 +94,8 @@ def get_all_users(
 
     users = []
     for row in result.mappings():
-        user = UserOut(**row)
+        roles = [role for role in ["admin", "broker", "realtor", "buyer", "seller", "tenant"] if row.get(role)]
+        user = UserOut(**row, role=roles)
         users.append(user)
     return users
 

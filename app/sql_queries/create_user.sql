@@ -1,29 +1,24 @@
+WITH inserted_role AS (
+    INSERT INTO roles ({role_columns})
+    VALUES ({role_placeholders})
+    RETURNING roles_id
+)
 INSERT INTO USERS (
     first_name,
     last_name,
     email,
     password_hash,
-    role,
+    role_id,
     phone_number,
-    address, 
-    neighborhood,
-    city, 
-    county, 
-    lic_num,
-    agency_id
+    created_by
 )
 VALUES(
     :first_name,
     :last_name,
     :email,
     :password_hash,
-    :role,
+    (SELECT roles_id FROM inserted_role),
     :phone_number,
-    :address,
-    :neighborhood,
-    :city,
-    :county,
-    :lic_num,
-    :agency_id
+    :created_by
 )
 RETURNING user_id;

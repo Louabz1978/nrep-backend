@@ -1,5 +1,13 @@
-SELECT *
+SELECT 
+    u.*, 
+    r.admin, 
+    r.broker, 
+    r.realtor,
+    r.buyer,
+    r.seller,
+    r.tenant
 FROM users u
+JOIN roles r ON u.role_id = r.roles_id
 WHERE
     (:role = 'admin')
     OR
