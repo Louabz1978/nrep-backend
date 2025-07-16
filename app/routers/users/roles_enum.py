@@ -6,6 +6,7 @@ class UserRole(str, Enum):
     seller = "seller"
     broker = "broker"
     realtor = "realtor"
+    tenant = "tenant"
 
     model_config = {
         "from_attributes": True

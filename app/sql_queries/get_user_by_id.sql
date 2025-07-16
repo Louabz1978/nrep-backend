@@ -1,7 +1,6 @@
 SELECT
-  u.user_id, u.first_name, u.last_name, u.email, u.role, u.phone_number,
-  u.address, u.neighborhood, u.city, u.county, u.lic_num, u.is_active,
-  a.agency_id AS agency_id, a.name AS agency_name, a.phone_number AS agency_phone_number
+  u.user_id, u.first_name, u.last_name, u.email, u.phone_number, u.role_id, u.address_id, u.created_by, u.created_at,
+  r.admin, r.broker, r.realtor, r.buyer, r.seller , r.tenant
 FROM users u
-LEFT JOIN agencies a ON u.agency_id = a.agency_id
+JOIN roles r ON u.role_id = r.roles_id
 WHERE u.user_id = :user_id;
