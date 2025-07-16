@@ -30,7 +30,7 @@ def create_user(
     current_user: User = Depends(get_current_user)
 ):
     #authorization check
-    role_sql = load_sql("get_usre_role.sql")
+    role_sql = load_sql("get_user_roles.sql")
     current_user_roles = db.execute(text(role_sql), {"user_id": current_user.user_id}).mappings().first()
     current_user_role = [key for key,value in current_user_roles.items() if value]
     user_roles = set(user.role)
