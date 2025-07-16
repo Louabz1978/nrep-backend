@@ -36,7 +36,7 @@ def update_role(
     db.execute(
         text(sql), 
         {
-            "user_id": user_id,
+            "role_id": user["role_id"],
             "admin": role_data.admin,
             "broker": role_data.broker,
             "realtor": role_data.realtor,
