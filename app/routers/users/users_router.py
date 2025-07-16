@@ -17,6 +17,7 @@ from ..roles.roles_out import RoleOut
 from ..addresses.address_out import AddressOut
 
 from .user_create import UserCreate
+from .user_out import UserRole
 
 router = APIRouter(
     prefix="/users",
@@ -105,27 +106,50 @@ def get_user_by_id(
     db: Session = Depends(database.get_db),
     current_user: User = Depends(get_current_user)
 ):
-    if current_user.role != "admin":
-        raise HTTPException(status_code=403, detail="Not authorized")
-
     sql = load_sql("get_user_by_id.sql")
     result = db.execute(text(sql), {"user_id": user_id})
     row = result.mappings().first()
-    
+
     if not row:
         raise HTTPException(status_code=404, detail="User not found")
-    
-    agency = None
-    if row["agency_id"]:
-        agency = AgencyOut(
-            agency_id=row["agency_id"],
-            name=row["agency_name"],
-            phone_number=row["agency_phone_number"],
-        )
+
+    target_user_creator_id = row["created_by"]
+
+    if current_user.roles.admin:
+        pass  # admin can access any user
+
+    elif current_user.user_id == user_id:
+        pass  # user can access their own data
+
+    elif current_user.roles.broker:
+        if target_user_creator_id == current_user.user_id:
+            pass # broker can access users he created
+        else:
+            # broker can access the users that the realtor that her created created
+            realtor_ids = db.execute(
+                text(
+                    "SELECT user_id FROM users WHERE created_by = :broker_id AND role_id IN (SELECT roles_id FROM roles WHERE realtor = TRUE)"
+                ),
+                {"broker_id": current_user.user_id}
+            ).scalars().all()
+
+            if target_user_creator_id not in realtor_ids:
+                raise HTTPException(status_code=403, detail="Not authorized to view this user")
+
+    elif current_user.roles.realtor:
+        if target_user_creator_id == current_user.user_id:
+            pass # realtors can access users that they created
+        else:
+            raise HTTPException(status_code=403, detail="Not authorized to view this user")
+
+    else:
+        raise HTTPException(status_code=403, detail="Not authorized to view this user")
+
+    roles = [role for role in ["admin", "broker", "realtor", "buyer", "seller", "tenant"] if row.get(role)]
 
     user = UserOut(
         **row,
-        agency=agency
+        role=roles
     )
 
     return user
