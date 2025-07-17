@@ -25,6 +25,7 @@ class Property(Base):
     created_at: Mapped[datetime] = mapped_column(TIMESTAMP, server_default=func.now())
     last_updated: Mapped[datetime] = mapped_column(TIMESTAMP, server_default=func.now(), onupdate=func.now())
     image_url: Mapped[Optional[str]] = mapped_column(String)
+    build_year: Mapped[int] = mapped_column(Integer, nullable=False)
     
     # ForeignKey
     created_by : Mapped[Optional[int]] = mapped_column(ForeignKey("users.user_id"), nullable=False)

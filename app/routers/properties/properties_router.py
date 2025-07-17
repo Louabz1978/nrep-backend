@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import text
 
 from app import database
+from app.routers.addresses.address_out import AddressOut
 from ...models.user_model import User
 from ...models.property_model import Property
 from app.utils.out_helper import build_user_out
@@ -112,7 +113,9 @@ def get_property_by_id(
     current_user: User = Depends(get_current_user),
 ):
     
-    if current_user.role not in ("admin", "broker", "realtor"):
+    role_sql = load_sql("get_user_roles.sql")
+    roles = db.execute(text(role_sql), {"user_id": current_user.user_id}).mappings().first()
+    if roles["admin"] == False and roles["broker"] == False and roles["realtor"] == False:
         raise HTTPException(status_code=403, detail="Not authorized")
     
     sql = load_sql("get_property_by_id.sql")
@@ -122,11 +125,19 @@ def get_property_by_id(
     if row is None:
         raise HTTPException(status_code=404, detail="Property not found")
 
+    nested_prefixes = ("owner_", "created_by_", "address_")
+    property_data = {
+        k: v for k, v in row.items()
+        if not any(k.startswith(prefix) for prefix in nested_prefixes)
+    }
+    address_data = {k[len("address_"):]: v for k, v in row.items() if k.startswith("address_")}
     property = PropertyOut(
-        **row,
-        seller=build_user_out(row, "seller_"),
-        realtor=build_user_out(row, "realtor_")
+        **property_data,
+        owner=build_user_out(row, "owner_"),
+        created_by_user=build_user_out(row, "created_by_"),
+        address=AddressOut(**address_data)
     )
+
     return property
 
 @router.post("/my-properties")
@@ -249,7 +260,9 @@ def delete_property(
     db: Session = Depends(database.get_db),
     current_user: User = Depends(get_current_user)
 ):
-    if current_user.role != "admin":
+    role_sql = load_sql("get_user_roles.sql")
+    roles = db.execute(text(role_sql), {"user_id": current_user.user_id}).mappings().first()
+    if roles["admin"] == False:
         raise HTTPException(status_code=403, detail="Not authorized")
 
     sql = load_sql("get_property_by_id.sql")
@@ -258,6 +271,8 @@ def delete_property(
     if not property:
         raise HTTPException(status_code=404, detail="Property not found")
 
+    delete_sql = load_sql("delete_additional.sql")
+    db.execute(text(delete_sql), {"property_id": property_id})
     delete_sql = load_sql("delete_property.sql")
     db.execute(text(delete_sql), {"property_id": property_id})
     
