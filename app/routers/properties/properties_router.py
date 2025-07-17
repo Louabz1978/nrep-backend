@@ -17,6 +17,10 @@ from ...dependencies import get_current_user
 from .property_create import PropertyCreate
 from .property_out import PropertyOut
 
+from ..addresses.address_out import AddressOut
+
+from ..users.user_out import UserOut
+
 router = APIRouter(
     prefix="/property",
     tags=["Properties"]
@@ -84,7 +88,7 @@ def get_all_properties(
     db: Session = Depends(database.get_db),
     current_user: User = Depends(get_current_user)
 ):
-    if current_user.role not in ("admin", "broker", "realtor"):
+    if not current_user.roles.admin and not current_user.roles.broker and not current_user.roles.realtor:
         raise HTTPException(status_code=403, detail="Not authorized")
     
     sql = load_sql("get_all_properties.sql")
@@ -92,10 +96,72 @@ def get_all_properties(
 
     properties = []
     for row in result.mappings():
+        created_by_roles = [
+            role for role in ["admin", "broker", "realtor", "buyer", "seller", "tenant"]
+            if row.get(f"created_by_{role}") is True
+        ]
+
+
+        created_by = UserOut(
+            user_id=row["created_by_user_id"],
+            first_name=row["created_by_first_name"],
+            last_name=row["created_by_last_name"],
+            email=row["created_by_email"],
+            phone_number=row["created_by_phone_number"],
+            role=created_by_roles,
+            created_by=row["created_by_created_by"], 
+            created_at=row["created_by_created_at"] 
+        )
+
+        owner_roles = [
+            role for role in ["admin", "broker", "realtor", "buyer", "seller", "tenant"]
+            if row.get(f"owner_{role}") is True
+        ]
+
+        owner = UserOut(
+            user_id=row["owner_user_id"],
+            first_name=row["owner_first_name"],
+            last_name=row["owner_last_name"],
+            email=row["owner_email"],
+            phone_number=row["owner_phone_number"],
+            role=owner_roles,
+            created_by=row["owner_created_by"],  # from users.created_by
+            created_at=row["owner_created_at"] 
+        )
+            
         property = PropertyOut(
-            **row,
-            seller=build_user_out(row, "seller_"),
-            realtor=build_user_out(row, "realtor_")
+            property_id=row["property_id"],
+            description=row["description"],
+            price=row["price"],
+            property_type=row["property_type"],
+            floor=row["floor"],
+            bedrooms=row["bedrooms"],
+            bathrooms=row["bathrooms"],
+            property_realtor_commission=row["property_realtor_commission"],
+            buyer_realtor_commission=row["buyer_realtor_commission"],
+            area_space=row["area_space"],
+            year_built=row["year_built"],
+            latitude=row["latitude"],
+            longitude=row["longitude"],
+            status=row["status"],
+            created_at=row["created_at"],
+            last_updated=row["last_updated"],
+            image_url=row["image_url"],
+            build_year=row["build_year"],
+            
+            created_by_user=created_by,
+            owner=owner,
+            address= AddressOut (
+                address_id=row["address_id"],
+                address=row["address"],
+                floor=row["floor"],
+                apt=row["apt"],
+                area=row["area"],
+                city=row["city"],
+                county=row["county"],
+                created_at=row["address_created_at"],
+                created_by=row["address_created_by"]
+            )
         )
         properties.append(property)
     return properties
