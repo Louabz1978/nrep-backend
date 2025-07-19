@@ -148,7 +148,6 @@ def get_all_properties(
             created_at=row["created_at"],
             last_updated=row["last_updated"],
             image_url=row["image_url"],
-            build_year=row["build_year"],
             
             created_by_user=created_by,
             owner=owner,

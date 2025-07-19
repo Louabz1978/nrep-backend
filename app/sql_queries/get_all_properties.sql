@@ -17,7 +17,6 @@ SELECT
     p.created_at,
     p.last_updated,
     p.image_url,
-    p.build_year,
 
     -- Created by user fields
     cb.user_id AS created_by_user_id,
