@@ -249,6 +249,70 @@ async def upload_property(
 
     return {"message": "Property listed successfully", "property_id": new_property.property_id, "images": image_paths}
 
+
+@router.put("/properties/{property_id}")
+def update_property(
+    property_id : int ,
+    property_data: PropertyCreate ,
+    db: Session = Depends(database.get_db),
+    current_user: User = Depends(get_current_user)
+):
+    #get property
+    sql = load_sql("get_property_by_id.sql")
+    property = db.execute(text(sql), {"property_id": property_id}).mappings().first()
+    if not property:
+        raise HTTPException( status_code= 404 , detail="property not found")
+    
+    #authorization check
+    role_sql = load_sql("get_user_roles.sql")
+    current_user_roles = db.execute(text(role_sql), {"user_id": current_user.user_id}).mappings().first()
+    current_user_role = [key for key,value in current_user_roles.items() if value]
+    if not (
+        "admin" in current_user_role
+        or ("broker" in current_user_role and (current_user.user_id in [ property["created_by_user_id"], property["created_by_created_by"] ] ) )
+        or ("realtor" in current_user_role and current_user.user_id == property["created_by_user_id"])
+    ):
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    #owner_id check
+    owner = db.execute(text(role_sql), {"user_id": property_data.owner_id}).mappings().first()
+    if not owner:
+        raise HTTPException(status_code=404, detail="Owner not found")
+    if owner["seller"] == False:
+        raise HTTPException(status_code=404, detail="Owner is not a seller")
+
+    #update address
+    if property_data.address :
+        db_property_address = property_data.address.model_dump()
+        db_property_address["address_id"] = property["address_address_id"]
+        sql = load_sql("update_address.sql")
+        row = db.execute(text(sql), db_property_address)
+
+    #update property
+    db_property = property_data.model_dump(exclude={"address"})
+    db_property["property_id"] = property_id
+    sql = load_sql("update_property.sql")
+    updated_property_id = db.execute(text(sql), db_property).scalar()
+    db.commit()
+
+    #fetch property data
+    sql = load_sql("get_property_by_id.sql")
+    row = db.execute(text(sql), {"property_id": updated_property_id}).mappings().first()
+    nested_prefixes = ("owner_", "created_by_", "address_")
+    property_data = {
+        k: v for k, v in row.items()
+        if not any(k.startswith(prefix) for prefix in nested_prefixes)
+    }
+    address_data = {k[len("address_"):]: v for k, v in row.items() if k.startswith("address_")}
+    property_details = PropertyOut(
+        **property_data,
+        owner=build_user_out(row, "owner_"),
+        created_by_user=build_user_out(row, "created_by_"),
+        address=AddressOut(**address_data)
+    )
+
+    return {"message": "Property updated successfully", "property details": property_details}
+
 # Defines a DELETE HTTP endpoint at the path '/property/{property_id}'
 # Deletes the resource identified by 'property_id'
 # Returns HTTP status code 204 with a JSON message confirming successful deletion

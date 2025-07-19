@@ -22,7 +22,6 @@ class PropertyOut(BaseModel):
     created_at: datetime
     last_updated: datetime
     image_url: Optional[str]
-    build_year: int
 
     created_by_user: Optional[UserOut]
     owner: Optional[UserOut]
