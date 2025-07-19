@@ -101,6 +101,27 @@ def get_all_users(
         users.append(user)
     return users
 
+@router.get("/", response_model=UserOut, status_code=status.HTTP_200_OK)
+def get_user_details(
+    db: Session = Depends(database.get_db),
+    current_user: User = Depends(get_current_user)
+):
+    sql = load_sql("get_user_by_id.sql")
+    result = db.execute(text(sql), {"user_id": current_user.user_id})
+    row = result.mappings().first()
+
+    if not row:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    roles = [role for role in ["admin", "broker", "realtor", "buyer", "seller", "tenant"] if row.get(role)]
+
+    user = UserOut(
+        **row,
+        role=roles
+    )
+
+    return user
+
 @router.get("/{user_id}", response_model=UserOut, status_code=status.HTTP_200_OK)
 def get_user_by_id(
     user_id: int,
