@@ -1,45 +1,76 @@
-SELECT 
-    p.*,
-
-    -- Seller fields
-    u1.user_id AS seller_user_id,
-    u1.first_name AS seller_first_name,
-    u1.last_name AS seller_last_name,
-    u1.email AS seller_email,
-    u1.phone_number AS seller_phone_number,
-    u1.address AS seller_address,
-    u1.neighborhood AS seller_neighborhood,
-    u1.city AS seller_city,
-    u1.county AS seller_county,
-    u1.lic_num AS seller_lic_num,
-    u1.role AS seller_role,
-    u1.is_active AS seller_is_active,
-    a1.agency_id AS seller_agency_id,
-    a1.name AS seller_agency_name,
-    a1.phone_number AS seller_agency_phone_number,
-
-    -- Realtor fields
-    u2.user_id AS realtor_user_id,
-    u2.first_name AS realtor_first_name,
-    u2.last_name AS realtor_last_name,
-    u2.email AS realtor_email,
-    u2.phone_number AS realtor_phone_number,
-    u2.address AS realtor_address,
-    u2.neighborhood AS realtor_neighborhood,
-    u2.city AS realtor_city,
-    u2.county AS realtor_county,
-    u2.lic_num AS realtor_lic_num,
-    u2.role AS realtor_role,
-    u2.is_active AS realtor_is_active,
-    a2.agency_id AS realtor_agency_id,
-    a2.name AS realtor_agency_name,
-    a2.phone_number AS realtor_agency_phone_number
+SELECT
+    p.property_id,
+    p.description,
+    p.price,
+    p.property_type,
+    p.floor,
+    p.bedrooms,
+    p.bathrooms,
+    p.property_realtor_commission,
+    p.buyer_realtor_commission,
+    p.area_space,
+    p.year_built,
+    p.latitude,
+    p.longitude,
+    p.status,
+    p.created_at,
+    p.last_updated,
+    p.image_url,
+    p.build_year,
+    
+    -- Owner user fields prefixed with owner_
+    owner.user_id AS owner_user_id,
+    owner.first_name AS owner_first_name,
+    owner.last_name AS owner_last_name,
+    owner.email AS owner_email,
+    owner.phone_number AS owner_phone_number,
+    owner.created_by AS owner_created_by,
+    owner.created_at AS owner_created_at,
+    
+    -- Owner roles prefixed
+    owner_roles.admin AS owner_admin,
+    owner_roles.broker AS owner_broker,
+    owner_roles.realtor AS owner_realtor,
+    owner_roles.buyer AS owner_buyer,
+    owner_roles.seller AS owner_seller,
+    owner_roles.tenant AS owner_tenant,
+    
+    -- Created by user fields prefixed with created_by_
+    creator.user_id AS created_by_user_id,
+    creator.first_name AS created_by_first_name,
+    creator.last_name AS created_by_last_name,
+    creator.email AS created_by_email,
+    creator.phone_number AS created_by_phone_number,
+    creator.created_by AS created_by_created_by,
+    creator.created_at AS created_by_created_at,
+    
+    -- Created by roles prefixed
+    creator_roles.admin AS created_by_admin,
+    creator_roles.broker AS created_by_broker,
+    creator_roles.realtor AS created_by_realtor,
+    creator_roles.buyer AS created_by_buyer,
+    creator_roles.seller AS created_by_seller,
+    creator_roles.tenant AS created_by_tenant,
+    
+    -- Address fields
+    a.address_id AS address_address_id,
+    a.address AS address_address,
+    a.floor AS address_floor,
+    a.apt AS address_apt,
+    a.area AS address_area,
+    a.city AS address_city,
+    a.county AS address_county,
+    a.created_at AS address_created_at,
+    a.created_by AS address_created_by
 
 FROM properties p
-LEFT JOIN users u1 ON p.seller_id = u1.user_id
-LEFT JOIN agencies a1 ON u1.agency_id = a1.agency_id
 
-LEFT JOIN users u2 ON p.realtor_id = u2.user_id
-LEFT JOIN agencies a2 ON u2.agency_id = a2.agency_id
+LEFT JOIN users owner ON p.owner_id = owner.user_id
+LEFT JOIN roles owner_roles ON owner.role_id = owner_roles.roles_id
+
+LEFT JOIN users creator ON p.created_by = creator.user_id
+LEFT JOIN roles creator_roles ON creator.role_id = creator_roles.roles_id
+
+LEFT JOIN addresses a ON p.address_id = a.address_id
 
 WHERE p.property_id = :property_id;

@@ -4,12 +4,12 @@ from typing import Optional
 
 class AddressOut(BaseModel):
     address_id: int
-    address: str
+    address: Optional[str]
     floor: str
-    apt:str
-    area:str
-    city:str
-    county:str
+    apt: str
+    area: str
+    city: Optional[str]
+    county: Optional[str]
     created_at: datetime
     created_by: int
 
