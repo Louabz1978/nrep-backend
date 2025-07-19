@@ -27,14 +27,6 @@ router = APIRouter(
     tags=["Properties"]
 )
 
-# Defines a POST HTTP endpoint at the path '/property'
-# Creates a new property property
-# Returns HTTP 201 Created with a JSON message confirming success and the new_property_id
-# Raises HTTP 403 Forbidden if the user is not authorized (admin, broker, or realtor)
-# Raises HTTP 400 Bad Request if:
-#   - The user role is 'realtor' and realtor_id is missing, invalid, or not a realtor
-#   - The seller_id does not exist
-#   - The specified user is not a seller
 @router.post("", status_code=status.HTTP_201_CREATED)
 def create_property(
     property: PropertyCreate,
@@ -51,7 +43,7 @@ def create_property(
         if realtor is None:
             raise HTTPException(status_code=400, detail="realtor_id is required")
         
-        sql = load_sql("get_user_by_id.sql")
+        sql = load_sql("user/get_user_by_id.sql")
         result = db.execute(text(sql), {"user_id": realtor}).mappings().first()
         if not result :
             raise HTTPException(status_code=400, detail="invalid realtor_id")
@@ -61,7 +53,7 @@ def create_property(
         realtor = current_user.user_id
 
     #validate seller_id
-    sql = load_sql("get_user_by_id.sql")
+    sql = load_sql("user/get_user_by_id.sql")
     result = db.execute(text(sql), {"user_id": property.seller_id}).mappings().first()
     if not result :
         raise HTTPException(status_code=400, detail="invalid seller_id")
@@ -71,13 +63,13 @@ def create_property(
     db_property = property.model_dump()
     db_property["realtor_id"] = realtor
 
-    sql = load_sql("create_property.sql")
+    sql = load_sql("property/create_property.sql")
     result = db.execute(text(sql), db_property)
     new_property_id = result.scalar()
 
     db.commit()
 
-    sql = load_sql("get_property_by_id.sql")
+    sql = load_sql("property/get_property_by_id.sql")
     created_property = db.execute(text(sql), {"property_id": new_property_id}).mappings().first()
     property_details = PropertyOut(**created_property)
 
@@ -92,7 +84,7 @@ def get_all_properties(
     if not current_user.roles.admin and not current_user.roles.broker and not current_user.roles.realtor:
         raise HTTPException(status_code=403, detail="Not authorized")
     
-    sql = load_sql("get_all_properties.sql")
+    sql = load_sql("property/get_all_properties.sql")
     result = db.execute(text(sql))
 
     properties = []
@@ -101,7 +93,6 @@ def get_all_properties(
             role for role in ["admin", "broker", "realtor", "buyer", "seller", "tenant"]
             if row.get(f"created_by_{role}") is True
         ]
-
 
         created_by = UserOut(
             user_id=row["created_by_user_id"],
@@ -164,13 +155,9 @@ def get_all_properties(
             )
         )
         properties.append(property)
+
     return properties
 
-# Defines a GET HTTP endpoint at the path '/property/{property_id}'
-# GET the resource identified by 'property_id'
-# Returns HTTP status code 200 with a JSON PropertyOut
-# Raises HTTP 403 Forbidden if the user is not authorized as admin
-# Raises HTTP 404 Not Found if the property does not exist
 @router.get("/{property_id}", response_model=PropertyOut, status_code=status.HTTP_200_OK)
 def get_property_by_id(
     property_id: int, 
@@ -178,12 +165,12 @@ def get_property_by_id(
     current_user: User = Depends(get_current_user),
 ):
     
-    role_sql = load_sql("get_user_roles.sql")
+    role_sql = load_sql("role/get_user_roles.sql")
     roles = db.execute(text(role_sql), {"user_id": current_user.user_id}).mappings().first()
     if roles["admin"] == False and roles["broker"] == False and roles["realtor"] == False:
         raise HTTPException(status_code=403, detail="Not authorized")
     
-    sql = load_sql("get_property_by_id.sql")
+    sql = load_sql("property/get_property_by_id.sql")
     result = db.execute(text(sql), {"property_id": property_id})
     row = result.mappings().first()
 
@@ -314,31 +301,26 @@ async def upload_property(
 
     return {"message": "Property listed successfully", "property_id": new_property.property_id, "images": image_paths}
 
-# Defines a DELETE HTTP endpoint at the path '/property/{property_id}'
-# Deletes the resource identified by 'property_id'
-# Returns HTTP status code 204 with a JSON message confirming successful deletion
-# Raises HTTP 403 Forbidden if the user is not authorized as admin
-# Raises HTTP 404 Not Found if the property does not exist
 @router.delete("/{property_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_property(
     property_id: int,
     db: Session = Depends(database.get_db),
     current_user: User = Depends(get_current_user)
 ):
-    role_sql = load_sql("get_user_roles.sql")
+    role_sql = load_sql("role/get_user_roles.sql")
     roles = db.execute(text(role_sql), {"user_id": current_user.user_id}).mappings().first()
     if roles["admin"] == False:
         raise HTTPException(status_code=403, detail="Not authorized")
 
-    sql = load_sql("get_property_by_id.sql")
+    sql = load_sql("property/get_property_by_id.sql")
     result = db.execute(text(sql), {"property_id": property_id})
     property = result.mappings().first()
     if not property:
         raise HTTPException(status_code=404, detail="Property not found")
 
-    delete_sql = load_sql("delete_additional.sql")
+    delete_sql = load_sql("additional/delete_additional.sql")
     db.execute(text(delete_sql), {"property_id": property_id})
-    delete_sql = load_sql("delete_property.sql")
+    delete_sql = load_sql("property/delete_property.sql")
     db.execute(text(delete_sql), {"property_id": property_id})
     
     db.commit()

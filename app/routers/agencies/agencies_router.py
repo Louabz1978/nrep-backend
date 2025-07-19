@@ -28,7 +28,7 @@ def create_agency(
 
     # Validate broker_id if provided
     if agency.broker_id:
-        sql = load_sql("get_user_by_id.sql")
+        sql = load_sql("user/get_user_by_id.sql")
         broker = db.execute(text(sql), {"user_id" : agency.broker_id}).mappings().first()
         if not broker:
             raise HTTPException(status_code=400, detail="Broker not found")
@@ -37,13 +37,13 @@ def create_agency(
 
     db_agency = agency.model_dump()
 
-    sql = load_sql("create_agency.sql")
+    sql = load_sql("agency/create_agency.sql")
     result = db.execute(text(sql), db_agency)
     new_agency_id = result.scalar()
 
     db.commit()
 
-    sql = load_sql("get_agency_by_id.sql")
+    sql = load_sql("agency/get_agency_by_id.sql")
     created_agency = db.execute(text(sql), {"agency_id": new_agency_id}).mappings().first()
     agency_details = AgencyOut(**created_agency, name = created_agency["agency_name"])
 
@@ -57,7 +57,7 @@ def get_all_agencies(
     if current_user.role != "admin":
         raise HTTPException(status_code=403, detail="Not authorized")
     
-    sql = load_sql("get_all_agencies.sql")
+    sql = load_sql("agency/get_all_agencies.sql")
     result = db.execute(text(sql))
 
     agencies = []
@@ -79,7 +79,7 @@ def get_agency_by_id(
     if current_user.role != "admin":
         raise HTTPException(status_code=403, detail="Not authorized")
     
-    sql = load_sql("get_agency_by_id.sql")
+    sql = load_sql("agency/get_agency_by_id.sql")
     result = db.execute(text(sql), {"agency_id": agency_id})
     row = result.mappings().first()
     
@@ -112,7 +112,7 @@ def update_agency(
         if not broker or broker.role != "broker":
             raise HTTPException(status_code=400, detail="Invalid broker_id or user is not a broker")
 
-    sql = load_sql("update_agency.sql")
+    sql = load_sql("agency/update_agency.sql")
 
     db.execute(
         text(sql),
@@ -141,13 +141,13 @@ def delete_agency(
     if current_user.role != "admin":
         raise HTTPException(status_code=403, detail="Not authorized")
 
-    sql = load_sql("get_agency_by_id.sql")
+    sql = load_sql("agency/get_agency_by_id.sql")
     result = db.execute(text(sql), {"agency_id": agency_id})
     agency = result.mappings().first()
     if not agency:
         raise HTTPException(status_code=404, detail="Agency not found")
 
-    delete_sql = load_sql("delete_agency.sql")
+    delete_sql = load_sql("agency/delete_agency.sql")
     db.execute(text(delete_sql), {"agency_id": agency_id})
     
     db.commit()

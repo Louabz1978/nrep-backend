@@ -11,7 +11,6 @@ class Address(Base):
 
     address_id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     address: Mapped[Optional[str]] = mapped_column(String(255))
-    # neighborhood: Mapped[Optional[str]] = mapped_column(String(255))
     floor: Mapped[str] = mapped_column(String, nullable=False)
     apt: Mapped[str] = mapped_column(String, nullable=False)
     area: Mapped[str] = mapped_column(String, nullable=False)
