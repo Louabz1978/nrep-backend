@@ -22,17 +22,17 @@ def update_role(
     current_user: User = Depends(get_current_user)
 ):
     
-    role_sql = load_sql("get_user_roles.sql")
+    role_sql = load_sql("role/get_user_roles.sql")
     roles = db.execute(text(role_sql), {"user_id": current_user.user_id}).mappings().first()
     if roles["admin"] == False:
         raise HTTPException(status_code=403, detail="Not authorized")
     
-    user_sql = load_sql("get_user_by_id.sql")
+    user_sql = load_sql("user/get_user_by_id.sql")
     user = db.execute(text(user_sql), {"user_id": user_id}).mappings().first()
     if user is None:
         raise HTTPException(status_code=404, detail="User not found")
     
-    sql = load_sql("update_role.sql")
+    sql = load_sql("role/update_role.sql")
     db.execute(
         text(sql), 
         {
