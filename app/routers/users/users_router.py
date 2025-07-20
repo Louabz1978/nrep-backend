@@ -17,6 +17,7 @@ from ..roles.roles_out import RoleOut
 from ..addresses.address_out import AddressOut
 
 from .user_create import UserCreate
+from .user_update import UserUpdate
 from .user_out import UserRole
 
 router = APIRouter(
@@ -179,41 +180,65 @@ def get_user_by_id(
 @router.put("/{user_id}",status_code=status.HTTP_200_OK)
 def update_user(
     user_id: int,
-    user_data: UserCreate,
+    user_data: UserUpdate,
     db: Session = Depends(database.get_db),
     current_user: User = Depends(get_current_user)
 ):
-    role_sql = load_sql("role/get_user_roles.sql")
-    current_user_roles = db.execute(text(role_sql), {"user_id": current_user.user_id}).mappings().first()
-    if current_user_roles["admin"] == False:
-        raise HTTPException(status_code=403, detail="Not authorized")
+    sql = load_sql("user/get_user_by_id.sql")
+    result = db.execute(text(sql), {"user_id": user_id})
+    user = result.mappings().first()
 
-    user = db.query(User).filter(User.user_id == user_id).first()
+
+   
+    result = db.execute(text(sql), {"user_id": user["created_by"]})
+    creator = result.mappings().first()
+
+
+    if current_user.roles.admin == False:
+     if current_user.roles.realtor==True and current_user.user_id == creator["user_id"]:
+        pass
+     elif current_user.roles.broker==True and (current_user.user_id == creator["user_id"] or current_user.user_id == creator["created_by"]):
+        pass
+     else:
+        raise HTTPException(status_code=403, detail="Not authorized")
+        
+          
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    # Check if email exists
-    result = db.execute(text('SELECT 1 FROM USERS WHERE email = :email'), {"email": user.email}).mappings().first()
-    if user.email != user_data.email and result:
+    if user_data.email :
+     result = db.execute(text('SELECT 1 FROM USERS WHERE email = :email'), {"email": user.email}).mappings().first()
+     if result:
         raise HTTPException(status_code=400, detail="Email already exists")
+    data_to_update = user_data.dict()
+
+
+    password = data_to_update.pop("password", None)
+    if password:
+     data_to_update["password_hash"] = bcrypt.hash(password)
+    else:
+     data_to_update["password_hash"] = None 
     
-    sql = load_sql("user/update_user.sql")
-
-    db.execute(
-        text(sql),
-        {
-            "user_id": user_id,
-            "first_name": user_data.first_name,
-            "last_name": user_data.last_name,
-            "email": user_data.email,
-            "password_hash": bcrypt.hash(user_data.password),
-            "phone_number": user_data.phone_number
-        }
-    )
-
+    sql_update = load_sql("user/update_user.sql")
+    db.execute(text(sql_update), {"user_id": user_id, **data_to_update})
     db.commit()
+
     
-    return {"message": "User updated successfully", "user_id": user.user_id}
+    result = db.execute(text(sql), {"user_id": user_id})
+    updated_user = result.mappings().first()
+
+    updated_user_dict = dict(updated_user)
+    
+    role_fields = ["admin", "broker", "realtor", "buyer", "seller", "tenant"]
+    roles = [role for role in role_fields if updated_user_dict[role]]
+
+    sql = load_sql("user/get_user_by_id.sql")
+    result = db.execute(text(sql), {"user_id": user_id})
+    user = result.mappings().first()
+    user_out = UserOut(**updated_user_dict, role=roles)
+
+    return {"message": "User updated successfully", "user": user_out}
+
 
 @router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_user(
