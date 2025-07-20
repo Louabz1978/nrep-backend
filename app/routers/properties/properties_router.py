@@ -17,6 +17,7 @@ from ...dependencies import get_current_user
 
 from .property_create import PropertyCreate
 from .property_out import PropertyOut
+from .property_update import PropertyUpdate
 
 from ..addresses.address_out import AddressOut
 
@@ -305,7 +306,7 @@ async def upload_property(
 @router.put("/properties/{property_id}")
 def update_property(
     property_id : int ,
-    property_data: PropertyCreate ,
+    property_data: PropertyUpdate ,
     db: Session = Depends(database.get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -327,11 +328,12 @@ def update_property(
         raise HTTPException(status_code=403, detail="Not authorized")
     
     #owner_id check
-    owner = db.execute(text(role_sql), {"user_id": property_data.owner_id}).mappings().first()
-    if not owner:
-        raise HTTPException(status_code=404, detail="Owner not found")
-    if owner["seller"] == False:
-        raise HTTPException(status_code=404, detail="Owner is not a seller")
+    if property_data.owner_id:
+        owner = db.execute(text(role_sql), {"user_id": property_data.owner_id}).mappings().first()
+        if not owner:
+            raise HTTPException(status_code=404, detail="Owner not found")
+        if owner["seller"] == False:
+            raise HTTPException(status_code=404, detail="Owner is not a seller")
 
     #update address
     if property_data.address :
@@ -341,9 +343,10 @@ def update_property(
         row = db.execute(text(sql), db_property_address)
 
     #update property
-    db_property = property_data.model_dump(exclude={"address"})
+    db_property = property_data.model_dump(exclude_unset=True, exclude={"address"})
     db_property["property_id"] = property_id
-    sql = load_sql("property/update_property.sql")
+    set_clause = ", ".join(f"{k} = :{k}" for k in db_property)
+    sql = f"UPDATE PROPERTIES SET {set_clause} WHERE property_id= :property_id RETURNING property_id;"
     updated_property_id = db.execute(text(sql), db_property).scalar()
     db.commit()
 
