@@ -6,7 +6,7 @@ from app import database
 from .address_create import AddressCreate
 from .address_out import AddressOut
 from .address_update import AddressUpdate
-from models.user_model import User
+from app.models.user_model import User
 from app.utils.file_helper import load_sql
 from ...dependencies import get_current_user
 
@@ -15,7 +15,7 @@ router = APIRouter(
     tags=["addresses"]
 )
 
-@router.put("address")
+@router.put("/address")
 def update_address(
     address : AddressUpdate,
     db : Session = Depends(database.get_db),
@@ -28,7 +28,7 @@ def update_address(
         raise HTTPException(status_code=404, detail="user not found")
     
     get_sql = load_sql("address/get_address_by_id.sql")
-    address_data = db.execute(text(get_sql), {"address_id":user_data["address_id"]})
+    address_data = db.execute(text(get_sql), {"address_id":user_data["address_id"]}).mappings().first()
 
     if not address_data:
         raise HTTPException(status_code=404, detail="address not found")

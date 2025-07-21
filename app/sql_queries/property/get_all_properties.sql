@@ -17,6 +17,7 @@ SELECT
     p.created_at,
     p.last_updated,
     p.image_url,
+    p.mls_num,
 
     -- Created by user fields
     cb.user_id AS created_by_user_id,
@@ -52,14 +53,15 @@ SELECT
 
     -- Address fields
     a.address_id,
-    a.address,
     a.floor,
     a.apt,
     a.area,
     a.city,
     a.county,
     a.created_by AS address_created_by,
-    a.created_at AS address_created_at
+    a.created_at AS address_created_at,
+    a.building_num,
+    a.street
 
 FROM properties p
 LEFT JOIN users cb ON p.created_by = cb.user_id

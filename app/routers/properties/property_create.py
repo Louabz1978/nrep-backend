@@ -20,6 +20,7 @@ class PropertyCreate(BaseModel):
     longitude: float
     status: str
     image_url: Optional[str]
+    mls_num: Optional[ int ]
     address: Optional[AddressCreate] = None
     created_by: int
 

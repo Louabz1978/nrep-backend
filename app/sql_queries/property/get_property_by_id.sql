@@ -16,6 +16,7 @@ SELECT
     p.created_at,
     p.last_updated,
     p.image_url,
+    p.mls_num,
     
     -- Owner user fields prefixed with owner_
     owner.user_id AS owner_user_id,
@@ -53,14 +54,15 @@ SELECT
     
     -- Address fields
     a.address_id AS address_address_id,
-    a.address AS address_address,
     a.floor AS address_floor,
     a.apt AS address_apt,
     a.area AS address_area,
     a.city AS address_city,
     a.county AS address_county,
     a.created_at AS address_created_at,
-    a.created_by AS address_created_by
+    a.created_by AS address_created_by,
+    a.building_num AS address_building_num,
+    a.street AS address_street
 
 FROM properties p
 
