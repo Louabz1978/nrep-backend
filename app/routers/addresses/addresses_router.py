@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 
@@ -46,5 +46,40 @@ def update_address(
     address_details = AddressOut(**updated_address)
 
     return {"message" : "address updated successfully", "address" : address_details}
+
+@router.get("", status_code=status.HTTP_200_OK)
+def get_address(
+    db: Session = Depends(database.get_db),
+    current_user: User = Depends(get_current_user)
+):
+    sql = load_sql("address/get_address.sql")
+    result = db.execute(text(sql), {'address_id': current_user.address_id})
+    row = result.mappings().first()
+
+    if row is None:
+        raise HTTPException(status_code=404, detail="Address not found")
+    
+    address = AddressOut(**row)
+    return address
+
+@router.delete("/{address_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_address(
+    address_id: int,
+    db: Session = Depends(database.get_db),
+    current_user: User = Depends(get_current_user)
+):
+    if not current_user.roles.admin:
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    sql = load_sql("address/get_address_by_id.sql")
+    address = db.execute(text(sql), {"address_id": address_id}).mappings().first()
+    if not address:
+        raise HTTPException(status_code=404, detail="Address not found")
+
+    delete_sql = load_sql("address/delete_address.sql")
+    db.execute(text(delete_sql), {"address_id": address_id})
+    
+    db.commit()
+    return {"message": "Address deleted successfully"}
 
 
