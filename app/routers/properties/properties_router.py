@@ -145,14 +145,15 @@ def get_all_properties(
             owner=owner,
             address= AddressOut (
                 address_id=row["address_id"],
-                address=row["address"],
                 floor=row["floor"],
                 apt=row["apt"],
                 area=row["area"],
                 city=row["city"],
                 county=row["county"],
                 created_at=row["address_created_at"],
-                created_by=row["address_created_by"]
+                created_by=row["address_created_by"],
+                building_num=row["building_num"],
+                street=row["street"],
             )
         )
         properties.append(property)
@@ -339,7 +340,7 @@ def update_property(
     if property_data.address :
         db_property_address = property_data.address.model_dump()
         db_property_address["address_id"] = property["address_address_id"]
-        sql = load_sql("update_address.sql")
+        sql = load_sql("address/update_address.sql")
         row = db.execute(text(sql), db_property_address)
 
     #update property

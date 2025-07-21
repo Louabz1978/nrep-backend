@@ -206,18 +206,18 @@ def update_user(
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    if user_data.email :
-     result = db.execute(text('SELECT 1 FROM USERS WHERE email = :email'), {"email": user.email}).mappings().first()
-     if result:
-        raise HTTPException(status_code=400, detail="Email already exists")
+    if user_data.email and user_data.email != user["email"]:
+        result = db.execute(text('SELECT 1 FROM USERS WHERE email = :email'), {"email": user_data.email}).mappings().first()
+        if result:
+            raise HTTPException(status_code=400, detail="Email already exists")
+     
     data_to_update = user_data.dict()
-
 
     password = data_to_update.pop("password", None)
     if password:
-     data_to_update["password_hash"] = bcrypt.hash(password)
+        data_to_update["password_hash"] = bcrypt.hash(password)
     else:
-     data_to_update["password_hash"] = None 
+        data_to_update["password_hash"] = None 
     
     sql_update = load_sql("user/update_user.sql")
     db.execute(text(sql_update), {"user_id": user_id, **data_to_update})
