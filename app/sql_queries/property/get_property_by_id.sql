@@ -16,6 +16,7 @@ SELECT
     p.created_at,
     p.last_updated,
     p.image_url,
+    p.mls_num,
     
     -- Owner user fields prefixed with owner_
     owner.user_id AS owner_user_id,

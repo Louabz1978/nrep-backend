@@ -11,8 +11,8 @@ class AddressOut(BaseModel):
     county: Optional[str]
     created_at: datetime
     created_by: int
-    building_num: Optional[int]
-    street: Optional[str]
+    building_num: Optional[int] = None
+    street: Optional[str] = None
     
     model_config = {
         "from_attributes": True

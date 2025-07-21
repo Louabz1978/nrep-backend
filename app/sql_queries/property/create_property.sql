@@ -20,7 +20,8 @@ INSERT INTO PROPERTIES (
     status,
     listed_date,
     last_updated ,
-    image_url 
+    image_url,
+    mls_num
 )
 VALUES(
     :seller_id,
@@ -44,6 +45,7 @@ VALUES(
     :status,
     :listed_date,
     :last_updated ,
-    :image_url
+    :image_url,
+    :mls_num
 )
 RETURNING property_id;

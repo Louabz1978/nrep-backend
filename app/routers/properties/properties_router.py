@@ -346,6 +346,8 @@ def update_property(
     #update property
     db_property = property_data.model_dump(exclude_unset=True, exclude={"address"})
     db_property["property_id"] = property_id
+    if property_data.status != property["status"]:
+        db_property["last_updated"] = datetime.now()
     set_clause = ", ".join(f"{k} = :{k}" for k in db_property)
     sql = f"UPDATE PROPERTIES SET {set_clause} WHERE property_id= :property_id RETURNING property_id;"
     updated_property_id = db.execute(text(sql), db_property).scalar()

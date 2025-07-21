@@ -2,13 +2,13 @@ from pydantic import BaseModel
 from typing import Optional
 
 class AddressUpdate(BaseModel):
-    floor: Optional[str]
-    apt: Optional[str]
-    area: Optional[str]
-    city: Optional[str]
-    county: Optional[str]
-    building_num: Optional[int]
-    street: Optional[str]
+    floor: Optional[str] = None
+    apt: Optional[str] = None
+    area: Optional[str] = None
+    city: Optional[str] = None
+    county: Optional[str] = None
+    building_num: Optional[int] = None
+    street: Optional[str] = None
 
     model_config = {
         "from_attributes": True
