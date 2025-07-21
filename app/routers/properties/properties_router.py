@@ -343,6 +343,7 @@ def update_property(
         row = db.execute(text(sql), db_property_address)
 
     #update property
+    #don't forget the last_upated!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     db_property = property_data.model_dump(exclude_unset=True, exclude={"address"})
     db_property["property_id"] = property_id
     set_clause = ", ".join(f"{k} = :{k}" for k in db_property)
