@@ -1,20 +1,20 @@
-import os
-import shutil
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, status
-from typing import List
+from fastapi import APIRouter, Depends, HTTPException, status
 from datetime import datetime, timezone
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.orm import Session
 from sqlalchemy import text
 
 from app import database
-from app.routers.addresses.address_out import AddressOut
-from ...models.user_model import User
-from app.utils.file_helper import load_sql
 
+from app.utils.file_helper import load_sql
 from ...dependencies import get_current_user
-from ..addresses.address_create import AddressCreate
+
+from ...models.user_model import User
+
 from ..addresses.address_out import AddressOut
-from ..users.user_out import UserOut , UserRole
+
+from ..addresses.address_create import AddressCreate
+
+
 router = APIRouter(
     prefix="/address",
     tags=["Adresses"]

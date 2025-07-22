@@ -5,20 +5,16 @@ from sqlalchemy.orm import Session
 from sqlalchemy import text
 
 from app import database
-from ...models.user_model import User
-from ...models.agency_model import Agency
-from app.utils.file_helper import load_sql
 
+from app.utils.file_helper import load_sql
 from ...dependencies import get_current_user
 
+from ...models.user_model import User
+
 from .user_out import UserOut
-from ..agencies.agency_out import AgencyOut
-from ..roles.roles_out import RoleOut
-from ..addresses.address_out import AddressOut
 
 from .user_create import UserCreate
 from .user_update import UserUpdate
-from .user_out import UserRole
 
 router = APIRouter(
     prefix="/users",
@@ -238,7 +234,6 @@ def update_user(
     user_out = UserOut(**updated_user_dict, role=roles)
 
     return {"message": "User updated successfully", "user": user_out}
-
 
 @router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_user(

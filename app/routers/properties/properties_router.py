@@ -1,30 +1,27 @@
 import os
-import shutil
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, status
-from typing import List
+from fastapi import APIRouter, Depends, HTTPException, status
 from datetime import datetime, timezone
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.orm import Session
 from sqlalchemy import text
 
 from app import database
-from app.routers.addresses.address_out import AddressOut
+
+from app.utils.file_helper import load_sql
+from app.utils.out_helper import build_user_out
+from ...dependencies import get_current_user
+
 from ...models.user_model import User
 from ...models.property_model import Property
-from app.utils.out_helper import build_user_out
-from app.utils.file_helper import load_sql
 
-from ...dependencies import get_current_user
-from .property_create import PropertyCreate
+from ..users.roles_enum import UserRole
+
+from ..users.user_out import UserOut
 from .property_out import PropertyOut
+from ..addresses.address_out import AddressOut
+
+from .property_create import PropertyCreate
 from .property_update import PropertyUpdate
 
-from ..addresses.address_out import AddressOut
-
-from ..users.user_out import UserOut
-
-from ..addresses.address_out import AddressOut
-from ..users.user_out import UserOut
-from ..users.roles_enum import UserRole
 router = APIRouter(
     prefix="/property",
     tags=["Properties"]
@@ -126,7 +123,6 @@ def create_property(
         "message": "property created successfully",
         "property": property_details
     }
-
 
 @router.get("", response_model=list[PropertyOut], status_code=status.HTTP_200_OK)
 def get_all_properties(
@@ -279,84 +275,8 @@ async def my_properties(db: Session = Depends(database.get_db), current_user: Us
 
     return property_list
 
-@router.post("/upload-property")
-async def upload_property(
-    description: str = Form(...),
-    price: float = Form(...),
-    address: str = Form(...),
-    city: str = Form(...),
-    state: str = Form(...),
-    zip_code: str = Form(...),
-    property_type: str = Form(...),
-    bedrooms: int = Form(...),
-    bathrooms: float = Form(...),
-    property_realtor_commission: float = Form(...),
-    buyer_realtor_commission: float = Form(...),
-    area_sqft: int = Form(...),
-    lot_size_sqft: int = Form(...),
-    year_built: int = Form(...),
-    images: List[UploadFile] = File(...),
-    db: Session = Depends(database.get_db),
-    current_user: User = Depends(get_current_user)
-):
-    if current_user.role != "realtor": # type: ignore
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="You are not authorized to upload a property. Realtor role required."
-        )
-
-    new_property = Property(
-        realtor_id=current_user.user_id,
-        title="New Property",
-        description=description,
-        price=price,
-        address=address,
-        city=city,
-        state=state,
-        zip_code=zip_code,
-        property_type=property_type,
-        bedrooms=bedrooms,
-        bathrooms=bathrooms,
-        property_realtor_commission=property_realtor_commission,
-        buyer_realtor_commission=buyer_realtor_commission,
-        area_sqft=area_sqft,
-        lot_size_sqft=lot_size_sqft,
-        year_built=year_built,
-        latitude=25.7617,
-        longitude=-80.1918,
-        image_url="",
-        listed_date=datetime.now(timezone.utc),
-        status="available"
-    )
-
-    db.add(new_property)
-    db.commit()
-    db.refresh(new_property)
-
-    property_folder = f"property_images/{new_property.property_id}"
-    os.makedirs(property_folder, exist_ok=True)
-
-    image_paths = []
-
-    for idx, image in enumerate(images):
-        timestamp = datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S%f")
-        filename = f"{timestamp}_{idx}_{image.filename}"
-        file_path = os.path.join(property_folder, filename)
-
-        with open(file_path, "wb") as buffer:
-            shutil.copyfileobj(image.file, buffer)
-
-        image_paths.append(f"/{file_path}")
-
-    if image_paths:
-        new_property.image_url = image_paths[0]
-        db.commit()
-
-    return {"message": "Property listed successfully", "property_id": new_property.property_id, "images": image_paths}
-
-
-@router.put("/properties/{property_id}")
-def update_property(
+@router.put("/{property_id}")
+def update_property_by_id(
     property_id : int ,
     property_data: PropertyUpdate ,
     db: Session = Depends(database.get_db),
@@ -422,11 +342,6 @@ def update_property(
 
     return {"message": "Property updated successfully", "property details": property_details}
 
-# Defines a DELETE HTTP endpoint at the path '/property/{property_id}'
-# Deletes the resource identified by 'property_id'
-# Returns HTTP status code 204 with a JSON message confirming successful deletion
-# Raises HTTP 403 Forbidden if the user is not authorized as admin
-# Raises HTTP 404 Not Found if the property does not exist
 @router.delete("/{property_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_property(
     property_id: int,

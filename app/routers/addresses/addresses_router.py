@@ -1,15 +1,19 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from sqlalchemy import text
+from datetime import datetime ,timezone
 
 from app import database
-from .address_create import AddressCreate
-from .address_out import AddressOut
-from .address_update import AddressUpdate
-from app.models.user_model import User
+
 from app.utils.file_helper import load_sql
 from ...dependencies import get_current_user
-from datetime import datetime ,timezone
+
+from app.models.user_model import User
+
+from .address_out import AddressOut
+
+from .address_create import AddressCreate
+from .address_update import AddressUpdate
 
 router = APIRouter(
     prefix="/address",
@@ -52,7 +56,7 @@ def create_address(
     return address_details
 
 @router.get("", status_code=status.HTTP_200_OK)
-def get_address(
+def get_user_address(
     db: Session = Depends(database.get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -85,7 +89,6 @@ def get_address_by_id(
     address = AddressOut(**row)
     return address
 
-
 @router.put("")
 def update_address(
     address : AddressUpdate,
@@ -117,8 +120,6 @@ def update_address(
     address_details = AddressOut(**updated_address)
 
     return {"message" : "address updated successfully", "address" : address_details}
-
-
 
 @router.put("/{address_id}")
 def update_address_by_id(
@@ -161,7 +162,6 @@ def update_address_by_id(
     address_details = AddressOut(**updated_address)
 
     return {"message" : "address updated successfully", "address" : address_details}
-
 
 @router.delete("/{address_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_address(

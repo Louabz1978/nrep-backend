@@ -1,8 +1,6 @@
 from pydantic import BaseModel, model_validator
 from datetime import datetime
 from typing import Optional
-from ..users.user_out import UserOut
-from ..addresses.address_create import AddressCreate
 
 from ..addresses.address_create import AddressCreate
 
