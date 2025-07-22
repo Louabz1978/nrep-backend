@@ -1,8 +1,11 @@
 from pydantic import BaseModel, EmailStr
 from typing import Optional,List
 from datetime import datetime
+
 from .roles_enum import UserRole
+
 from ..addresses.address_out import AddressOut
+
 class UserOut(BaseModel):
     user_id: int
     first_name: str
