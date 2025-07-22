@@ -245,39 +245,7 @@ def get_property_by_id(
 
     return property
 
-@router.post("/my-properties")
-async def my_properties(db: Session = Depends(database.get_db), current_user: User = Depends(get_current_user)):
-    properties = db.query(Property).filter(Property.realtor_id == current_user.user_id).all()
-    if not properties:
-        return {"message": "No Properties Found"}
 
-    property_list = []
-    for prop in properties:
-        images_folder = f"property_images/{prop.property_id}"
-        if os.path.exists(images_folder):
-            images = sorted(
-            [f"/{images_folder}/{img}" 
-             for img in os.listdir(images_folder) if img.lower().endswith((".png", ".jpg", ".jpeg", ".webp"))]
-)
-
-        else:
-            images = []
-
-        property_list.append({
-            "property_id": prop.property_id,
-            "address": prop.address,
-            "city": prop.city,
-            "state": prop.state,
-            "price": prop.price,
-            "bedrooms": prop.bedrooms,
-            "bathrooms": prop.bathrooms,
-            "property_realtor_commission":prop.property_realtor_commission,
-            "buyer_realtor_commission":prop.buyer_realtor_commission,
-            "area_sqft": prop.area_sqft,
-            "images": images,  
-        })
-
-    return property_list
 
 @router.post("/upload-property")
 async def upload_property(

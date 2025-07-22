@@ -1,8 +1,9 @@
 from pydantic import BaseModel, field_validator
 from datetime import datetime, date, time
 from typing import Optional
+from app.routers.users.user_out import UserOut
 
-class AddressOut(BaseModel):
+class AddressOut2(BaseModel):
     address_id: int
     floor: int
     apt: str
@@ -10,7 +11,7 @@ class AddressOut(BaseModel):
     city: Optional[str]
     county: Optional[str]
     created_at: datetime
-    created_by: int
+    created_by_user: UserOut
     building_num: Optional[int] = None
     street: Optional[str] = None
     

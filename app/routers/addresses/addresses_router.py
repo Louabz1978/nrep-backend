@@ -5,11 +5,14 @@ from sqlalchemy import text
 from app import database
 from .address_create import AddressCreate
 from .address_out import AddressOut
+from .address_out2 import AddressOut2
 from .address_update import AddressUpdate
 from app.models.user_model import User
 from app.utils.file_helper import load_sql
 from ...dependencies import get_current_user
 from datetime import datetime ,timezone
+from typing import List
+from app.routers.users.user_out import UserOut
 
 router = APIRouter(
     prefix="/address",
@@ -66,7 +69,7 @@ def get_address(
     address = AddressOut(**row)
     return address
 
-@router.get("/{address_id}", status_code=status.HTTP_200_OK)
+@router.get("/{address_id:int}", status_code=status.HTTP_200_OK)
 def get_address_by_id(
     address_id: int,
     db: Session = Depends(database.get_db),
@@ -85,6 +88,45 @@ def get_address_by_id(
     address = AddressOut(**row)
     return address
 
+@router.get("/all", response_model=List[AddressOut2], status_code=status.HTTP_200_OK)
+def get_all_addresses(
+    db: Session = Depends(database.get_db),
+    current_user: User = Depends(get_current_user),
+):
+  
+    if current_user.roles.admin is False :
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    sql = load_sql("address/get_all_addresses.sql")
+    result = db.execute(text(sql)).mappings().all()
+    addresses = []
+    for row in result:
+        # نفصل بيانات اليوزر يلي أنشأ الادريس
+        created_by_user_data = {
+            key.replace("created_by_user_", ""): value
+            for key, value in row.items()
+            if key.startswith("created_by_user_")
+        }
+
+        # نبني الكائن
+        roles = [role for role in ["admin", "broker", "realtor", "buyer", "seller", "tenant"] if created_by_user_data.get(role)]
+        created_by_user_data["role"] = roles
+        created_by_user = UserOut(**created_by_user_data)
+
+        # نفصل باقي البيانات تبع الادريس
+        address_data = {
+            k: v for k, v in row.items()
+            if not k.startswith("created_by_user_")
+        }
+
+        # نضيف created_by_user للديكشنري
+        address_data["created_by_user"] = created_by_user
+
+        # نعمل كائن AddressOut2
+        addr = AddressOut2(**address_data)
+        addresses.append(addr)
+
+    return addresses
 
 @router.put("")
 def update_address(
