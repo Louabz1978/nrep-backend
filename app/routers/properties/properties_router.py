@@ -1,17 +1,18 @@
-import os
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, File, UploadFile
 from datetime import datetime, timezone
 from sqlalchemy.orm import Session
 from sqlalchemy import text
+from typing import List
+import random
 
 from app import database
 
-from app.utils.file_helper import load_sql
-from app.utils.out_helper import build_user_out
+from ...utils.file_helper import load_sql
+from ...utils.out_helper import build_user_out
 from ...dependencies import get_current_user
+from ...utils.validate_photo import save_photos
 
 from ...models.user_model import User
-from ...models.property_model import Property
 
 from ..users.roles_enum import UserRole
 
@@ -21,6 +22,7 @@ from ..addresses.address_out import AddressOut
 
 from .property_create import PropertyCreate
 from .property_update import PropertyUpdate
+from ..addresses.address_create import AddressCreate
 
 router = APIRouter(
     prefix="/property",
@@ -28,8 +30,10 @@ router = APIRouter(
 )
 
 @router.post("", status_code=status.HTTP_201_CREATED)
-def create_property(
-    property: PropertyCreate,
+async def create_property(
+    property: PropertyCreate = Depends(),
+    address: AddressCreate = Depends(),
+    photos: List[UploadFile] = File(...),
     db: Session = Depends(database.get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -42,7 +46,7 @@ def create_property(
     else:
         raise HTTPException(status_code=403, detail="Not authorized")
 
-    #validate seller_id
+    saved_files = save_photos(address, photos)
 
     sql = load_sql("user/get_user_by_id.sql")
     owner_result = db.execute(text(sql), {"user_id": property.owner_id}).mappings().first()
@@ -52,7 +56,7 @@ def create_property(
     if not owner_result["seller"]:
         raise HTTPException(status_code=400, detail="Owner must be seller")
     
-    address_data = property.address.model_dump()
+    address_data = address.model_dump()
     address_data["created_at"] = datetime.now(timezone.utc)
     address_data["created_by"] = current_user.user_id
     address_sql = load_sql("address/create_address.sql")
@@ -61,6 +65,10 @@ def create_property(
 
     db_property = property.model_dump()
     db_property["created_by"] = current_user.user_id
+    db_property["created_at"] = datetime.now(timezone.utc)
+    db_property["last_updated"] = datetime.now(timezone.utc)
+    db_property["image_url"] = saved_files
+    db_property["mls_num"] = random.randint(100000, 999999)
     db_property["address_id"] = address_id
 
     property_sql = load_sql("property/create_property.sql")
@@ -319,8 +327,6 @@ def get_property_by_id(
     )
 
     return property
-
-
 
 @router.put("/{property_id}")
 def update_property_by_id(

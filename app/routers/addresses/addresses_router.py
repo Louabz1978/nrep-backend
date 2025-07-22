@@ -5,8 +5,9 @@ from datetime import datetime ,timezone
 
 from app import database
 
-from .address_out2 import AddressOut2
 from typing import List
+
+from .address_out2 import AddressOut2
 from app.routers.users.user_out import UserOut
 
 

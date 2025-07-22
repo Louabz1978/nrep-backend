@@ -74,4 +74,4 @@ LEFT JOIN roles creator_roles ON creator.role_id = creator_roles.roles_id
 
 LEFT JOIN addresses a ON p.address_id = a.address_id
 
-WHERE p.owner_id = :created_by;
+WHERE p.created_by = :created_by;

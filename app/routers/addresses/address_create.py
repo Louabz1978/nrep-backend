@@ -1,8 +1,8 @@
 from pydantic import BaseModel
 
 class AddressCreate(BaseModel):
-    floor: str
-    apt: str
+    floor: int
+    apt: int
     area: str
     city: str
     county: str
