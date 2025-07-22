@@ -14,7 +14,6 @@ from app.utils.out_helper import build_user_out
 from app.utils.file_helper import load_sql
 
 from ...dependencies import get_current_user
-
 from .property_create import PropertyCreate
 from .property_out import PropertyOut
 from .property_update import PropertyUpdate
@@ -23,6 +22,9 @@ from ..addresses.address_out import AddressOut
 
 from ..users.user_out import UserOut
 
+from ..addresses.address_out import AddressOut
+from ..users.user_out import UserOut
+from ..users.roles_enum import UserRole
 router = APIRouter(
     prefix="/property",
     tags=["Properties"]
@@ -34,47 +36,96 @@ def create_property(
     db: Session = Depends(database.get_db),
     current_user: User = Depends(get_current_user)
 ):
-    if current_user.role not in ("broker", "realtor"):
-        raise HTTPException(status_code=403, detail="Not authorized")
-    
-    #validate realtor_id
-    realtor = property.realtor_id
+    role_sql = load_sql("role/get_user_roles.sql")
+    role_result = db.execute(text(role_sql), {"user_id": current_user.user_id}).mappings().first()
+    current_user_role = [key for key, value in role_result.items() if value]
 
-    if current_user.role != "realtor":
-        if realtor is None:
-            raise HTTPException(status_code=400, detail="realtor_id is required")
-        
-        sql = load_sql("user/get_user_by_id.sql")
-        result = db.execute(text(sql), {"user_id": realtor}).mappings().first()
-        if not result :
-            raise HTTPException(status_code=400, detail="invalid realtor_id")
-        if result["role"] != "realtor":
-            raise HTTPException(status_code=400, detail="Realtor must be realtor")
+    if "realtor" in current_user_role or "broker" in current_user_role:
+        pass
     else:
-        realtor = current_user.user_id
+        raise HTTPException(status_code=403, detail="Not authorized")
 
     #validate seller_id
+
     sql = load_sql("user/get_user_by_id.sql")
-    result = db.execute(text(sql), {"user_id": property.seller_id}).mappings().first()
-    if not result :
-        raise HTTPException(status_code=400, detail="invalid seller_id")
-    if result["role"] != "seller":
-        raise HTTPException(status_code=400, detail="Seller must be seller")
+    owner_result = db.execute(text(sql), {"user_id": property.owner_id}).mappings().first()
+    if not owner_result :
+        raise HTTPException(status_code=400, detail="invalid owner_id")
+    
+    if not owner_result["seller"]:
+        raise HTTPException(status_code=400, detail="Owner must be seller")
+    
+    address_data = property.address.model_dump()
+    address_data["created_at"] = datetime.now(timezone.utc)
+    address_data["created_by"] = current_user.user_id
+    address_sql = load_sql("address/create_address.sql")
+    address_result = db.execute(text(address_sql),address_data)
+    address_id = address_result.scalar()
 
     db_property = property.model_dump()
-    db_property["realtor_id"] = realtor
+    db_property["created_by"] = current_user.user_id
+    db_property["address_id"] = address_id
 
-    sql = load_sql("property/create_property.sql")
-    result = db.execute(text(sql), db_property)
-    new_property_id = result.scalar()
+    property_sql = load_sql("property/create_property.sql")
+    property_result = db.execute(text(property_sql), db_property)
+    new_property_id = property_result.scalar()
 
     db.commit()
-
+    
     sql = load_sql("property/get_property_by_id.sql")
     created_property = db.execute(text(sql), {"property_id": new_property_id}).mappings().first()
-    property_details = PropertyOut(**created_property)
 
-    return {"message" : "property created successfully","property": property_details}
+    address_dict = {
+        "address_id": created_property.get("address_address_id"),
+        "floor": created_property.get("address_floor"),
+        "apt": created_property.get("address_apt"),
+        "area": created_property.get("address_area"),
+        "city": created_property.get("address_city"),
+        "county": created_property.get("address_county"),
+        "created_at": created_property.get("address_created_at"),
+        "created_by": created_property.get("address_created_by"),
+        "building_num": created_property.get("address_building_num"),
+        "street" : created_property.get("address_street")
+    }
+    address_obj = AddressOut(**address_dict) if address_dict else None
+    
+    user_sql = load_sql("user/get_user_by_id.sql")
+    role_sql = load_sql("role/get_user_roles.sql")
+
+    owner_id = property.owner_id
+    owner_result = db.execute(text(user_sql), {"user_id": owner_id}).mappings().first()
+    owner_roles_result = db.execute(text(role_sql), {"user_id": owner_id}).mappings().first()
+    owner_roles = [key for key, value in owner_roles_result.items() if value is True and key in UserRole.__members__] if owner_roles_result else []
+    if owner_result:
+        owner_data = dict(owner_result)
+        owner_data["role"] = owner_roles
+        owner_obj = UserOut(**owner_data)
+    else:
+        owner_obj = None
+
+    created_by_id = current_user.user_id
+    created_by_result = db.execute(text(user_sql), {"user_id": created_by_id}).mappings().first()
+    created_by_roles_result = db.execute(text(role_sql), {"user_id": created_by_id}).mappings().first()
+    created_by_roles = [key for key, value in created_by_roles_result.items() if value is True and key in UserRole.__members__] if created_by_roles_result else []
+    
+    if created_by_result:
+        created_by_data = dict(created_by_result)
+        created_by_data["role"] = created_by_roles
+        created_by_obj = UserOut(**created_by_data)
+    else:
+        created_by_obj = None
+
+    property_out_data = dict(created_property)
+    property_out_data["address"] = address_obj
+    property_out_data["owner"] = owner_obj
+    property_out_data["created_by_user"] = created_by_obj
+
+    property_details = PropertyOut(**property_out_data)
+
+    return {
+        "message": "property created successfully",
+        "property": property_details
+    }
 
 
 @router.get("", response_model=list[PropertyOut], status_code=status.HTTP_200_OK)

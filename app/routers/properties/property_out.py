@@ -27,3 +27,7 @@ class PropertyOut(BaseModel):
     created_by_user: Optional[UserOut]
     owner: Optional[UserOut]
     address: Optional[AddressOut]
+
+    model_config = {
+        "from_attributes": True
+    }

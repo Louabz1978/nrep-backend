@@ -1,6 +1,8 @@
 from pydantic import BaseModel, model_validator
 from datetime import datetime
 from typing import Optional
+from ..users.user_out import UserOut
+from ..addresses.address_create import AddressCreate
 
 from ..addresses.address_create import AddressCreate
 
@@ -19,22 +21,21 @@ class PropertyCreate(BaseModel):
     latitude: float
     longitude: float
     status: str
+    created_at : datetime
+    last_updated: datetime
     image_url: Optional[str]
     mls_num: Optional[ int ]
     address: Optional[AddressCreate] = None
-    created_by: int
 
     @model_validator(mode='before')
     def validate_roles(cls, values):
         owner_id = values.get('owner_id')
-        # Treat 0 as no owner_id provided
+        # Treat 0 as no seller_id provided
         if owner_id == 0:
             owner_id = None
             values['owner_id'] = None
-        #owner_id is required
+        #seller_id is required
         if not owner_id:
             raise ValueError("owner_id is required")
-        
-
 
         return values
