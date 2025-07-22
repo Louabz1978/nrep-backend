@@ -1,7 +1,9 @@
 from pydantic import BaseModel, model_validator
-from datetime import date, datetime
+from datetime import datetime
 from typing import Optional
 from ..users.user_out import UserOut
+from ..addresses.address_create import AddressCreate
+
 from ..addresses.address_create import AddressCreate
 
 class PropertyCreate(BaseModel):
@@ -22,7 +24,7 @@ class PropertyCreate(BaseModel):
     created_at : datetime
     last_updated: datetime
     image_url: Optional[str]
-    address : AddressCreate
+    address: Optional[AddressCreate] = None
 
     @model_validator(mode='before')
     def validate_roles(cls, values):

@@ -4,7 +4,8 @@ from app.routers.auth.auth_router import router as auth_router
 from app.routers.users.users_router import router as users_route
 from app.routers.agencies.agencies_router import router as agency_route
 from app.routers.properties.properties_router import router as property_route
-from app.routers.roles.roles_router import router as role_route
+from app.routers.roles.roles_router import router as roles_router
+from app.routers.addresses.adresses_router import router as addresses_router
 
 from app.database import engine, Base
 from fastapi.middleware.cors import CORSMiddleware
@@ -27,4 +28,5 @@ app.include_router(auth_router)
 app.include_router(users_route)
 app.include_router(agency_route)
 app.include_router(property_route)
-app.include_router(role_route)
+app.include_router(roles_router)
+app.include_router(addresses_router)

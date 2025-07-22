@@ -1,21 +1,23 @@
 INSERT INTO addresses (
-    address,
     floor,
     apt,
     area,
     city,
     county,
     created_at,
-    created_by
+    created_by,
+    building_num,
+    street
 )
 VALUES (
-    :address,
     :floor,
     :apt,
     :area,
     :city,
     :county,
     :created_at,
-    :created_by
+    :created_by,
+    :building_num,
+    :street
 )
 RETURNING address_id;

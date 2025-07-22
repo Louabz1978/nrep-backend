@@ -1,0 +1,1 @@
+DELETE FROM additional WHERE property_id = :property_id

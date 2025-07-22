@@ -1,23 +1,20 @@
 UPDATE properties SET 
     owner_id = :owner_id,
-    agent_id = :agent_id,
-    address = :address,
-    neighborhood = :neighborhood,
-    city = :city,
-    county = :county,
     description = :description,
     price = :price,
     property_type = :property_type,
     floor = :floor,
     bedrooms = :bedrooms,
     bathrooms = :bathrooms,
-    listing_agent_commission = :listing_agent_commission,
-    buyer_agent_commission = :buyer_agent_commission,
+    property_realtor_commission = :property_realtor_commission,
+    buyer_realtor_commission = :buyer_realtor_commission,
     area_space = :area_space,
     year_built = :year_built,
     latitude = :latitude,
     longitude = :longitude,
     status = :status,
+    last_updated = CURRENT_TIMESTAMP,
     image_url = :image_url,
-    last_updated = CURRENT_TIMESTAMP
-WHERE property_id = :listing_id;
+    created_by = :created_by
+WHERE property_id = :property_id
+RETURNING property_id;
