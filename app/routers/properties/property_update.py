@@ -6,7 +6,7 @@ from ..addresses.address_update import AddressUpdate
 class PropertyUpdate(BaseModel):
     owner_id: Optional[ int ] = None
     description: Optional[ str ] = None
-    price: Optional[ str ] = None
+    price: Optional[ int ] = None
     property_type: Optional[ str ] = None
     floor: Optional[ int ] = None
     bedrooms: Optional[ int ] = None
@@ -20,6 +20,7 @@ class PropertyUpdate(BaseModel):
     status: Optional[ str ] = None
     image_url: Optional[ str ] = None
     address: Optional[ AddressUpdate ] = None
+    mls_num : Optional[ int ] = None
 
     @model_validator(mode='before')
     def validate_roles(cls, values):

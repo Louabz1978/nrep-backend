@@ -24,6 +24,7 @@ class PropertyCreate(BaseModel):
     created_at : datetime
     last_updated: datetime
     image_url: Optional[str]
+    mls_num: Optional[ int ]
     address: Optional[AddressCreate] = None
 
     @model_validator(mode='before')

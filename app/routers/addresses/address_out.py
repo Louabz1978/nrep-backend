@@ -10,21 +10,10 @@ class AddressOut(BaseModel):
     city: Optional[str]
     county: Optional[str]
     created_at: datetime
-    created_by: Optional[int]
-    building_num: Optional[int]
-    street: Optional[str]
-
-    model_config = {
-        "from_attributes": True
-    }
-
-    @field_validator("created_at", mode="before")
-    @classmethod
-    def ensure_datetime(cls, v):
-        if isinstance(v, time):
-            return datetime.combine(date.today(), v)
-        return v
-
+    created_by: int
+    building_num: Optional[int] = None
+    street: Optional[str] = None
+    
     model_config = {
         "from_attributes": True
     }

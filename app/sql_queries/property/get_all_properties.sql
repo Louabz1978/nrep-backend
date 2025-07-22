@@ -17,6 +17,7 @@ SELECT
     p.created_at,
     p.last_updated,
     p.image_url,
+    p.mls_num,
 
     -- Created by user fields
     cb.user_id AS created_by_user_id,
