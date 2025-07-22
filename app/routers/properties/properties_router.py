@@ -211,7 +211,86 @@ def get_all_properties(
 
     return properties
 
-@router.get("/{property_id}", response_model=PropertyOut, status_code=status.HTTP_200_OK)
+@router.get("/my-properties", response_model=List[PropertyOut], status_code=status.HTTP_200_OK)
+def my_properties(
+    db: Session = Depends(database.get_db),
+    current_user: User = Depends(get_current_user)
+):
+    sql = load_sql("property/my_property.sql")
+    result = db.execute(text(sql), {"created_by": current_user.user_id})
+
+    properties = []
+    for row in result.mappings():
+        # Build roles for created_by and owner
+        created_by_roles = [
+            role for role in ["admin", "broker", "realtor", "buyer", "seller", "tenant"]
+            if row.get(f"created_by_{role}") is True
+        ]
+        owner_roles = [
+            role for role in ["admin", "broker", "realtor", "buyer", "seller", "tenant"]
+            if row.get(f"owner_{role}") is True
+        ]
+        # Build nested UserOut objects
+        created_by = UserOut(
+            user_id=row["created_by_user_id"],
+            first_name=row["created_by_first_name"],
+            last_name=row["created_by_last_name"],
+            email=row["created_by_email"],
+            phone_number=row["created_by_phone_number"],
+            role=created_by_roles,
+            created_by=row["created_by_created_by"],
+            created_at=row["created_by_created_at"]
+        )
+        owner = UserOut(
+            user_id=row["owner_user_id"],
+            first_name=row["owner_first_name"],
+            last_name=row["owner_last_name"],
+            email=row["owner_email"],
+            phone_number=row["owner_phone_number"],
+            role=owner_roles,
+            created_by=row["owner_created_by"],
+            created_at=row["owner_created_at"]
+        )
+        # Build address
+        address = AddressOut(
+            address_id=row["address_address_id"],
+            floor=row["address_floor"],
+            apt=row["address_apt"],
+            area=row["address_area"],
+            city=row["address_city"],
+            county=row["address_county"],
+            created_at=row["address_created_at"],
+            created_by=row["address_created_by"],
+            building_num=row["address_building_num"],
+            street=row["address_street"]
+        )
+        # Build PropertyOut
+        property = PropertyOut(
+            property_id=row["property_id"],
+            description=row["description"],
+            price=row["price"],
+            property_type=row["property_type"],
+            floor=row["floor"],
+            bedrooms=row["bedrooms"],
+            bathrooms=row["bathrooms"],
+            property_realtor_commission=row["property_realtor_commission"],
+            buyer_realtor_commission=row["buyer_realtor_commission"],
+            area_space=row["area_space"],
+            year_built=row["year_built"],
+            latitude=row["latitude"],
+            longitude=row["longitude"],
+            status=row["status"],
+            created_at=row["created_at"],
+            last_updated=row["last_updated"],
+            image_url=row["image_url"],
+            owner=owner,
+            created_by_user=created_by,
+            address=address
+        )
+        properties.append(property)
+    return properties
+
+@router.get("/{property_id:int}", response_model=PropertyOut, status_code=status.HTTP_200_OK)
 def get_property_by_id(
     property_id: int, 
     db: Session = Depends(database.get_db),
