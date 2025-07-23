@@ -31,8 +31,8 @@ router = APIRouter(
 
 @router.post("", status_code=status.HTTP_201_CREATED)
 async def create_property(
-    property: PropertyCreate = Depends(),
-    address: AddressCreate = Depends(),
+    property: PropertyCreate = Depends(PropertyCreate.as_form),
+    address: AddressCreate = Depends(AddressCreate.as_form),
     photos: List[UploadFile] = File(...),
     db: Session = Depends(database.get_db),
     current_user: User = Depends(get_current_user)
@@ -195,6 +195,7 @@ def get_all_properties(
             created_at=row["created_at"],
             last_updated=row["last_updated"],
             image_url=row["image_url"],
+            mls_num=row["mls_num"],
             
             created_by_user=created_by,
             owner=owner,
