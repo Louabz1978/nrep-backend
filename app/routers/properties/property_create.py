@@ -1,5 +1,6 @@
 from pydantic import BaseModel, model_validator
 from typing import Optional
+from fastapi import Form
 
 class PropertyCreate(BaseModel):
     owner_id: int
@@ -17,6 +18,41 @@ class PropertyCreate(BaseModel):
     longitude: float
     status: str
 
+    @classmethod
+    def as_form(
+        cls,
+        owner_id: int = Form(...),
+        description: str = Form(...),
+        price: int = Form(...),
+        property_type: Optional[ str ] = Form(...),
+        floor: Optional[ int ] = Form(...),
+        bedrooms: int = Form(...),
+        bathrooms: float = Form(...),
+        property_realtor_commission: float = Form(...),
+        buyer_realtor_commission: float = Form(...),
+        area_space: int = Form(...),
+        year_built: int = Form(...),
+        latitude: float = Form(...),
+        longitude: float = Form(...),
+        status: str = Form(...)
+    ):
+        return cls(
+            owner_id = owner_id,
+            description = description,
+            price = price,
+            property_type = property_type,
+            floor = floor,
+            bedrooms = bedrooms,
+            bathrooms = bathrooms,
+            property_realtor_commission = property_realtor_commission,
+            buyer_realtor_commission = buyer_realtor_commission,
+            area_space = area_space,
+            year_built = year_built,
+            latitude = latitude,
+            longitude = longitude,
+            status = status
+        )
+    
     @model_validator(mode='before')
     def validate_roles(cls, values):
         owner_id = values.get('owner_id')
