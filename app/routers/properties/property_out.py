@@ -1,17 +1,12 @@
 from pydantic import BaseModel
-from datetime import date, datetime
 from typing import Optional
+from datetime import datetime
 
-from ..users.user_out import UserOut
+from app.routers.users.user_out import UserOut
+from app.routers.addresses.address_out import AddressOut
 
 class PropertyOut(BaseModel):
     property_id: int
-    seller_id: int
-    realtor_id: Optional[int]
-    address: str
-    neighborhood: str
-    city: str
-    county: str
     description: str
     price: int
     property_type: Optional[str]
@@ -25,10 +20,15 @@ class PropertyOut(BaseModel):
     latitude: float
     longitude: float
     status: str
-    listed_date: date
+    created_at: datetime
     last_updated: datetime
     image_url: Optional[str]
+    mls_num: Optional[int] = None
 
-    # Relationships
-    seller: Optional[UserOut] = None
-    realtor: Optional[UserOut] = None
+    created_by_user: Optional[UserOut]
+    owner: Optional[UserOut]
+    address: Optional[AddressOut]
+
+    model_config = {
+        "from_attributes": True
+    }

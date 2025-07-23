@@ -5,16 +5,16 @@ from sqlalchemy.orm import Session
 from sqlalchemy import text
 
 from app import database
-from ...models.user_model import User
-from ...models.agency_model import Agency
-from app.utils.file_helper import load_sql
 
+from app.utils.file_helper import load_sql
 from ...dependencies import get_current_user
 
+from ...models.user_model import User
+
 from .user_out import UserOut
-from ..agencies.agency_out import AgencyOut
 
 from .user_create import UserCreate
+from .user_update import UserUpdate
 
 router = APIRouter(
     prefix="/users",
@@ -27,40 +27,47 @@ def create_user(
     db: Session = Depends(database.get_db),
     current_user: User = Depends(get_current_user)
 ):
-    if current_user.role not in ("admin", "broker", "realtor"):
+    #authorization check
+    role_sql = load_sql("role/get_user_roles.sql")
+    current_user_roles = db.execute(text(role_sql), {"user_id": current_user.user_id}).mappings().first()
+    current_user_role = [key for key,value in current_user_roles.items() if value]
+    user_roles = set(user.role)
+    if not (
+        "admin" in current_user_role
+        or ("broker" in current_user_role and user_roles.issubset({"realtor","buyer","seller","tenant"}))
+        or ("realtor" in current_user_role and user_roles.issubset({"buyer","seller","tenant"}))
+    ):
         raise HTTPException(status_code=403, detail="Not authorized")
-
+    
     # Check if email exists
     result = db.execute(text('SELECT 1 FROM USERS WHERE email = :email'), {"email": user.email}).mappings().first()
     if result:
         raise HTTPException(status_code=400, detail="Email already exists")
 
-    # Validate agency only if realtor
-    agency_details = None
-    if user.role == 'realtor':
-        sql = load_sql("get_agency_by_id.sql")
-        agency_details = db.execute(text(sql), {"agency_id": user.agency_id}).mappings().first()
-        if not agency_details:
-            raise HTTPException(status_code=400, detail="Invalid agency_id")
+    #prepare role insert
+    true_roles = {role.value: True for role in user.role}
+    role_columns = ", ".join(true_roles.keys())
+    role_placeholders = ", ".join([f":{key}" for key in true_roles])
 
+    #prepare user insert
     hashed_password = bcrypt.hash(user.password)
-
-    db_user = user.model_dump()
+    db_user = user.model_dump(exclude={"password", "role"})
     db_user["password_hash"] = hashed_password
-    del db_user["password"]
+    db_user["created_by"] = current_user.user_id
+    params = {**db_user, **true_roles}
 
-    sql = load_sql("create_user.sql")
-    result = db.execute(text(sql), db_user)
-    new_user_id = result.scalar()
-
+    #insert user
+    raw_sql = load_sql("user/create_user.sql")
+    sql = raw_sql.format(role_columns = role_columns, role_placeholders = role_placeholders)
+    new_user_id = db.execute(text(sql), params).scalar()
     db.commit()
 
-    sql = load_sql("get_user_by_id.sql")
+    #fetch user data
+    sql = load_sql("user/get_user_by_id.sql")
     created_user = db.execute(text(sql), {"user_id": new_user_id}).mappings().first()
-    agency = None 
-    if created_user["agency_id"]:
-        agency = AgencyOut(**agency_details, name = agency_details["agency_name"])
-    user_details = UserOut(**created_user, agency = agency)
+    role_fields = ["admin", "broker", "realtor", "buyer", "seller", "tenant"]
+    roles = [role for role in role_fields if created_user[role]]
+    user_details = UserOut(**created_user, role= roles, address=None)
 
     return {"message": "User created successfully", "user": user_details}
 
@@ -69,27 +76,48 @@ def get_all_users(
     db: Session = Depends(database.get_db),
     current_user: User = Depends(get_current_user),
 ):
-    if current_user.role != "admin":
+    role_sql = load_sql("role/get_user_roles.sql")
+    roles = db.execute(text(role_sql), {"user_id": current_user.user_id}).mappings().first()
+    if roles["admin"] == False and roles["broker"] == False and roles["realtor"] == False:
         raise HTTPException(status_code=403, detail="Not authorized")
 
-    sql = load_sql("get_all_users.sql")
-    result = db.execute(text(sql))
+    if roles["admin"] == True:
+        role = 'admin'
+    elif roles["broker"] == True:
+        role = 'broker'
+    else:
+        role = 'realtor'
+    
+    sql = load_sql("user/get_all_users.sql")
+    result = db.execute(text(sql), {"user_id": current_user.user_id, "role": role})
 
     users = []
     for row in result.mappings():
-        agency = None
-        if row["agency_id"]:
-            agency = AgencyOut(
-                agency_id=row["agency_id"],
-                name=row["agency_name"],
-                phone_number=row["agency_phone_number"],
-            )
-        user = UserOut(
-            **row,
-            agency=agency
-        )
+        roles = [role for role in ["admin", "broker", "realtor", "buyer", "seller", "tenant"] if row.get(role)]
+        user = UserOut(**row, role=roles)
         users.append(user)
     return users
+
+@router.get("/", response_model=UserOut, status_code=status.HTTP_200_OK)
+def get_user_details(
+    db: Session = Depends(database.get_db),
+    current_user: User = Depends(get_current_user)
+):
+    sql = load_sql("user/get_user_by_id.sql")
+    result = db.execute(text(sql), {"user_id": current_user.user_id})
+    row = result.mappings().first()
+
+    if not row:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    roles = [role for role in ["admin", "broker", "realtor", "buyer", "seller", "tenant"] if row.get(role)]
+
+    user = UserOut(
+        **row,
+        role=roles
+    )
+
+    return user
 
 @router.get("/{user_id}", response_model=UserOut, status_code=status.HTTP_200_OK)
 def get_user_by_id(
@@ -97,27 +125,50 @@ def get_user_by_id(
     db: Session = Depends(database.get_db),
     current_user: User = Depends(get_current_user)
 ):
-    if current_user.role != "admin":
-        raise HTTPException(status_code=403, detail="Not authorized")
-
-    sql = load_sql("get_user_by_id.sql")
+    sql = load_sql("user/get_user_by_id.sql")
     result = db.execute(text(sql), {"user_id": user_id})
     row = result.mappings().first()
-    
+
     if not row:
         raise HTTPException(status_code=404, detail="User not found")
-    
-    agency = None
-    if row["agency_id"]:
-        agency = AgencyOut(
-            agency_id=row["agency_id"],
-            name=row["agency_name"],
-            phone_number=row["agency_phone_number"],
-        )
+
+    target_user_creator_id = row["created_by"]
+
+    if current_user.roles.admin:
+        pass  # admin can access any user
+
+    elif current_user.user_id == user_id:
+        pass  # user can access their own data
+
+    elif current_user.roles.broker:
+        if target_user_creator_id == current_user.user_id:
+            pass # broker can access users he created
+        else:
+            # broker can access the users that the realtor that her created created
+            realtor_ids = db.execute(
+                text(
+                    "SELECT user_id FROM users WHERE created_by = :broker_id AND role_id IN (SELECT roles_id FROM roles WHERE realtor = TRUE)"
+                ),
+                {"broker_id": current_user.user_id}
+            ).scalars().all()
+
+            if target_user_creator_id not in realtor_ids:
+                raise HTTPException(status_code=403, detail="Not authorized to view this user")
+
+    elif current_user.roles.realtor:
+        if target_user_creator_id == current_user.user_id:
+            pass # realtors can access users that they created
+        else:
+            raise HTTPException(status_code=403, detail="Not authorized to view this user")
+
+    else:
+        raise HTTPException(status_code=403, detail="Not authorized to view this user")
+
+    roles = [role for role in ["admin", "broker", "realtor", "buyer", "seller", "tenant"] if row.get(role)]
 
     user = UserOut(
         **row,
-        agency=agency
+        role=roles
     )
 
     return user
@@ -125,47 +176,64 @@ def get_user_by_id(
 @router.put("/{user_id}",status_code=status.HTTP_200_OK)
 def update_user(
     user_id: int,
-    user_data: UserCreate,
+    user_data: UserUpdate,
     db: Session = Depends(database.get_db),
     current_user: User = Depends(get_current_user)
 ):
-    if current_user.role != "admin":
-        raise HTTPException(status_code=403, detail="Not authorized")
+    sql = load_sql("user/get_user_by_id.sql")
+    result = db.execute(text(sql), {"user_id": user_id})
+    user = result.mappings().first()
 
-    user = db.query(User).filter(User.user_id == user_id).first()
+
+   
+    result = db.execute(text(sql), {"user_id": user["created_by"]})
+    creator = result.mappings().first()
+
+
+    if current_user.roles.admin == False:
+     if current_user.roles.realtor==True and current_user.user_id == creator["user_id"]:
+        pass
+     elif current_user.roles.broker==True and (current_user.user_id == creator["user_id"] or current_user.user_id == creator["created_by"]):
+        pass
+     else:
+        raise HTTPException(status_code=403, detail="Not authorized")
+        
+          
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    # Validate agency_id existence if provided
-    if user_data.agency_id is not None:
-        agency = db.query(Agency).filter(Agency.agency_id == user_data.agency_id).first()
-        if not agency:
-            raise HTTPException(status_code=400, detail="Invalid agency_id")
+    if user_data.email and user_data.email != user["email"]:
+        result = db.execute(text('SELECT 1 FROM USERS WHERE email = :email'), {"email": user_data.email}).mappings().first()
+        if result:
+            raise HTTPException(status_code=400, detail="Email already exists")
+     
+    data_to_update = user_data.dict()
 
-    sql = load_sql("update_user.sql")
-
-    db.execute(
-        text(sql),
-        {
-            "user_id": user_id,
-            "first_name": user_data.first_name,
-            "last_name": user_data.last_name,
-            "email": user_data.email,
-            "password_hash": bcrypt.hash(user_data.password),
-            "role": user_data.role,
-            "phone_number": user_data.phone_number,
-            "address": user_data.address,
-            "neighborhood": user_data.neighborhood,
-            "city": user_data.city,
-            "county": user_data.county,
-            "lic_num": user_data.lic_num,
-            "agency_id": user_data.agency_id,
-        }
-    )
-
-    db.commit()
+    password = data_to_update.pop("password", None)
+    if password:
+        data_to_update["password_hash"] = bcrypt.hash(password)
+    else:
+        data_to_update["password_hash"] = None 
     
-    return {"message": "User updated successfully", "user_id": user.user_id}
+    sql_update = load_sql("user/update_user.sql")
+    db.execute(text(sql_update), {"user_id": user_id, **data_to_update})
+    db.commit()
+
+    
+    result = db.execute(text(sql), {"user_id": user_id})
+    updated_user = result.mappings().first()
+
+    updated_user_dict = dict(updated_user)
+    
+    role_fields = ["admin", "broker", "realtor", "buyer", "seller", "tenant"]
+    roles = [role for role in role_fields if updated_user_dict[role]]
+
+    sql = load_sql("user/get_user_by_id.sql")
+    result = db.execute(text(sql), {"user_id": user_id})
+    user = result.mappings().first()
+    user_out = UserOut(**updated_user_dict, role=roles)
+
+    return {"message": "User updated successfully", "user": user_out}
 
 @router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_user(
@@ -173,16 +241,17 @@ def delete_user(
     db: Session = Depends(database.get_db),
     current_user: User = Depends(get_current_user)
 ):
-    if current_user.role != "admin":
+    role_sql = load_sql("role/get_user_roles.sql")
+    current_user_roles = db.execute(text(role_sql), {"user_id": current_user.user_id}).mappings().first()
+    if current_user_roles["admin"] == False:
         raise HTTPException(status_code=403, detail="Not authorized")
 
-    sql = load_sql("get_user_by_id.sql")
-    result = db.execute(text(sql), {"user_id": user_id})
-    user = result.mappings().first()
+    sql = load_sql("user/get_user_by_id.sql")
+    user = db.execute(text(sql), {"user_id": user_id}).mappings().first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    delete_sql = load_sql("delete_user.sql")
+    delete_sql = load_sql("user/delete_user.sql")
     db.execute(text(delete_sql), {"user_id": user_id})
     
     db.commit()

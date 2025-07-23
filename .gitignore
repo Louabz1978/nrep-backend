@@ -17,3 +17,6 @@ venv/
 .vscode/
 
 .pytest_cache
+.env
+
+uploaded_photos/

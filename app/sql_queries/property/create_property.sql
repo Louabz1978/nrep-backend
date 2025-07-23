@@ -1,10 +1,7 @@
 INSERT INTO PROPERTIES (
-    seller_id,
-    realtor_id,
-    address,
-    neighborhood,
-    city,
-    county,
+    owner_id,
+    created_by,
+    address_id,
     description,
     price,
     property_type,
@@ -18,17 +15,15 @@ INSERT INTO PROPERTIES (
     latitude,
     longitude,
     status,
-    listed_date,
+    created_at,
     last_updated ,
-    image_url 
+    image_url,
+    mls_num
 )
 VALUES(
-    :seller_id,
-    :realtor_id,
-    :address,
-    :neighborhood,
-    :city,
-    :county,
+    :owner_id,
+    :created_by,
+    :address_id,
     :description,
     :price,
     :property_type,
@@ -42,8 +37,9 @@ VALUES(
     :latitude,
     :longitude,
     :status,
-    :listed_date,
+    :created_at,
     :last_updated ,
-    :image_url
+    :image_url,
+    :mls_num
 )
 RETURNING property_id;

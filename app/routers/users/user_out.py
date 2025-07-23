@@ -1,22 +1,21 @@
 from pydantic import BaseModel, EmailStr
-from typing import Optional
+from typing import Optional,List
+from datetime import datetime
 
-from ..agencies.agency_out import AgencyOut
+from .roles_enum import UserRole
+
+from ..addresses.address_out import AddressOut
 
 class UserOut(BaseModel):
     user_id: int
     first_name: str
     last_name: str
     email: EmailStr
-    role: str
-    phone_number: Optional[str] = None
-    address: Optional[str] = None
-    neighborhood: Optional[str] = None
-    city: Optional[str] = None
-    county: Optional[str] = None
-    lic_num: Optional[str] = None
-    agency: Optional[AgencyOut]
-    is_active: Optional[bool]
+    phone_number: str
+    role: List[UserRole]
+    address: Optional[AddressOut] = None
+    created_by: int
+    created_at: datetime
 
     model_config = {
         "from_attributes": True

@@ -7,7 +7,6 @@ class Additional(Base):
     __tablename__ = "additional"
 
     additional_id: Mapped[int] = mapped_column(primary_key=True, index=True, autoincrement=True)
-    property_id: Mapped[int] = mapped_column(ForeignKey("properties.property_id"), nullable=False)
     elevator: Mapped[Optional[bool]] = mapped_column(Boolean)
     balcony: Mapped[Optional[int]] = mapped_column(Integer)
     ac: Mapped[Optional[int]] = mapped_column(Integer)
@@ -19,6 +18,9 @@ class Additional(Base):
     jacuzzi: Mapped[Optional[bool]] = mapped_column(Boolean)
     pool: Mapped[Optional[bool]] = mapped_column(Boolean)
 
-    # Relationship
-    property = relationship("Property", back_populates="additional_details")
+    # ForeignKey
+    property_id: Mapped[int] = mapped_column(ForeignKey("properties.property_id"), nullable=False)
 
+    # Relationship
+    property = relationship("Property", back_populates="additional_details", foreign_keys=[property_id])
+    
