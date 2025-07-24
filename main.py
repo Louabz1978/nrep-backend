@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
 
 from app.routers.auth.auth_router import router as auth_router
 from app.routers.users.users_router import router as users_route
@@ -15,6 +16,9 @@ from app.models import *
 app = FastAPI()
 
 Base.metadata.create_all(bind=engine) 
+
+UPLOAD_DIR = os.path.join(os.getcwd(), "uploaded_photos")
+app.mount("/uploaded_photos", StaticFiles(directory=UPLOAD_DIR), name="uploaded_photos")
 
 app.add_middleware(
     CORSMiddleware,

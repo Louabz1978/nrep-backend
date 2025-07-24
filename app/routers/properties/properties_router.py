@@ -1,17 +1,18 @@
-import os
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, File, UploadFile
 from datetime import datetime, timezone
 from sqlalchemy.orm import Session
 from sqlalchemy import text
+from typing import List
+import random
 
 from app import database
 
-from app.utils.file_helper import load_sql
-from app.utils.out_helper import build_user_out
+from ...utils.file_helper import load_sql
+from ...utils.out_helper import build_user_out
 from ...dependencies import get_current_user
+from ...utils.validate_photo import save_photos
 
 from ...models.user_model import User
-from ...models.property_model import Property
 
 from ..users.roles_enum import UserRole
 
@@ -21,6 +22,7 @@ from ..addresses.address_out import AddressOut
 
 from .property_create import PropertyCreate
 from .property_update import PropertyUpdate
+from ..addresses.address_create import AddressCreate
 
 router = APIRouter(
     prefix="/property",
@@ -28,8 +30,10 @@ router = APIRouter(
 )
 
 @router.post("", status_code=status.HTTP_201_CREATED)
-def create_property(
-    property: PropertyCreate,
+async def create_property(
+    property: PropertyCreate = Depends(PropertyCreate.as_form),
+    address: AddressCreate = Depends(AddressCreate.as_form),
+    photos: List[UploadFile] = File(...),
     db: Session = Depends(database.get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -42,7 +46,7 @@ def create_property(
     else:
         raise HTTPException(status_code=403, detail="Not authorized")
 
-    #validate seller_id
+    saved_files = save_photos(address, photos)
 
     sql = load_sql("user/get_user_by_id.sql")
     owner_result = db.execute(text(sql), {"user_id": property.owner_id}).mappings().first()
@@ -52,7 +56,7 @@ def create_property(
     if not owner_result["seller"]:
         raise HTTPException(status_code=400, detail="Owner must be seller")
     
-    address_data = property.address.model_dump()
+    address_data = address.model_dump()
     address_data["created_at"] = datetime.now(timezone.utc)
     address_data["created_by"] = current_user.user_id
     address_sql = load_sql("address/create_address.sql")
@@ -61,6 +65,10 @@ def create_property(
 
     db_property = property.model_dump()
     db_property["created_by"] = current_user.user_id
+    db_property["created_at"] = datetime.now(timezone.utc)
+    db_property["last_updated"] = datetime.now(timezone.utc)
+    db_property["image_url"] = saved_files
+    db_property["mls_num"] = random.randint(100000, 999999)
     db_property["address_id"] = address_id
 
     property_sql = load_sql("property/create_property.sql")
@@ -187,6 +195,7 @@ def get_all_properties(
             created_at=row["created_at"],
             last_updated=row["last_updated"],
             image_url=row["image_url"],
+            mls_num=row["mls_num"],
             
             created_by_user=created_by,
             owner=owner,
@@ -207,7 +216,86 @@ def get_all_properties(
 
     return properties
 
-@router.get("/{property_id}", response_model=PropertyOut, status_code=status.HTTP_200_OK)
+@router.get("/my-properties", response_model=List[PropertyOut], status_code=status.HTTP_200_OK)
+def my_properties(
+    db: Session = Depends(database.get_db),
+    current_user: User = Depends(get_current_user)
+):
+    sql = load_sql("property/my_property.sql")
+    result = db.execute(text(sql), {"created_by": current_user.user_id})
+
+    properties = []
+    for row in result.mappings():
+        # Build roles for created_by and owner
+        created_by_roles = [
+            role for role in ["admin", "broker", "realtor", "buyer", "seller", "tenant"]
+            if row.get(f"created_by_{role}") is True
+        ]
+        owner_roles = [
+            role for role in ["admin", "broker", "realtor", "buyer", "seller", "tenant"]
+            if row.get(f"owner_{role}") is True
+        ]
+        # Build nested UserOut objects
+        created_by = UserOut(
+            user_id=row["created_by_user_id"],
+            first_name=row["created_by_first_name"],
+            last_name=row["created_by_last_name"],
+            email=row["created_by_email"],
+            phone_number=row["created_by_phone_number"],
+            role=created_by_roles,
+            created_by=row["created_by_created_by"],
+            created_at=row["created_by_created_at"]
+        )
+        owner = UserOut(
+            user_id=row["owner_user_id"],
+            first_name=row["owner_first_name"],
+            last_name=row["owner_last_name"],
+            email=row["owner_email"],
+            phone_number=row["owner_phone_number"],
+            role=owner_roles,
+            created_by=row["owner_created_by"],
+            created_at=row["owner_created_at"]
+        )
+        # Build address
+        address = AddressOut(
+            address_id=row["address_address_id"],
+            floor=row["address_floor"],
+            apt=row["address_apt"],
+            area=row["address_area"],
+            city=row["address_city"],
+            county=row["address_county"],
+            created_at=row["address_created_at"],
+            created_by=row["address_created_by"],
+            building_num=row["address_building_num"],
+            street=row["address_street"]
+        )
+        # Build PropertyOut
+        property = PropertyOut(
+            property_id=row["property_id"],
+            description=row["description"],
+            price=row["price"],
+            property_type=row["property_type"],
+            floor=row["floor"],
+            bedrooms=row["bedrooms"],
+            bathrooms=row["bathrooms"],
+            property_realtor_commission=row["property_realtor_commission"],
+            buyer_realtor_commission=row["buyer_realtor_commission"],
+            area_space=row["area_space"],
+            year_built=row["year_built"],
+            latitude=row["latitude"],
+            longitude=row["longitude"],
+            status=row["status"],
+            created_at=row["created_at"],
+            last_updated=row["last_updated"],
+            image_url=row["image_url"],
+            owner=owner,
+            created_by_user=created_by,
+            address=address
+        )
+        properties.append(property)
+    return properties
+
+@router.get("/{property_id:int}", response_model=PropertyOut, status_code=status.HTTP_200_OK)
 def get_property_by_id(
     property_id: int, 
     db: Session = Depends(database.get_db),
@@ -240,40 +328,6 @@ def get_property_by_id(
     )
 
     return property
-
-@router.post("/my-properties")
-async def my_properties(db: Session = Depends(database.get_db), current_user: User = Depends(get_current_user)):
-    properties = db.query(Property).filter(Property.realtor_id == current_user.user_id).all()
-    if not properties:
-        return {"message": "No Properties Found"}
-
-    property_list = []
-    for prop in properties:
-        images_folder = f"property_images/{prop.property_id}"
-        if os.path.exists(images_folder):
-            images = sorted(
-            [f"/{images_folder}/{img}" 
-             for img in os.listdir(images_folder) if img.lower().endswith((".png", ".jpg", ".jpeg", ".webp"))]
-)
-
-        else:
-            images = []
-
-        property_list.append({
-            "property_id": prop.property_id,
-            "address": prop.address,
-            "city": prop.city,
-            "state": prop.state,
-            "price": prop.price,
-            "bedrooms": prop.bedrooms,
-            "bathrooms": prop.bathrooms,
-            "property_realtor_commission":prop.property_realtor_commission,
-            "buyer_realtor_commission":prop.buyer_realtor_commission,
-            "area_sqft": prop.area_sqft,
-            "images": images,  
-        })
-
-    return property_list
 
 @router.put("/{property_id}")
 def update_property_by_id(
