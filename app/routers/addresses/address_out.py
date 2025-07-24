@@ -4,7 +4,7 @@ from typing import Optional
 
 class AddressOut(BaseModel):
     address_id: int
-    floor: str
+    floor: int
     apt: str
     area: str
     city: Optional[str]

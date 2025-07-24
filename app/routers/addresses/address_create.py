@@ -1,7 +1,7 @@
 from pydantic import BaseModel
 
 class AddressCreate(BaseModel):
-    floor: str
+    floor: int
     apt: str
     area: str
     city: str
