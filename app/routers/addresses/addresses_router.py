@@ -49,6 +49,16 @@ def create_address(
     address_result = db.execute(text(address_sql), address_data)
     new_address_id = address_result.scalar()
 
+    update_user_sql = """
+    UPDATE users
+    SET address_id = :address_id
+    WHERE user_id = :user_id
+    """
+    db.execute(text(update_user_sql), {
+        "address_id": new_address_id,
+        "user_id": current_user.user_id
+    })
+
     db.commit()
 
     sql = load_sql("address/get_address.sql")
