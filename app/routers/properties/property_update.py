@@ -1,6 +1,7 @@
 from pydantic import BaseModel, model_validator
 from typing import Optional
 from .properties_type_enum import PropertyTypes
+from .properties_status_enum import PropertyStatus
 
 from ..addresses.address_update import AddressUpdate
 
@@ -17,7 +18,7 @@ class PropertyUpdate(BaseModel):
     year_built: Optional[ int ] = None
     latitude: Optional[ float ] = None
     longitude: Optional[ float ] = None
-    status: Optional[ str ] = None
+    status: Optional[ PropertyStatus ] = None
     image_url: Optional[ str ] = None
     address: Optional[ AddressUpdate ] = None
     mls_num : Optional[ int ] = None

@@ -6,6 +6,7 @@ from app.routers.users.user_out import UserOut
 from app.routers.addresses.address_out import AddressOut
 
 from .properties_type_enum import PropertyTypes
+from .properties_status_enum import PropertyStatus
 
 class PropertyOut(BaseModel):
     property_id: int
@@ -20,7 +21,7 @@ class PropertyOut(BaseModel):
     year_built: int
     latitude: float
     longitude: float
-    status: str
+    status: PropertyStatus
     created_at: datetime
     last_updated: datetime
     image_url: Optional[str]

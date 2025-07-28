@@ -2,6 +2,7 @@ from pydantic import BaseModel, model_validator
 from typing import Optional
 from fastapi import Form
 from .properties_type_enum import PropertyTypes
+from .properties_status_enum import PropertyStatus
 
 class PropertyCreate(BaseModel):
     owner_id: int
@@ -16,7 +17,7 @@ class PropertyCreate(BaseModel):
     year_built: int
     latitude: float
     longitude: float
-    status: str
+    status: PropertyStatus
 
     @classmethod
     def as_form(
@@ -33,7 +34,7 @@ class PropertyCreate(BaseModel):
         year_built: int = Form(...),
         latitude: float = Form(...),
         longitude: float = Form(...),
-        status: str = Form(...)
+        status: PropertyStatus = Form(...)
     ):
         return cls(
             owner_id = owner_id,
