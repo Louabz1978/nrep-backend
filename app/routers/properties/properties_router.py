@@ -222,7 +222,6 @@ def get_all_properties(
         properties.append(property)
 
     return {
-        "data": properties,
         "pagination": {
             "total": total,
             "page": page,
@@ -230,7 +229,8 @@ def get_all_properties(
             "total_pages": total_pages,
             "has_next": page < total_pages,
             "has_prev": page > 1
-        }
+        },
+        "data": properties
     }
 
 @router.get("/my-properties", response_model=List[PropertyOut], status_code=status.HTTP_200_OK)
