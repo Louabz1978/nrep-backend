@@ -37,4 +37,4 @@ class Property(Base):
 
     address = relationship("Address", back_populates="properties", foreign_keys=[address_id])
     favorites = relationship("Favorite", back_populates="property")
-    additional_details = relationship("Additional", back_populates="property", uselist=False)
+    additional_details = relationship("Additional", back_populates="property", cascade="all, delete-orphan", uselist=False, passive_deletes=True)

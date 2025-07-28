@@ -19,7 +19,7 @@ class Additional(Base):
     pool: Mapped[Optional[bool]] = mapped_column(Boolean)
 
     # ForeignKey
-    property_id: Mapped[int] = mapped_column(ForeignKey("properties.property_id"), nullable=False)
+    property_id: Mapped[int] = mapped_column(ForeignKey("properties.property_id", ondelete="CASCADE"), nullable=False)
 
     # Relationship
     property = relationship("Property", back_populates="additional_details", foreign_keys=[property_id])
