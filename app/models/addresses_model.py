@@ -10,8 +10,8 @@ class Address(Base):
     __tablename__ = "addresses"
 
     address_id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    floor: Mapped[int] = mapped_column(String, nullable=False)
-    apt: Mapped[str] = mapped_column(String, nullable=False)
+    floor: Mapped[int] = mapped_column(Integer, nullable=False)
+    apt: Mapped[int] = mapped_column(Integer, nullable=False)
     area: Mapped[str] = mapped_column(String, nullable=False)
     city: Mapped[Optional[str]] = mapped_column(String(255))
     county: Mapped[Optional[str]] = mapped_column(String(255))

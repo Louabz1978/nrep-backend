@@ -3,7 +3,7 @@ from typing import Optional
 
 class AddressUpdate(BaseModel):
     floor: Optional[int] = None
-    apt: Optional[str] = None
+    apt: Optional[int] = None
     area: Optional[str] = None
     city: Optional[str] = None
     county: Optional[str] = None
