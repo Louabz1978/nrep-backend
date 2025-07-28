@@ -5,13 +5,13 @@ from typing import Optional
 class AddressOut(BaseModel):
     address_id: int
     floor: int
-    apt: str
+    apt: int
     area: str
     city: Optional[str]
     county: Optional[str]
     created_at: datetime
     created_by: int
-    building_num: Optional[int] = None
+    building_num: Optional[str] = None
     street: Optional[str] = None
     
     model_config = {
