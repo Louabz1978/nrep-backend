@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status, File, UploadFile
+from fastapi import APIRouter, Depends, HTTPException, status, File, UploadFile, Query
 from datetime import datetime, timezone
 from sqlalchemy.orm import Session
 from sqlalchemy import text
@@ -18,6 +18,7 @@ from ..users.roles_enum import UserRole
 
 from ..users.user_out import UserOut
 from .property_out import PropertyOut
+from .property_pagination import PaginatedProperties
 from ..addresses.address_out import AddressOut
 
 from .property_create import PropertyCreate
@@ -132,16 +133,22 @@ async def create_property(
         "property": property_details
     }
 
-@router.get("", response_model=list[PropertyOut], status_code=status.HTTP_200_OK)
+@router.get("", response_model=PaginatedProperties, status_code=status.HTTP_200_OK)
 def get_all_properties(
+    page: int = Query(1, ge=1),
+    per_page: int = Query(10, ge=1),
     db: Session = Depends(database.get_db),
     current_user: User = Depends(get_current_user)
 ):
     if not current_user.roles.admin and not current_user.roles.broker and not current_user.roles.realtor:
         raise HTTPException(status_code=403, detail="Not authorized")
     
+    total_sql = "SELECT COUNT(*) FROM properties"
+    total = db.execute(text(total_sql)).scalar()
+    total_pages = (total + per_page - 1) // per_page
+    
     sql = load_sql("property/get_all_properties.sql")
-    result = db.execute(text(sql))
+    result = db.execute(text(sql), {'limit': per_page, 'offset': (page - 1) * per_page})
 
     properties = []
     for row in result.mappings():
@@ -214,7 +221,17 @@ def get_all_properties(
         )
         properties.append(property)
 
-    return properties
+    return {
+        "data": properties,
+        "pagination": {
+            "total": total,
+            "page": page,
+            "per_page": per_page,
+            "total_pages": total_pages,
+            "has_next": page < total_pages,
+            "has_prev": page > 1
+        }
+    }
 
 @router.get("/my-properties", response_model=List[PropertyOut], status_code=status.HTTP_200_OK)
 def my_properties(

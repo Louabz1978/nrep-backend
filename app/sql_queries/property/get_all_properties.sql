@@ -70,4 +70,7 @@ LEFT JOIN roles rcb ON cb.role_id = rcb.roles_id
 LEFT JOIN users o ON p.owner_id = o.user_id
 LEFT JOIN roles ro ON o.role_id = ro.roles_id
 
-LEFT JOIN addresses a ON p.address_id = a.address_id;
+LEFT JOIN addresses a ON p.address_id = a.address_id
+
+ORDER BY created_at DESC
+LIMIT :limit OFFSET :offset;
