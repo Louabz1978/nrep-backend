@@ -24,7 +24,7 @@ class PropertyOut(BaseModel):
     status: PropertyStatus
     created_at: datetime
     last_updated: datetime
-    image_url: Optional[str]
+    image_urls: Optional[str]
     mls_num: Optional[int] = None
 
     created_by_user: Optional[UserOut]
