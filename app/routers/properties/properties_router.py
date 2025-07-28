@@ -22,6 +22,8 @@ from ..addresses.address_out import AddressOut
 
 from .property_create import PropertyCreate
 from .property_update import PropertyUpdate
+from .additional_create import AdditionalCreate
+from .additional_out import AdditionalOut
 from ..addresses.address_create import AddressCreate
 
 router = APIRouter(
@@ -32,6 +34,7 @@ router = APIRouter(
 @router.post("", status_code=status.HTTP_201_CREATED)
 async def create_property(
     property: PropertyCreate = Depends(PropertyCreate.as_form),
+    additional: AdditionalCreate = Depends(AdditionalCreate.as_form),
     address: AddressCreate = Depends(AddressCreate.as_form),
     photos: List[UploadFile] = File(...),
     db: Session = Depends(database.get_db),
@@ -75,6 +78,13 @@ async def create_property(
     property_result = db.execute(text(property_sql), db_property)
     new_property_id = property_result.scalar()
 
+    db_additional = additional.model_dump()
+    db_additional["property_id"] = new_property_id
+
+    additional_sql = load_sql("additional/create_additional.sql")
+    additional_result = db.execute(text(additional_sql), db_additional)
+    new_additional_id = additional_result.scalar()
+
     db.commit()
     
     sql = load_sql("property/get_property_by_id.sql")
@@ -96,6 +106,7 @@ async def create_property(
     
     user_sql = load_sql("user/get_user_by_id.sql")
     role_sql = load_sql("role/get_user_roles.sql")
+    additional_sql = load_sql("additional/get_additional_by_id.sql")
 
     owner_id = property.owner_id
     owner_result = db.execute(text(user_sql), {"user_id": owner_id}).mappings().first()
@@ -127,9 +138,17 @@ async def create_property(
 
     property_details = PropertyOut(**property_out_data)
 
+    created_additional = db.execute(text(additional_sql), {"additional_id": new_additional_id}).mappings().first()
+    if created_additional:
+        additional_out_data = dict(created_additional)
+        additional_details = AdditionalOut(**additional_out_data)
+    else:
+        additional_details = None
+
     return {
         "message": "property created successfully",
-        "property": property_details
+        "property": property_details,
+        "additional": additional_details
     }
 
 @router.get("", response_model=list[PropertyOut], status_code=status.HTTP_200_OK)
