@@ -16,7 +16,7 @@ class Address(Base):
     city: Mapped[Optional[str]] = mapped_column(String(255))
     county: Mapped[Optional[str]] = mapped_column(String(255))
     created_at: Mapped[datetime] = mapped_column(TIMESTAMP, server_default=func.now())
-    building_num: Mapped[Optional[int]] = mapped_column(Integer)
+    building_num: Mapped[Optional[str]] = mapped_column(String)
     street: Mapped[Optional[str]] = mapped_column(String)
 
     # ForeignKey

@@ -7,7 +7,7 @@ class AddressUpdate(BaseModel):
     area: Optional[str] = None
     city: Optional[str] = None
     county: Optional[str] = None
-    building_num: Optional[int] = None
+    building_num: Optional[str] = None
     street: Optional[str] = None
 
     model_config = {

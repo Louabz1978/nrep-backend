@@ -12,7 +12,7 @@ class AddressOut2(BaseModel):
     county: Optional[str]
     created_at: datetime
     created_by_user: UserOut
-    building_num: Optional[int] = None
+    building_num: Optional[str] = None
     street: Optional[str] = None
     
     model_config = {
