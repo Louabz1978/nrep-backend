@@ -1,5 +1,6 @@
 from pydantic import BaseModel, model_validator
 from typing import Optional
+from .properties_type_enum import PropertyTypes
 
 from ..addresses.address_update import AddressUpdate
 
@@ -7,7 +8,7 @@ class PropertyUpdate(BaseModel):
     owner_id: Optional[ int ] = None
     description: Optional[ str ] = None
     price: Optional[ int ] = None
-    property_type: Optional[ str ] = None
+    property_type: Optional[ PropertyTypes ] = None
     bedrooms: Optional[ int ] = None
     bathrooms: Optional[ float ] = None
     property_realtor_commission: Optional[ float ] = None
