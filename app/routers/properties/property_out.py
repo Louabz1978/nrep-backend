@@ -10,7 +10,6 @@ class PropertyOut(BaseModel):
     description: str
     price: int
     property_type: Optional[str]
-    floor: Optional[int]
     bedrooms: int
     bathrooms: float
     property_realtor_commission: float
@@ -23,7 +22,7 @@ class PropertyOut(BaseModel):
     created_at: datetime
     last_updated: datetime
     image_url: Optional[str]
-    mls_num: Optional[int]
+    mls_num: Optional[int] = None
 
     created_by_user: Optional[UserOut]
     owner: Optional[UserOut]

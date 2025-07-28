@@ -2,7 +2,7 @@ from pydantic import BaseModel
 from typing import Optional
 
 class AddressUpdate(BaseModel):
-    floor: Optional[str] = None
+    floor: Optional[int] = None
     apt: Optional[str] = None
     area: Optional[str] = None
     city: Optional[str] = None

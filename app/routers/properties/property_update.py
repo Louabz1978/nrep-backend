@@ -8,7 +8,6 @@ class PropertyUpdate(BaseModel):
     description: Optional[ str ] = None
     price: Optional[ int ] = None
     property_type: Optional[ str ] = None
-    floor: Optional[ int ] = None
     bedrooms: Optional[ int ] = None
     bathrooms: Optional[ float ] = None
     property_realtor_commission: Optional[ float ] = None

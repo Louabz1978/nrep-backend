@@ -12,7 +12,6 @@ class Property(Base):
     description: Mapped[str] = mapped_column(Text)
     price: Mapped[int] = mapped_column(Integer)
     property_type: Mapped[Optional[str]] = mapped_column(String(100))
-    floor: Mapped[Optional[int]] = mapped_column(Integer)
     bedrooms: Mapped[int] = mapped_column(Integer)
     bathrooms: Mapped[float] = mapped_column(Float)
     property_realtor_commission: Mapped[float] = mapped_column(Float)

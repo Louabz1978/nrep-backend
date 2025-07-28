@@ -4,7 +4,6 @@ SELECT
     p.description,
     p.price,
     p.property_type,
-    p.floor,
     p.bedrooms,
     p.bathrooms,
     p.property_realtor_commission,

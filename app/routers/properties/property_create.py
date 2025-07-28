@@ -7,7 +7,6 @@ class PropertyCreate(BaseModel):
     description: str
     price: int
     property_type: Optional[ str ] = None
-    floor: Optional[ int ] = None
     bedrooms: int
     bathrooms: float
     property_realtor_commission: float
@@ -25,7 +24,6 @@ class PropertyCreate(BaseModel):
         description: str = Form(...),
         price: int = Form(...),
         property_type: Optional[ str ] = Form(...),
-        floor: Optional[ int ] = Form(...),
         bedrooms: int = Form(...),
         bathrooms: float = Form(...),
         property_realtor_commission: float = Form(...),
@@ -41,7 +39,6 @@ class PropertyCreate(BaseModel):
             description = description,
             price = price,
             property_type = property_type,
-            floor = floor,
             bedrooms = bedrooms,
             bathrooms = bathrooms,
             property_realtor_commission = property_realtor_commission,

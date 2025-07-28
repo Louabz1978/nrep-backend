@@ -3,7 +3,6 @@ UPDATE properties SET
     description = :description,
     price = :price,
     property_type = :property_type,
-    floor = :floor,
     bedrooms = :bedrooms,
     bathrooms = :bathrooms,
     property_realtor_commission = :property_realtor_commission,
