@@ -3,7 +3,6 @@ SELECT
     p.description,
     p.price,
     p.property_type,
-    p.floor,
     p.bedrooms,
     p.bathrooms,
     p.property_realtor_commission,
@@ -15,7 +14,7 @@ SELECT
     p.status,
     p.created_at,
     p.last_updated,
-    p.image_url,
+    p.image_urls,
     p.mls_num,
     
     -- Owner user fields prefixed with owner_

@@ -12,7 +12,6 @@ class Property(Base):
     description: Mapped[str] = mapped_column(Text)
     price: Mapped[int] = mapped_column(Integer)
     property_type: Mapped[Optional[str]] = mapped_column(String(100))
-    floor: Mapped[Optional[int]] = mapped_column(Integer)
     bedrooms: Mapped[int] = mapped_column(Integer)
     bathrooms: Mapped[float] = mapped_column(Float)
     property_realtor_commission: Mapped[float] = mapped_column(Float)
@@ -24,7 +23,7 @@ class Property(Base):
     status: Mapped[str] = mapped_column(String(20), default="available")
     created_at: Mapped[datetime] = mapped_column(TIMESTAMP, server_default=func.now())
     last_updated: Mapped[datetime] = mapped_column(TIMESTAMP, server_default=func.now(), onupdate=func.now())
-    image_url: Mapped[Optional[str]] = mapped_column(String)
+    image_urls: Mapped[Optional[str]] = mapped_column(String)
     mls_num: Mapped[Optional[int]] = mapped_column(Integer)
     
     # ForeignKey

@@ -7,7 +7,7 @@ class AddressCreate(BaseModel):
     area: str = Form(...)
     city: str = Form(...)
     county: str = Form(...)
-    building_num: int = Form(...)
+    building_num: str = Form(...)
     street: str = Form(...)
 
     @classmethod
@@ -18,7 +18,7 @@ class AddressCreate(BaseModel):
         area: str = Form(...),
         city: str = Form(...),
         county: str = Form(...),
-        building_num: int = Form(...),
+        building_num: str = Form(...),
         street: str = Form(...)
     ):
         return cls(
