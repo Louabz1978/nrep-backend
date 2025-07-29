@@ -12,6 +12,7 @@ from ...dependencies import get_current_user
 from ...models.user_model import User
 
 from .user_out import UserOut
+from user_pagination import PaginatedUsers 
 
 from .user_create import UserCreate
 from .user_update import UserUpdate
@@ -74,7 +75,8 @@ def create_user(
 from typing import List
 from fastapi import Query
 
-@router.get("", response_model=dict, status_code=status.HTTP_200_OK)
+
+@router.get("", response_model=PaginatedUsers, status_code=status.HTTP_200_OK)
 def get_all_users(
     page: int = Query(1, ge=1),
     per_page: int = Query(10, ge=1),
@@ -84,37 +86,33 @@ def get_all_users(
     role_sql = load_sql("role/get_user_roles.sql")
     roles = db.execute(text(role_sql), {"user_id": current_user.user_id}).mappings().first()
     
-    if not roles["admin"] and not roles["broker"] and not roles["realtor"]:
+    if roles["admin"] == False and roles["broker"] == False and roles["realtor"] == False:
         raise HTTPException(status_code=403, detail="Not authorized")
 
-    if roles["admin"]:
-        role = "admin"
-    elif roles["broker"]:
-        role = "broker"
+    if roles["admin"] == True:
+        role = 'admin'
+    elif roles["broker"] == True:
+        role = 'broker'
     else:
-        role = "realtor"
+        role = 'realtor'
 
-   
+    # total count
     total_sql = load_sql("user/count_all_users.sql")
     total = db.execute(text(total_sql), {"user_id": current_user.user_id, "role": role}).scalar()
     total_pages = (total + per_page - 1) // per_page
 
-  
     sql = load_sql("user/get_all_users.sql")
-    result = db.execute(
-        text(sql),
-        {
-            "user_id": current_user.user_id,
-            "role": role,
-            "limit": per_page,
-            "offset": (page - 1) * per_page
-        }
-    )
+    result = db.execute(text(sql), {
+        "user_id": current_user.user_id,
+        "role": role,
+        "limit": per_page,
+        "offset": (page - 1) * per_page
+    })
 
     users = []
     for row in result.mappings():
-        user_roles = [r for r in ["admin", "broker", "realtor", "buyer", "seller", "tenant"] if row.get(r)]
-        user = UserOut(**row, role=user_roles)
+        roles = [role for role in ["admin", "broker", "realtor", "buyer", "seller", "tenant"] if row.get(role)]
+        user = UserOut(**row, role=roles)
         users.append(user)
 
     return {
