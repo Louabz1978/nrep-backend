@@ -43,11 +43,12 @@ class Property(Base):
     # ForeignKey
     created_by : Mapped[Optional[int]] = mapped_column(ForeignKey("users.user_id"), nullable=False)
     owner_id: Mapped[int] = mapped_column(ForeignKey("users.user_id"), nullable=False)
+    address_id: Mapped[int] = mapped_column(ForeignKey("addresses.address_id"), nullable=False)
 
     # Relationships
-    created_by_user = relationship("User", back_populates="property_created", foreign_keys=[created_by], passive_deletes=True)
-    owner = relationship("User", back_populates="property", foreign_keys=[owner_id], passive_deletes=True)
+    created_by_user = relationship("User", back_populates="property_created", foreign_keys=[created_by])
+    owner = relationship("User", back_populates="property", foreign_keys=[owner_id])
 
-    address = relationship("Address", back_populates="property", uselist=False, cascade="all, delete-orphan", passive_deletes=True)
+    address = relationship("Address", back_populates="properties", foreign_keys=[address_id])
     favorites = relationship("Favorite", back_populates="property")
-    additional_details = relationship("Additional", back_populates="property", cascade="all, delete-orphan", uselist=False, passive_deletes=True)
+    additional_details = relationship("Additional", back_populates="property", uselist=False)

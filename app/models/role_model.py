@@ -6,7 +6,6 @@ class Role(Base):
     __tablename__ = "roles"
     
     roles_id: Mapped[int] = mapped_column(primary_key=True, index=True, autoincrement=True)
-
     admin: Mapped[bool] = mapped_column(Boolean, server_default=text("false"))
     broker: Mapped[bool] = mapped_column(Boolean, server_default=text("false"))
     realtor: Mapped[bool] = mapped_column(Boolean, server_default=text("false"))
@@ -15,4 +14,4 @@ class Role(Base):
     tenant: Mapped[bool] = mapped_column(Boolean, server_default=text("false"))
     
     #Relationships
-    user = relationship("User", back_populates="roles")
+    user = relationship("User", back_populates="roles", foreign_keys="[User.role_id]")
