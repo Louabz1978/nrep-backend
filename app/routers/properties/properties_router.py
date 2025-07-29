@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, File, UploadFile,
 from datetime import datetime, timezone
 from sqlalchemy.orm import Session
 from sqlalchemy import text
-from typing import List
+from typing import List, Union
 import random
 
 from app import database
@@ -139,7 +139,7 @@ async def create_property(
 
     property_details = PropertyOut(**property_out_data)
 
-    created_additional = db.execute(text(additional_sql), {"additional_id": new_additional_id}).mappings().first()
+    created_additional = db.execute(text(additional_sql), {"property_id": new_property_id}).mappings().first()
     if created_additional:
         additional_out_data = dict(created_additional)
         additional_details = AdditionalOut(**additional_out_data)
@@ -329,7 +329,7 @@ def my_properties(
         properties.append(property)
     return properties
 
-@router.get("/{property_id:int}", response_model=PropertyOut, status_code=status.HTTP_200_OK)
+@router.get("/{property_id:int}", status_code=status.HTTP_200_OK)
 def get_property_by_id(
     property_id: int, 
     db: Session = Depends(database.get_db),
@@ -361,7 +361,15 @@ def get_property_by_id(
         address=AddressOut(**address_data)
     )
 
-    return property
+    additional_sql = load_sql("additional/get_additional_by_id.sql")
+    created_additional = db.execute(text(additional_sql), {"property_id": property_id}).mappings().first()
+    if created_additional:
+        additional_out_data = dict(created_additional)
+        additional_details = AdditionalOut(**additional_out_data)
+    else:
+        additional_details = None
+
+    return {"property": property, "additional": additional_details}
 
 @router.put("/{property_id}")
 def update_property_by_id(
