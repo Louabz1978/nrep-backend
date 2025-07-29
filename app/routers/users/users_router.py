@@ -98,7 +98,7 @@ def get_all_users(
         users.append(user)
     return users
 
-@router.get("/", response_model=UserOut, status_code=status.HTTP_200_OK)
+@router.get("/me", response_model=UserOut, status_code=status.HTTP_200_OK)
 def get_user_details(
     db: Session = Depends(database.get_db),
     current_user: User = Depends(get_current_user)

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status, File, UploadFile
+from fastapi import APIRouter, Depends, HTTPException, status, File, UploadFile, Query
 from datetime import datetime, timezone
 from sqlalchemy.orm import Session
 from sqlalchemy import text
@@ -18,10 +18,13 @@ from ..users.roles_enum import UserRole
 
 from ..users.user_out import UserOut
 from .property_out import PropertyOut
+from .property_pagination import PaginatedProperties
 from ..addresses.address_out import AddressOut
 
 from .property_create import PropertyCreate
 from .property_update import PropertyUpdate
+from .additional_create import AdditionalCreate
+from .additional_out import AdditionalOut
 from ..addresses.address_create import AddressCreate
 
 router = APIRouter(
@@ -32,6 +35,7 @@ router = APIRouter(
 @router.post("", status_code=status.HTTP_201_CREATED)
 async def create_property(
     property: PropertyCreate = Depends(PropertyCreate.as_form),
+    additional: AdditionalCreate = Depends(AdditionalCreate.as_form),
     address: AddressCreate = Depends(AddressCreate.as_form),
     photos: List[UploadFile] = File(...),
     db: Session = Depends(database.get_db),
@@ -67,13 +71,20 @@ async def create_property(
     db_property["created_by"] = current_user.user_id
     db_property["created_at"] = datetime.now(timezone.utc)
     db_property["last_updated"] = datetime.now(timezone.utc)
-    db_property["image_urls"] = saved_files
+    db_property["images_urls"] = saved_files
     db_property["mls_num"] = random.randint(100000, 999999)
     db_property["address_id"] = address_id
 
     property_sql = load_sql("property/create_property.sql")
     property_result = db.execute(text(property_sql), db_property)
     new_property_id = property_result.scalar()
+
+    db_additional = additional.model_dump()
+    db_additional["property_id"] = new_property_id
+
+    additional_sql = load_sql("additional/create_additional.sql")
+    additional_result = db.execute(text(additional_sql), db_additional)
+    new_additional_id = additional_result.scalar()
 
     db.commit()
     
@@ -96,6 +107,7 @@ async def create_property(
     
     user_sql = load_sql("user/get_user_by_id.sql")
     role_sql = load_sql("role/get_user_roles.sql")
+    additional_sql = load_sql("additional/get_additional_by_id.sql")
 
     owner_id = property.owner_id
     owner_result = db.execute(text(user_sql), {"user_id": owner_id}).mappings().first()
@@ -127,21 +139,35 @@ async def create_property(
 
     property_details = PropertyOut(**property_out_data)
 
+    created_additional = db.execute(text(additional_sql), {"additional_id": new_additional_id}).mappings().first()
+    if created_additional:
+        additional_out_data = dict(created_additional)
+        additional_details = AdditionalOut(**additional_out_data)
+    else:
+        additional_details = None
+
     return {
         "message": "property created successfully",
-        "property": property_details
+        "property": property_details,
+        "additional": additional_details
     }
 
-@router.get("", response_model=list[PropertyOut], status_code=status.HTTP_200_OK)
+@router.get("", response_model=PaginatedProperties, status_code=status.HTTP_200_OK)
 def get_all_properties(
+    page: int = Query(1, ge=1),
+    per_page: int = Query(10, ge=1),
     db: Session = Depends(database.get_db),
     current_user: User = Depends(get_current_user)
 ):
     if not current_user.roles.admin and not current_user.roles.broker and not current_user.roles.realtor:
         raise HTTPException(status_code=403, detail="Not authorized")
     
+    total_sql = "SELECT COUNT(*) FROM properties"
+    total = db.execute(text(total_sql)).scalar()
+    total_pages = (total + per_page - 1) // per_page
+    
     sql = load_sql("property/get_all_properties.sql")
-    result = db.execute(text(sql))
+    result = db.execute(text(sql), {'limit': per_page, 'offset': (page - 1) * per_page})
 
     properties = []
     for row in result.mappings():
@@ -193,7 +219,7 @@ def get_all_properties(
             status=row["status"],
             created_at=row["created_at"],
             last_updated=row["last_updated"],
-            image_urls=row["image_urls"],
+            images_urls=row["images_urls"],
             mls_num=row["mls_num"],
             
             created_by_user=created_by,
@@ -213,7 +239,17 @@ def get_all_properties(
         )
         properties.append(property)
 
-    return properties
+    return {
+        "pagination": {
+            "total": total,
+            "page": page,
+            "per_page": per_page,
+            "total_pages": total_pages,
+            "has_next": page < total_pages,
+            "has_prev": page > 1
+        },
+        "data": properties
+    }
 
 @router.get("/my-properties", response_model=List[PropertyOut], status_code=status.HTTP_200_OK)
 def my_properties(
@@ -285,7 +321,7 @@ def my_properties(
             status=row["status"],
             created_at=row["created_at"],
             last_updated=row["last_updated"],
-            image_urls=row["image_urls"],
+            images_urls=row["images_urls"],
             owner=owner,
             created_by_user=created_by,
             address=address
