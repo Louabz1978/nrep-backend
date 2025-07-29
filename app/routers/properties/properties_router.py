@@ -71,7 +71,7 @@ async def create_property(
     db_property["created_by"] = current_user.user_id
     db_property["created_at"] = datetime.now(timezone.utc)
     db_property["last_updated"] = datetime.now(timezone.utc)
-    db_property["image_urls"] = saved_files
+    db_property["images_urls"] = saved_files
     db_property["mls_num"] = random.randint(100000, 999999)
     db_property["address_id"] = address_id
 
@@ -219,7 +219,7 @@ def get_all_properties(
             status=row["status"],
             created_at=row["created_at"],
             last_updated=row["last_updated"],
-            image_urls=row["image_urls"],
+            images_urls=row["images_urls"],
             mls_num=row["mls_num"],
             
             created_by_user=created_by,
@@ -321,7 +321,7 @@ def my_properties(
             status=row["status"],
             created_at=row["created_at"],
             last_updated=row["last_updated"],
-            image_urls=row["image_urls"],
+            images_urls=row["images_urls"],
             owner=owner,
             created_by_user=created_by,
             address=address

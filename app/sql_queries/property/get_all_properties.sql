@@ -15,7 +15,7 @@ SELECT
     p.status,
     p.created_at,
     p.last_updated,
-    p.image_urls,
+    p.images_urls,
     p.mls_num,
 
     -- Created by user fields
