@@ -12,7 +12,7 @@ from ...dependencies import get_current_user
 from ...models.user_model import User
 
 from .user_out import UserOut
-from user_pagination import PaginatedUsers 
+from .user_pagination import PaginatedUser
 
 from .user_create import UserCreate
 from .user_update import UserUpdate
@@ -76,7 +76,7 @@ from typing import List
 from fastapi import Query
 
 
-@router.get("", response_model=PaginatedUsers, status_code=status.HTTP_200_OK)
+@router.get("", response_model=PaginatedUser, status_code=status.HTTP_200_OK)
 def get_all_users(
     page: int = Query(1, ge=1),
     per_page: int = Query(10, ge=1),
