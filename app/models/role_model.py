@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.database import Base
-from sqlalchemy import Boolean
+from sqlalchemy import Boolean, ForeignKey
 
 class Role(Base):
     __tablename__ = "roles"
@@ -12,6 +12,7 @@ class Role(Base):
     buyer: Mapped[bool] = mapped_column(Boolean, default=False)
     seller: Mapped[bool] = mapped_column(Boolean, default=False)
     tenant: Mapped[bool] = mapped_column(Boolean, default=False)
-    
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.user_id", ondelete="CASCADE"),nullable=False)
+
     #Relationships
-    user = relationship("User", back_populates="roles", foreign_keys="[User.role_id]")
+    user = relationship("User", back_populates="roles")
