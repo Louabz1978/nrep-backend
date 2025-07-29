@@ -19,7 +19,7 @@ class PropertyUpdate(BaseModel):
     latitude: Optional[ float ] = None
     longitude: Optional[ float ] = None
     status: Optional[ PropertyStatus ] = None
-    image_urls: Optional[ str ] = None
+    images_urls: Optional[ str ] = None
     address: Optional[ AddressUpdate ] = None
     mls_num : Optional[ int ] = None
 
