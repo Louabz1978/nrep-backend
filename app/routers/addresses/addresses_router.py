@@ -26,8 +26,8 @@ router = APIRouter(
     tags=["addresses"]
 )
 
-@router.post("", response_model=AddressOut, status_code=status.HTTP_201_CREATED)
-def create_address(
+@router.post("/me", response_model=AddressOut, status_code=status.HTTP_201_CREATED)
+def create_user_address(
     address: AddressCreate,
     db: Session = Depends(database.get_db),
     current_user: User = Depends(get_current_user)
@@ -71,7 +71,7 @@ def create_address(
 
     return address_details
 
-@router.get("", status_code=status.HTTP_200_OK)
+@router.get("/me", status_code=status.HTTP_200_OK)
 def get_user_address(
     db: Session = Depends(database.get_db),
     current_user: User = Depends(get_current_user)
@@ -110,7 +110,6 @@ def get_all_addresses(
     db: Session = Depends(database.get_db),
     current_user: User = Depends(get_current_user),
 ):
-  
     if current_user.roles.admin is False :
         raise HTTPException(status_code=403, detail="Not authorized")
     
@@ -145,8 +144,8 @@ def get_all_addresses(
 
     return addresses
 
-@router.put("")
-def update_address(
+@router.put("/me")
+def update_user_address(
     address : AddressUpdate,
     db : Session = Depends(database.get_db),
     current_user : User = Depends(get_current_user)

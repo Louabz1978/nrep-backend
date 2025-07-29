@@ -7,7 +7,6 @@ class UserUpdate(BaseModel):
     email: Optional[EmailStr] = None
     password: Optional[str] = None
     phone_number: Optional[str] = None
-    address_id: Optional[int] = None
 
     model_config = {
         "from_attributes": True
