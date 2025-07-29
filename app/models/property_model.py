@@ -43,7 +43,6 @@ class Property(Base):
     # ForeignKey
     created_by : Mapped[Optional[int]] = mapped_column(ForeignKey("users.user_id"), nullable=False)
     owner_id: Mapped[int] = mapped_column(ForeignKey("users.user_id"), nullable=False)
-    address_id: Mapped[int] = mapped_column(ForeignKey("addresses.address_id"), nullable=False)
 
     # Relationships
     created_by_user = relationship("User", back_populates="property_created", foreign_keys=[created_by])
