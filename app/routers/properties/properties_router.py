@@ -182,7 +182,7 @@ def get_all_properties(
             last_name=row["created_by_last_name"],
             email=row["created_by_email"],
             phone_number=row["created_by_phone_number"],
-            role=created_by_roles,
+            roles=created_by_roles,
             created_by=row["created_by_created_by"], 
             created_at=row["created_by_created_at"] 
         )
@@ -198,7 +198,7 @@ def get_all_properties(
             last_name=row["owner_last_name"],
             email=row["owner_email"],
             phone_number=row["owner_phone_number"],
-            role=owner_roles,
+            roles=owner_roles,
             created_by=row["owner_created_by"],  # from users.created_by
             created_at=row["owner_created_at"] 
         )
@@ -277,7 +277,7 @@ def my_properties(
             last_name=row["created_by_last_name"],
             email=row["created_by_email"],
             phone_number=row["created_by_phone_number"],
-            role=created_by_roles,
+            roles=created_by_roles,
             created_by=row["created_by_created_by"],
             created_at=row["created_by_created_at"]
         )
@@ -287,7 +287,7 @@ def my_properties(
             last_name=row["owner_last_name"],
             email=row["owner_email"],
             phone_number=row["owner_phone_number"],
-            role=owner_roles,
+            roles=owner_roles,
             created_by=row["owner_created_by"],
             created_at=row["owner_created_at"]
         )

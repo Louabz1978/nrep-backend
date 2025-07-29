@@ -25,7 +25,7 @@ def build_user_out(row: dict, prefix: str) -> UserOut | None:
         last_name=row.get(f"{prefix}last_name"),
         email=row.get(f"{prefix}email"),
         phone_number=row.get(f"{prefix}phone_number"),
-        role=roles,
+        roles=roles,
         created_by=row.get(f"{prefix}created_by"),
         created_at=row.get(f"{prefix}created_at")
 
