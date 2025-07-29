@@ -17,14 +17,12 @@ class User(Base):
     created_at: Mapped[datetime] = mapped_column(TIMESTAMP, server_default=func.now())
     
     # ForeignKey
-    created_by : Mapped[Optional[int]] = mapped_column(ForeignKey("users.user_id"), nullable=False)
-    address_id: Mapped[Optional[int]] = mapped_column(ForeignKey("addresses.address_id"), nullable=True)
-    role_id: Mapped[Optional[int]] = mapped_column(ForeignKey("roles.roles_id"), nullable=True)
+    created_by : Mapped[Optional[int]] = mapped_column(ForeignKey("users.user_id", ondelete="CASCADE") , nullable=False)
 
     # Relationships
     creator = relationship("User", remote_side=[user_id], backref="created_users")
 
-    roles = relationship("Role", back_populates="user", foreign_keys=[role_id], uselist=False)
+    roles = relationship("Role", back_populates="user", cascade="all, delete-orphan", uselist=True, passive_deletes=True)
 
     licenses = relationship("License", back_populates="user", uselist=False)
 
@@ -32,9 +30,8 @@ class User(Base):
     agency_broker = relationship("Agency", back_populates="broker", foreign_keys="[Agency.broker_id]")
 
     favorites = relationship("Favorite", back_populates="user")
-
-    address_created = relationship("Address", back_populates="created_by_user", foreign_keys="[Address.created_by]")
-    address = relationship("Address", back_populates="user", foreign_keys=[address_id])
+    
+    address = relationship("Address", back_populates="user", uselist=False, cascade="all, delete-orphan", passive_deletes=True)
 
     property_created = relationship("Property", back_populates="created_by_user", foreign_keys="[Property.created_by]")
     property = relationship("Property", back_populates="owner", foreign_keys="[Property.owner_id]")
