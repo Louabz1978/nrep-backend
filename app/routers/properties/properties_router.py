@@ -20,6 +20,7 @@ from ..users.user_out import UserOut
 from .property_out import PropertyOut
 from .property_pagination import PaginatedProperties
 from ..addresses.address_out import AddressOut
+from ..addresses.address_update import AddressUpdate
 
 from .property_create import PropertyCreate
 from .property_update import PropertyUpdate
@@ -182,7 +183,7 @@ def get_all_properties(
             last_name=row["created_by_last_name"],
             email=row["created_by_email"],
             phone_number=row["created_by_phone_number"],
-            role=created_by_roles,
+            roles=created_by_roles,
             created_by=row["created_by_created_by"], 
             created_at=row["created_by_created_at"] 
         )
@@ -198,7 +199,7 @@ def get_all_properties(
             last_name=row["owner_last_name"],
             email=row["owner_email"],
             phone_number=row["owner_phone_number"],
-            role=owner_roles,
+            roles=owner_roles,
             created_by=row["owner_created_by"],  # from users.created_by
             created_at=row["owner_created_at"] 
         )
@@ -277,7 +278,7 @@ def my_properties(
             last_name=row["created_by_last_name"],
             email=row["created_by_email"],
             phone_number=row["created_by_phone_number"],
-            role=created_by_roles,
+            roles=created_by_roles,
             created_by=row["created_by_created_by"],
             created_at=row["created_by_created_at"]
         )
@@ -287,7 +288,7 @@ def my_properties(
             last_name=row["owner_last_name"],
             email=row["owner_email"],
             phone_number=row["owner_phone_number"],
-            role=owner_roles,
+            roles=owner_roles,
             created_by=row["owner_created_by"],
             created_at=row["owner_created_at"]
         )
@@ -374,7 +375,8 @@ def get_property_by_id(
 @router.put("/{property_id}")
 def update_property_by_id(
     property_id : int ,
-    property_data: PropertyUpdate ,
+    property_data: PropertyUpdate = Depends(PropertyUpdate.as_form),
+    address_data: AddressUpdate = Depends(AddressUpdate.as_form),
     db: Session = Depends(database.get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -404,14 +406,23 @@ def update_property_by_id(
             raise HTTPException(status_code=404, detail="Owner is not a seller")
 
     #update address
-    if property_data.address :
-        db_property_address = property_data.address.model_dump()
-        db_property_address["address_id"] = property["address_address_id"]
-        sql = load_sql("address/update_address.sql")
-        row = db.execute(text(sql), db_property_address)
+    if address_data:
+        db_address = {
+            k: v for k, v in address_data.model_dump(exclude_unset=True).items()
+            if v is not None
+        }
+        if db_address:
+            db_address["address_id"] = property["address_address_id"]
+            set_clause = ", ".join(f"{k} = :{k}" for k in db_address if k != "address_id")
+            sql = f"UPDATE addresses SET {set_clause} WHERE address_id = :address_id"
+            db.execute(text(sql), db_address)
+
 
     #update property
-    db_property = property_data.model_dump(exclude_unset=True, exclude={"address"})
+    db_property = {
+        k: v for k, v in property_data.model_dump(exclude_unset=True, exclude={"address"}).items()
+        if v is not None
+    }
     db_property["property_id"] = property_id
     if property_data.status != property["status"]:
         db_property["last_updated"] = datetime.now()

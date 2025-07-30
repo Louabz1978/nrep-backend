@@ -14,7 +14,7 @@ class Role(Base):
     seller: Mapped[bool] = mapped_column(Boolean, server_default=text("false"))
     tenant: Mapped[bool] = mapped_column(Boolean, server_default=text("false"))
 
-    user_id: Mapped[int] = mapped_column(ForeignKey("users.user_id", ondelete="CASCADE"),nullable=False)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.user_id", ondelete="CASCADE"), unique=True)
 
     #Relationships
-    user = relationship("User", back_populates="roles", foreign_keys="[User.role_id]")
+    user: Mapped["User"] = relationship(back_populates="roles")

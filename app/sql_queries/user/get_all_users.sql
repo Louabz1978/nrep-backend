@@ -7,7 +7,7 @@ SELECT
     r.seller,
     r.tenant
 FROM users u
-JOIN roles r ON u.role_id = r.roles_id
+LEFT JOIN roles r ON r.user_id = u.user_id
 WHERE
     (:role = 'admin')
     OR
