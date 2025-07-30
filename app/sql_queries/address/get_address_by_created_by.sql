@@ -1,0 +1,1 @@
+SELECT * FROM addresses a WHERE a.created_by = :user_id AND a.property_id IS NULL;

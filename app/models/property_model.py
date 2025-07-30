@@ -48,6 +48,12 @@ class Property(Base):
     created_by_user = relationship("User", back_populates="property_created", foreign_keys=[created_by])
     owner = relationship("User", back_populates="property", foreign_keys=[owner_id])
 
-    address = relationship("Address", back_populates="properties", foreign_keys=[address_id])
+    address: Mapped["Address"] = relationship(
+        back_populates="properties",
+        cascade="all, delete-orphan",
+        uselist=False,
+        lazy="joined"
+    )
+
     favorites = relationship("Favorite", back_populates="property")
     additional_details = relationship("Additional", back_populates="property", uselist=False)

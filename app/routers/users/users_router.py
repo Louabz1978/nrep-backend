@@ -6,12 +6,15 @@ from sqlalchemy import text
 
 from app import database
 
+from sqlalchemy.exc import IntegrityError
+
 from app.utils.file_helper import load_sql
 from ...dependencies import get_current_user
 
 from ...models.user_model import User
 
 from .user_out import UserOut
+from ..addresses.address_out import AddressOut
 
 from .user_create import UserCreate
 from .user_update import UserUpdate
@@ -94,7 +97,12 @@ def get_all_users(
     users = []
     for row in result.mappings():
         roles = [role for role in ["admin", "broker", "realtor", "buyer", "seller", "tenant"] if row.get(role)]
-        user = UserOut(**row, roles=roles)
+        
+        user = UserOut(
+            **row,
+            address = AddressOut(**row) if row.get("address_id") else None,
+            roles=roles
+        )
         users.append(user)
     return users
 
@@ -114,6 +122,7 @@ def get_user_details(
 
     user = UserOut(
         **row,
+        address = AddressOut(**row) if row.get("address_id") else None,
         roles=roles
     )
 
@@ -168,6 +177,7 @@ def get_user_by_id(
 
     user = UserOut(
         **row,
+        address = AddressOut(**row) if row.get("address_id") else None,
         roles=roles
     )
 
@@ -252,7 +262,15 @@ def delete_user(
         raise HTTPException(status_code=404, detail="User not found")
 
     delete_sql = load_sql("user/delete_user.sql")
-    db.execute(text(delete_sql), {"user_id": user_id})
-    
+    try:
+        db.execute(text(delete_sql), {"user_id": user_id})
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(
+            status_code=409,
+            detail="Cannot delete user because it is referenced in other records."
+        )
+
     db.commit()
     return {"message": "User deleted successfully"}

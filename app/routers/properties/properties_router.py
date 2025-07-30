@@ -115,7 +115,7 @@ async def create_property(
     owner_roles = [key for key, value in owner_roles_result.items() if value is True and key in UserRole.__members__] if owner_roles_result else []
     if owner_result:
         owner_data = dict(owner_result)
-        owner_data["role"] = owner_roles
+        owner_data["roles"] = owner_roles
         owner_obj = UserOut(**owner_data)
     else:
         owner_obj = None
@@ -127,7 +127,7 @@ async def create_property(
     
     if created_by_result:
         created_by_data = dict(created_by_result)
-        created_by_data["role"] = created_by_roles
+        created_by_data["roles"] = created_by_roles
         created_by_obj = UserOut(**created_by_data)
     else:
         created_by_obj = None
