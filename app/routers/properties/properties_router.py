@@ -24,8 +24,8 @@ from ..addresses.address_update import AddressUpdate
 
 from .property_create import PropertyCreate
 from .property_update import PropertyUpdate
-from .additional_create import AdditionalCreate
-from .additional_out import AdditionalOut
+from ..additional.additional_create import AdditionalCreate
+from ..additional.additional_out import AdditionalOut
 from ..addresses.address_create import AddressCreate
 
 router = APIRouter(

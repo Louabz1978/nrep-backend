@@ -3,7 +3,7 @@ from typing import Optional
 from datetime import datetime
 
 from app.routers.users.user_out import UserOut
-from .additional_out import AdditionalOut
+from ..additional.additional_out import AdditionalOut
 from app.routers.addresses.address_out import AddressOut
 
 from .properties_type_enum import PropertyTypes
