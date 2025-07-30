@@ -64,3 +64,5 @@ class PropertyCreate(BaseModel):
             raise ValueError("owner_id is required")
 
         return values
+    
+

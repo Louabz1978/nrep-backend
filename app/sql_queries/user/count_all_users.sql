@@ -1,5 +1,5 @@
-SELECT COUNT(*) FROM users u
-JOIN roles r ON u.role_id = r.roles_id
+SELECT COUNT(*) AS total
+FROM users u
 WHERE
     (:role = 'admin')
     OR
