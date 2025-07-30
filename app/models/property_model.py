@@ -1,4 +1,4 @@
-from sqlalchemy import String, Integer, Float, ForeignKey, Date, TIMESTAMP, Text
+from sqlalchemy import String, Integer, Float, ForeignKey, TIMESTAMP, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
 from app.database import Base
@@ -9,7 +9,6 @@ from sqlalchemy import Enum
 
 from ..routers.properties.properties_status_enum import PropertyStatus
 from ..routers.properties.properties_type_enum import PropertyTypes
-
 
 class Property(Base):
     __tablename__ = "properties"
@@ -43,12 +42,17 @@ class Property(Base):
     # ForeignKey
     created_by : Mapped[Optional[int]] = mapped_column(ForeignKey("users.user_id"), nullable=False)
     owner_id: Mapped[int] = mapped_column(ForeignKey("users.user_id"), nullable=False)
-    address_id: Mapped[int] = mapped_column(ForeignKey("addresses.address_id"), nullable=False)
 
     # Relationships
     created_by_user = relationship("User", back_populates="property_created", foreign_keys=[created_by])
     owner = relationship("User", back_populates="property", foreign_keys=[owner_id])
 
-    address = relationship("Address", back_populates="properties", foreign_keys=[address_id])
+    address: Mapped["Address"] = relationship(
+        back_populates="properties",
+        cascade="all, delete-orphan",
+        uselist=False,
+        lazy="joined"
+    )
+
     favorites = relationship("Favorite", back_populates="property")
     additional_details = relationship("Additional", back_populates="property", uselist=False)

@@ -1,6 +1,16 @@
 SELECT
-  u.user_id, u.first_name, u.last_name, u.email, u.phone_number, u.role_id, u.address_id, u.created_by, u.created_at,
-  r.admin, r.broker, r.realtor, r.buyer, r.seller , r.tenant
+  u.*,
+  d.address_id,
+  d.floor,
+  d.apt,
+  d.area,
+  d.city,
+  d.county,
+  d.building_num,
+  d.street,
+  d.created_at AS address_created_at,
+  r.admin, r.broker, r.realtor, r.buyer, r.seller, r.tenant
 FROM users u
-JOIN roles r ON u.role_id = r.roles_id
+LEFT JOIN roles r ON r.user_id = u.user_id
+LEFT JOIN addresses d ON d.created_by = u.user_id
 WHERE u.user_id = :user_id;

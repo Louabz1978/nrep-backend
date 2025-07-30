@@ -20,11 +20,12 @@ from ..users.user_out import UserOut
 from .property_out import PropertyOut
 from .property_pagination import PaginatedProperties
 from ..addresses.address_out import AddressOut
+from ..addresses.address_update import AddressUpdate
 
 from .property_create import PropertyCreate
 from .property_update import PropertyUpdate
-from .additional_create import AdditionalCreate
-from .additional_out import AdditionalOut
+from ..additional.additional_create import AdditionalCreate
+from ..additional.additional_out import AdditionalOut
 from ..addresses.address_create import AddressCreate
 
 router = APIRouter(
@@ -60,25 +61,29 @@ async def create_property(
     if not owner_result["seller"]:
         raise HTTPException(status_code=400, detail="Owner must be seller")
     
-    address_data = address.model_dump()
-    address_data["created_at"] = datetime.now(timezone.utc)
-    address_data["created_by"] = current_user.user_id
-    address_sql = load_sql("address/create_address.sql")
-    address_result = db.execute(text(address_sql),address_data)
-    address_id = address_result.scalar()
-
+    # Create property
     db_property = property.model_dump()
     db_property["created_by"] = current_user.user_id
     db_property["created_at"] = datetime.now(timezone.utc)
     db_property["last_updated"] = datetime.now(timezone.utc)
     db_property["images_urls"] = saved_files
     db_property["mls_num"] = random.randint(100000, 999999)
-    db_property["address_id"] = address_id
 
     property_sql = load_sql("property/create_property.sql")
     property_result = db.execute(text(property_sql), db_property)
     new_property_id = property_result.scalar()
 
+    # Create property address
+    address_data = address.model_dump()
+    address_data["created_at"] = datetime.now(timezone.utc)
+    address_data["created_by"] = current_user.user_id
+    address_data["property_id"] = new_property_id
+    
+    address_sql = load_sql("address/create_property_address.sql")
+    address_result = db.execute(text(address_sql),address_data)
+    address_id = address_result.scalar()
+
+    # Create property additional
     db_additional = additional.model_dump()
     db_additional["property_id"] = new_property_id
 
@@ -115,8 +120,11 @@ async def create_property(
     owner_roles = [key for key, value in owner_roles_result.items() if value is True and key in UserRole.__members__] if owner_roles_result else []
     if owner_result:
         owner_data = dict(owner_result)
-        owner_data["role"] = owner_roles
-        owner_obj = UserOut(**owner_data)
+        owner_data["roles"] = owner_roles
+        owner_obj = UserOut(
+            **owner_data,
+            address = AddressOut(**owner_result) if owner_result.get("address_id") else None,
+        )
     else:
         owner_obj = None
 
@@ -127,8 +135,11 @@ async def create_property(
     
     if created_by_result:
         created_by_data = dict(created_by_result)
-        created_by_data["role"] = created_by_roles
-        created_by_obj = UserOut(**created_by_data)
+        created_by_data["roles"] = created_by_roles
+        created_by_obj = UserOut(
+            **created_by_data,
+            address = AddressOut(**created_by_result) if created_by_result.get("address_id") else None,
+        )
     else:
         created_by_obj = None
 
@@ -137,19 +148,15 @@ async def create_property(
     property_out_data["owner"] = owner_obj
     property_out_data["created_by_user"] = created_by_obj
 
-    property_details = PropertyOut(**property_out_data)
-
-    created_additional = db.execute(text(additional_sql), {"additional_id": new_additional_id}).mappings().first()
-    if created_additional:
-        additional_out_data = dict(created_additional)
-        additional_details = AdditionalOut(**additional_out_data)
-    else:
-        additional_details = None
+    created_additional = db.execute(text(additional_sql), {"property_id": new_property_id}).mappings().first()
+    property_details = PropertyOut(
+        **property_out_data,
+        additional=created_additional
+    )
 
     return {
         "message": "property created successfully",
         "property": property_details,
-        "additional": additional_details
     }
 
 @router.get("", response_model=PaginatedProperties, status_code=status.HTTP_200_OK)
@@ -182,7 +189,7 @@ def get_all_properties(
             last_name=row["created_by_last_name"],
             email=row["created_by_email"],
             phone_number=row["created_by_phone_number"],
-            role=created_by_roles,
+            roles=created_by_roles,
             created_by=row["created_by_created_by"], 
             created_at=row["created_by_created_at"] 
         )
@@ -198,7 +205,7 @@ def get_all_properties(
             last_name=row["owner_last_name"],
             email=row["owner_email"],
             phone_number=row["owner_phone_number"],
-            role=owner_roles,
+            roles=owner_roles,
             created_by=row["owner_created_by"],  # from users.created_by
             created_at=row["owner_created_at"] 
         )
@@ -235,11 +242,15 @@ def get_all_properties(
                 created_by=row["address_created_by"],
                 building_num=row["building_num"],
                 street=row["street"],
+            ),
+            additional= AdditionalOut(
+                **row
             )
         )
         properties.append(property)
 
     return {
+        "data": properties,
         "pagination": {
             "total": total,
             "page": page,
@@ -247,8 +258,7 @@ def get_all_properties(
             "total_pages": total_pages,
             "has_next": page < total_pages,
             "has_prev": page > 1
-        },
-        "data": properties
+        }
     }
 
 @router.get("/my-properties", response_model=List[PropertyOut], status_code=status.HTTP_200_OK)
@@ -256,7 +266,7 @@ def my_properties(
     db: Session = Depends(database.get_db),
     current_user: User = Depends(get_current_user)
 ):
-    sql = load_sql("property/my_property.sql")
+    sql = load_sql("property/get_my_property.sql")
     result = db.execute(text(sql), {"created_by": current_user.user_id})
 
     properties = []
@@ -277,7 +287,7 @@ def my_properties(
             last_name=row["created_by_last_name"],
             email=row["created_by_email"],
             phone_number=row["created_by_phone_number"],
-            role=created_by_roles,
+            roles=created_by_roles,
             created_by=row["created_by_created_by"],
             created_at=row["created_by_created_at"]
         )
@@ -287,7 +297,7 @@ def my_properties(
             last_name=row["owner_last_name"],
             email=row["owner_email"],
             phone_number=row["owner_phone_number"],
-            role=owner_roles,
+            roles=owner_roles,
             created_by=row["owner_created_by"],
             created_at=row["owner_created_at"]
         )
@@ -329,7 +339,7 @@ def my_properties(
         properties.append(property)
     return properties
 
-@router.get("/{property_id:int}", response_model=PropertyOut, status_code=status.HTTP_200_OK)
+@router.get("/{property_id:int}", status_code=status.HTTP_200_OK)
 def get_property_by_id(
     property_id: int, 
     db: Session = Depends(database.get_db),
@@ -358,15 +368,17 @@ def get_property_by_id(
         **property_data,
         owner=build_user_out(row, "owner_"),
         created_by_user=build_user_out(row, "created_by_"),
-        address=AddressOut(**address_data)
+        address=AddressOut(**address_data) if address_data.get("address_id") else None,
+        additional=AdditionalOut(**row)
     )
 
-    return property
+    return {"property": property}
 
 @router.put("/{property_id}")
 def update_property_by_id(
     property_id : int ,
-    property_data: PropertyUpdate ,
+    property_data: PropertyUpdate = Depends(PropertyUpdate.as_form),
+    address_data: AddressUpdate = Depends(AddressUpdate.as_form),
     db: Session = Depends(database.get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -396,14 +408,23 @@ def update_property_by_id(
             raise HTTPException(status_code=404, detail="Owner is not a seller")
 
     #update address
-    if property_data.address :
-        db_property_address = property_data.address.model_dump()
-        db_property_address["address_id"] = property["address_address_id"]
-        sql = load_sql("address/update_address.sql")
-        row = db.execute(text(sql), db_property_address)
+    if address_data:
+        db_address = {
+            k: v for k, v in address_data.model_dump(exclude_unset=True).items()
+            if v is not None
+        }
+        if db_address:
+            db_address["address_id"] = property["address_address_id"]
+            set_clause = ", ".join(f"{k} = :{k}" for k in db_address if k != "address_id")
+            sql = f"UPDATE addresses SET {set_clause} WHERE address_id = :address_id"
+            db.execute(text(sql), db_address)
+
 
     #update property
-    db_property = property_data.model_dump(exclude_unset=True, exclude={"address"})
+    db_property = {
+        k: v for k, v in property_data.model_dump(exclude_unset=True, exclude={"address"}).items()
+        if v is not None
+    }
     db_property["property_id"] = property_id
     if property_data.status != property["status"]:
         db_property["last_updated"] = datetime.now()

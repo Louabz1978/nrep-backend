@@ -1,7 +1,6 @@
 INSERT INTO PROPERTIES (
     owner_id,
     created_by,
-    address_id,
     description,
     price,
     property_type,
@@ -22,7 +21,6 @@ INSERT INTO PROPERTIES (
 VALUES(
     :owner_id,
     :created_by,
-    :address_id,
     :description,
     :price,
     :property_type,
