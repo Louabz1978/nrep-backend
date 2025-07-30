@@ -21,6 +21,7 @@ from .property_out import PropertyOut
 from .property_pagination import PaginatedProperties
 from ..addresses.address_out import AddressOut
 from ..addresses.address_update import AddressUpdate
+from ..additional.additional_update import AdditionalUpdate
 
 from .property_create import PropertyCreate
 from .property_update import PropertyUpdate
@@ -379,6 +380,7 @@ def update_property_by_id(
     property_id : int ,
     property_data: PropertyUpdate = Depends(PropertyUpdate.as_form),
     address_data: AddressUpdate = Depends(AddressUpdate.as_form),
+    additional_data: AdditionalUpdate = Depends(AdditionalUpdate.as_form),
     db: Session = Depends(database.get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -419,6 +421,17 @@ def update_property_by_id(
             sql = f"UPDATE addresses SET {set_clause} WHERE address_id = :address_id"
             db.execute(text(sql), db_address)
 
+    # Update Additional
+    if additional_data:
+        db_additional = {
+            k: v for k, v in additional_data.model_dump(exclude_unset=True).items()
+            if v is not None
+        }
+        if db_additional:
+            db_additional["additional_id"] = property["additional_id"]
+            set_clause = ", ".join(f"{k} = :{k}" for k in db_additional if k != "additional_id")
+            sql = f"UPDATE additional SET {set_clause} WHERE additional_id = :additional_id"
+            db.execute(text(sql), db_additional)
 
     #update property
     db_property = {
@@ -446,7 +459,8 @@ def update_property_by_id(
         **property_data,
         owner=build_user_out(row, "owner_"),
         created_by_user=build_user_out(row, "created_by_"),
-        address=AddressOut(**address_data)
+        address=AddressOut(**address_data) if address_data.get("address_id") else None,
+        additional=AdditionalOut(**row)
     )
 
     return {"message": "Property updated successfully", "property details": property_details}
