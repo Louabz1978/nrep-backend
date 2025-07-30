@@ -12,4 +12,4 @@ SELECT
 
     FROM additional 
 
-    WHERE additional_id = :additional_id;
+    WHERE property_id = :property_id;
