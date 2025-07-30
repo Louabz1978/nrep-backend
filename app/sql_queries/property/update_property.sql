@@ -13,7 +13,6 @@ UPDATE properties SET
     longitude = :longitude,
     status = :status,
     last_updated = CURRENT_TIMESTAMP,
-    images_urls = :images_urls,
-    created_by = :created_by
+    images_urls = :images_urls
 WHERE property_id = :property_id
 RETURNING property_id;

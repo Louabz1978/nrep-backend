@@ -1,6 +1,7 @@
 from pydantic import BaseModel, model_validator
 from typing import Optional
 from fastapi import Form
+
 from .properties_type_enum import PropertyTypes
 from .properties_status_enum import PropertyStatus
 
