@@ -6,15 +6,12 @@ from sqlalchemy import text
 
 from app import database
 
-from sqlalchemy.exc import IntegrityError
-
 from app.utils.file_helper import load_sql
 from ...dependencies import get_current_user
 
 from ...models.user_model import User
 
 from .user_out import UserOut
-from ..addresses.address_out import AddressOut
 
 from .user_create import UserCreate
 from .user_update import UserUpdate
@@ -70,7 +67,7 @@ def create_user(
     created_user = db.execute(text(sql), {"user_id": new_user_id}).mappings().first()
     role_fields = ["admin", "broker", "realtor", "buyer", "seller", "tenant"]
     roles = [role for role in role_fields if created_user[role]]
-    user_details = UserOut(**created_user, roles=roles, address=None)
+    user_details = UserOut(**created_user, roles= roles, address=None)
 
     return {"message": "User created successfully", "user": user_details}
 
@@ -97,16 +94,11 @@ def get_all_users(
     users = []
     for row in result.mappings():
         roles = [role for role in ["admin", "broker", "realtor", "buyer", "seller", "tenant"] if row.get(role)]
-        
-        user = UserOut(
-            **row,
-            address = AddressOut(**row) if row.get("address_id") else None,
-            roles=roles
-        )
+        user = UserOut(**row, roles=roles)
         users.append(user)
     return users
 
-@router.get("/me", response_model=UserOut, status_code=status.HTTP_200_OK)
+@router.get("/", response_model=UserOut, status_code=status.HTTP_200_OK)
 def get_user_details(
     db: Session = Depends(database.get_db),
     current_user: User = Depends(get_current_user)
@@ -122,7 +114,6 @@ def get_user_details(
 
     user = UserOut(
         **row,
-        address = AddressOut(**row) if row.get("address_id") else None,
         roles=roles
     )
 
@@ -177,7 +168,6 @@ def get_user_by_id(
 
     user = UserOut(
         **row,
-        address = AddressOut(**row) if row.get("address_id") else None,
         roles=roles
     )
 
@@ -253,7 +243,7 @@ def delete_user(
 ):
     role_sql = load_sql("role/get_user_roles.sql")
     current_user_roles = db.execute(text(role_sql), {"user_id": current_user.user_id}).mappings().first()
-    if not current_user_roles.get("admin", False):
+    if current_user_roles["admin"] == False:
         raise HTTPException(status_code=403, detail="Not authorized")
 
     sql = load_sql("user/get_user_by_id.sql")
@@ -262,15 +252,7 @@ def delete_user(
         raise HTTPException(status_code=404, detail="User not found")
 
     delete_sql = load_sql("user/delete_user.sql")
-    try:
-        db.execute(text(delete_sql), {"user_id": user_id})
-        db.commit()
-    except IntegrityError:
-        db.rollback()
-        raise HTTPException(
-            status_code=409,
-            detail="Cannot delete user because it is referenced in other records."
-        )
-
+    db.execute(text(delete_sql), {"user_id": user_id})
+    
     db.commit()
     return {"message": "User deleted successfully"}
