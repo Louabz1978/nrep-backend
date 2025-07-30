@@ -3,6 +3,7 @@ from typing import Optional
 from datetime import datetime
 
 from app.routers.users.user_out import UserOut
+from .additional_out import AdditionalOut
 from app.routers.addresses.address_out import AddressOut
 
 from .properties_type_enum import PropertyTypes
@@ -29,7 +30,8 @@ class PropertyOut(BaseModel):
 
     created_by_user: Optional[UserOut]
     owner: Optional[UserOut]
-    address: Optional[AddressOut]
+    address: Optional[AddressOut] = None
+    additional: Optional[AdditionalOut] = None
 
     model_config = {
         "from_attributes": True

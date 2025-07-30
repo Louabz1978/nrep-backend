@@ -5,7 +5,6 @@ from datetime import datetime
 from typing import Optional
 from app.database import Base
 
-
 class Address(Base):
     __tablename__ = "addresses"
 
@@ -28,6 +27,4 @@ class Address(Base):
     properties: Mapped["Property"] = relationship(back_populates="address")
 
     agencies = relationship("Agency", back_populates="address", uselist=False)
-
-    # properties = relationship("Property", back_populates="address")
     

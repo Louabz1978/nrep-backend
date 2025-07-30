@@ -26,7 +26,7 @@ SELECT
     cb.phone_number AS created_by_phone_number,
     cb.created_at AS created_by_created_at,
     cb.created_by AS created_by_created_by,
-    cb.role_id AS created_by_role_id,
+
     rcb.admin AS created_by_admin,
     rcb.broker AS created_by_broker,
     rcb.realtor AS created_by_realtor,
@@ -42,7 +42,7 @@ SELECT
     o.phone_number AS owner_phone_number,
     o.created_at AS owner_created_at,
     o.created_by AS owner_created_by,
-    o.role_id AS owner_role_id,
+
     ro.admin AS owner_admin,
     ro.broker AS owner_broker,
     ro.realtor AS owner_realtor,
@@ -60,16 +60,29 @@ SELECT
     a.created_by AS address_created_by,
     a.created_at AS address_created_at,
     a.building_num,
-    a.street
+    a.street,
 
+    -- Additional fields
+    ad.elevator,
+    ad.balcony,
+    ad.ac,
+    ad.fan_number, 
+    ad.garage, 
+    ad.garden, 
+    ad.solar_system, 
+    ad.water, 
+    ad.jacuzzi,
+    ad.pool
+    
 FROM properties p
 LEFT JOIN users cb ON p.created_by = cb.user_id
-LEFT JOIN roles rcb ON cb.role_id = rcb.roles_id
+LEFT JOIN roles rcb ON cb.user_id = rcb.user_id
 
 LEFT JOIN users o ON p.owner_id = o.user_id
-LEFT JOIN roles ro ON o.role_id = ro.roles_id
+LEFT JOIN roles ro ON o.user_id = ro.user_id
 
-LEFT JOIN addresses a ON p.address_id = a.address_id
+LEFT JOIN addresses a ON p.property_id = a.property_id
+LEFT JOIN additional ad ON p.property_id = ad.property_id
 
 ORDER BY created_at DESC
 LIMIT :limit OFFSET :offset;

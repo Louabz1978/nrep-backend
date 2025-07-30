@@ -1,4 +1,4 @@
-from sqlalchemy import String, Integer, Float, ForeignKey, Date, TIMESTAMP, Text
+from sqlalchemy import String, Integer, Float, ForeignKey, TIMESTAMP, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
 from app.database import Base
@@ -9,7 +9,6 @@ from sqlalchemy import Enum
 
 from ..routers.properties.properties_status_enum import PropertyStatus
 from ..routers.properties.properties_type_enum import PropertyTypes
-
 
 class Property(Base):
     __tablename__ = "properties"
