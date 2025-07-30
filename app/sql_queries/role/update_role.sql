@@ -5,4 +5,4 @@ SET admin = :admin,
     seller = :seller,
     buyer = :buyer,
     tenant = :tenant
-WHERE roles_id = :role_id
+WHERE user_id = :user_id

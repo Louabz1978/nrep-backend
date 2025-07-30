@@ -1,9 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from typing import List
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 
 from app import database
+
 from ...utils.file_helper import load_sql
 from ...models.user_model import User
 from ...dependencies import get_current_user
@@ -36,7 +36,7 @@ def update_role(
     db.execute(
         text(sql), 
         {
-            "role_id": user["role_id"],
+            "user_id": user.user_id,
             "admin": role_data.admin,
             "broker": role_data.broker,
             "realtor": role_data.realtor,

@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, File, UploadFile,
 from datetime import datetime, timezone
 from sqlalchemy.orm import Session
 from sqlalchemy import text
-from typing import List, Union
+from typing import List
 import random
 
 from app import database
@@ -24,8 +24,8 @@ from ..addresses.address_update import AddressUpdate
 
 from .property_create import PropertyCreate
 from .property_update import PropertyUpdate
-from .additional_create import AdditionalCreate
-from .additional_out import AdditionalOut
+from ..additional.additional_create import AdditionalCreate
+from ..additional.additional_out import AdditionalOut
 from ..addresses.address_create import AddressCreate
 
 router = APIRouter(
@@ -61,25 +61,29 @@ async def create_property(
     if not owner_result["seller"]:
         raise HTTPException(status_code=400, detail="Owner must be seller")
     
-    address_data = address.model_dump()
-    address_data["created_at"] = datetime.now(timezone.utc)
-    address_data["created_by"] = current_user.user_id
-    address_sql = load_sql("address/create_address.sql")
-    address_result = db.execute(text(address_sql),address_data)
-    address_id = address_result.scalar()
-
+    # Create property
     db_property = property.model_dump()
     db_property["created_by"] = current_user.user_id
     db_property["created_at"] = datetime.now(timezone.utc)
     db_property["last_updated"] = datetime.now(timezone.utc)
     db_property["images_urls"] = saved_files
     db_property["mls_num"] = random.randint(100000, 999999)
-    db_property["address_id"] = address_id
 
     property_sql = load_sql("property/create_property.sql")
     property_result = db.execute(text(property_sql), db_property)
     new_property_id = property_result.scalar()
 
+    # Create property address
+    address_data = address.model_dump()
+    address_data["created_at"] = datetime.now(timezone.utc)
+    address_data["created_by"] = current_user.user_id
+    address_data["property_id"] = new_property_id
+    
+    address_sql = load_sql("address/create_property_address.sql")
+    address_result = db.execute(text(address_sql),address_data)
+    address_id = address_result.scalar()
+
+    # Create property additional
     db_additional = additional.model_dump()
     db_additional["property_id"] = new_property_id
 
@@ -116,8 +120,11 @@ async def create_property(
     owner_roles = [key for key, value in owner_roles_result.items() if value is True and key in UserRole.__members__] if owner_roles_result else []
     if owner_result:
         owner_data = dict(owner_result)
-        owner_data["role"] = owner_roles
-        owner_obj = UserOut(**owner_data)
+        owner_data["roles"] = owner_roles
+        owner_obj = UserOut(
+            **owner_data,
+            address = AddressOut(**owner_result) if owner_result.get("address_id") else None,
+        )
     else:
         owner_obj = None
 
@@ -128,8 +135,11 @@ async def create_property(
     
     if created_by_result:
         created_by_data = dict(created_by_result)
-        created_by_data["role"] = created_by_roles
-        created_by_obj = UserOut(**created_by_data)
+        created_by_data["roles"] = created_by_roles
+        created_by_obj = UserOut(
+            **created_by_data,
+            address = AddressOut(**created_by_result) if created_by_result.get("address_id") else None,
+        )
     else:
         created_by_obj = None
 
@@ -138,19 +148,15 @@ async def create_property(
     property_out_data["owner"] = owner_obj
     property_out_data["created_by_user"] = created_by_obj
 
-    property_details = PropertyOut(**property_out_data)
-
     created_additional = db.execute(text(additional_sql), {"property_id": new_property_id}).mappings().first()
-    if created_additional:
-        additional_out_data = dict(created_additional)
-        additional_details = AdditionalOut(**additional_out_data)
-    else:
-        additional_details = None
+    property_details = PropertyOut(
+        **property_out_data,
+        additional=created_additional
+    )
 
     return {
         "message": "property created successfully",
         "property": property_details,
-        "additional": additional_details
     }
 
 @router.get("", response_model=PaginatedProperties, status_code=status.HTTP_200_OK)
@@ -236,11 +242,15 @@ def get_all_properties(
                 created_by=row["address_created_by"],
                 building_num=row["building_num"],
                 street=row["street"],
+            ),
+            additional= AdditionalOut(
+                **row
             )
         )
         properties.append(property)
 
     return {
+        "data": properties,
         "pagination": {
             "total": total,
             "page": page,
@@ -248,8 +258,7 @@ def get_all_properties(
             "total_pages": total_pages,
             "has_next": page < total_pages,
             "has_prev": page > 1
-        },
-        "data": properties
+        }
     }
 
 @router.get("/my-properties", response_model=List[PropertyOut], status_code=status.HTTP_200_OK)
@@ -257,7 +266,7 @@ def my_properties(
     db: Session = Depends(database.get_db),
     current_user: User = Depends(get_current_user)
 ):
-    sql = load_sql("property/my_property.sql")
+    sql = load_sql("property/get_my_property.sql")
     result = db.execute(text(sql), {"created_by": current_user.user_id})
 
     properties = []
@@ -359,18 +368,11 @@ def get_property_by_id(
         **property_data,
         owner=build_user_out(row, "owner_"),
         created_by_user=build_user_out(row, "created_by_"),
-        address=AddressOut(**address_data)
+        address=AddressOut(**address_data) if address_data.get("address_id") else None,
+        additional=AdditionalOut(**row)
     )
 
-    additional_sql = load_sql("additional/get_additional_by_id.sql")
-    created_additional = db.execute(text(additional_sql), {"property_id": property_id}).mappings().first()
-    if created_additional:
-        additional_out_data = dict(created_additional)
-        additional_details = AdditionalOut(**additional_out_data)
-    else:
-        additional_details = None
-
-    return {"property": property, "additional": additional_details}
+    return {"property": property}
 
 @router.put("/{property_id}")
 def update_property_by_id(

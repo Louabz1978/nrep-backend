@@ -26,5 +26,3 @@ SELECT
     {role_placeholders}
 FROM inserted_user
 RETURNING roles_id;
-
--- SELECT user_id FROM inserted_user;

@@ -5,7 +5,6 @@ from datetime import datetime
 from typing import Optional
 from app.database import Base
 
-
 class Address(Base):
     __tablename__ = "addresses"
 
@@ -21,12 +20,11 @@ class Address(Base):
 
     # ForeignKey
     created_by: Mapped[Optional[int]] = mapped_column(ForeignKey("users.user_id"), nullable=False)
+    property_id: Mapped[int] = mapped_column(ForeignKey("properties.property_id", ondelete="CASCADE"), unique=True, nullable=True)
 
     # Relationship
     created_by_user = relationship("User", back_populates="address_created", foreign_keys=[created_by])
-    user = relationship("User", back_populates="address", foreign_keys="[User.address_id]")
+    properties: Mapped["Property"] = relationship(back_populates="address")
 
     agencies = relationship("Agency", back_populates="address", uselist=False)
-
-    properties = relationship("Property", back_populates="address")
     

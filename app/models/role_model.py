@@ -14,6 +14,7 @@ class Role(Base):
     seller: Mapped[bool] = mapped_column(Boolean, server_default=text("false"))
     tenant: Mapped[bool] = mapped_column(Boolean, server_default=text("false"))
 
+    # ForeignKey
     user_id: Mapped[int] = mapped_column(ForeignKey("users.user_id", ondelete="CASCADE"), unique=True)
 
     #Relationships
