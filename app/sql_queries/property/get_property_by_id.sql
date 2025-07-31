@@ -64,6 +64,7 @@ SELECT
     a.street AS address_street,
 
     -- Additional fields
+    ad.additional_id,
     ad.elevator,
     ad.balcony,
     ad.ac,
