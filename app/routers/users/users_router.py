@@ -68,6 +68,7 @@ def create_user(
     #fetch user data
     sql = load_sql("user/get_user_by_id.sql")
     created_user = db.execute(text(sql), {"user_id": new_user_id}).mappings().first()
+    print(new_user_id)
     role_fields = ["admin", "broker", "realtor", "buyer", "seller", "tenant"]
     roles = [role for role in role_fields if created_user[role]]
     user_details = UserOut(**created_user, roles=roles, address=None)

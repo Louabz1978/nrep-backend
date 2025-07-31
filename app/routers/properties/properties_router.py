@@ -314,6 +314,10 @@ def my_properties(
             building_num=row["address_building_num"],
             street=row["address_street"]
         )
+        #build additional
+        additional= AdditionalOut(
+                **row
+            )
         # Build PropertyOut
         property = PropertyOut(
             property_id=row["property_id"],
@@ -334,7 +338,8 @@ def my_properties(
             images_urls=row["images_urls"],
             owner=owner,
             created_by_user=created_by,
-            address=address
+            address=address,
+            additional=additional
         )
         properties.append(property)
     return properties
