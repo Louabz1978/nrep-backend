@@ -1,6 +1,6 @@
 from fastapi import Form
 from pydantic import BaseModel, model_validator
-from typing import Optional
+from typing import Optional, List
 from .properties_type_enum import PropertyTypes
 from .properties_status_enum import PropertyStatus
 
@@ -21,7 +21,7 @@ class PropertyUpdate(BaseModel):
     latitude: Optional[ float ] = None
     longitude: Optional[ float ] = None
     status: Optional[ PropertyStatus ] = None
-    images_urls: Optional[ str ] = None
+    images_urls: Optional[List[str]] = None
     
     address: Optional[ AddressUpdate ] = None
     additional: Optional[ AdditionalUpdate ] = None
@@ -42,7 +42,7 @@ class PropertyUpdate(BaseModel):
         latitude: Optional[int] = Form(None),
         longitude: Optional[int] = Form(None),
         status: Optional[PropertyStatus] = Form(None),
-        images_urls: Optional[str] = Form(None),
+        images_urls: Optional[List[str]] = Form(None),
     ):
 
         return cls(

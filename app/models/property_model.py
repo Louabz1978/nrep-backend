@@ -6,6 +6,7 @@ from typing import Optional
 from datetime import datetime
 from sqlalchemy import Numeric
 from sqlalchemy import Enum
+from sqlalchemy.dialects.postgresql import JSONB
 
 from ..routers.properties.properties_status_enum import PropertyStatus
 from ..routers.properties.properties_type_enum import PropertyTypes
@@ -36,7 +37,7 @@ class Property(Base):
     )
     created_at: Mapped[datetime] = mapped_column(TIMESTAMP, server_default=func.now())
     last_updated: Mapped[datetime] = mapped_column(TIMESTAMP, server_default=func.now(), onupdate=func.now())
-    images_urls: Mapped[Optional[str]] = mapped_column(String)
+    images_urls: Mapped[Optional[list[dict]]] = mapped_column(JSONB)
     mls_num: Mapped[Optional[int]] = mapped_column(Integer)
     
     # ForeignKey
