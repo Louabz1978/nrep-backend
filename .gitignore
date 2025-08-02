@@ -19,4 +19,4 @@ venv/
 .pytest_cache
 .env
 
-uploaded_photos/
+static/

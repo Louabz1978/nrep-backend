@@ -1,16 +1,17 @@
-from fastapi import APIRouter, Depends, HTTPException, status, File, UploadFile, Query
+from fastapi import APIRouter, Depends, Form, HTTPException, status, File, UploadFile, Query, Request
 from datetime import datetime, timezone
 from sqlalchemy.orm import Session
 from sqlalchemy import text
-from typing import List
+from typing import List, Optional
 import random
+import json
 
 from app import database
 
 from ...utils.file_helper import load_sql
 from ...utils.out_helper import build_user_out
 from ...dependencies import get_current_user
-from ...utils.validate_photo import save_photos
+from ...utils.validate_photo import save_photos, update_photos
 
 from ...models.user_model import User
 
@@ -36,10 +37,12 @@ router = APIRouter(
 
 @router.post("", status_code=status.HTTP_201_CREATED)
 async def create_property(
+    request: Request,
     property: PropertyCreate = Depends(PropertyCreate.as_form),
     additional: AdditionalCreate = Depends(AdditionalCreate.as_form),
     address: AddressCreate = Depends(AddressCreate.as_form),
     photos: List[UploadFile] = File(...),
+    metadata: str = Form(...),
     db: Session = Depends(database.get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -52,8 +55,6 @@ async def create_property(
     else:
         raise HTTPException(status_code=403, detail="Not authorized")
 
-    saved_files = save_photos(address, photos)
-
     sql = load_sql("user/get_user_by_id.sql")
     owner_result = db.execute(text(sql), {"user_id": property.owner_id}).mappings().first()
     if not owner_result :
@@ -62,13 +63,21 @@ async def create_property(
     if not owner_result["seller"]:
         raise HTTPException(status_code=400, detail="Owner must be seller")
     
+    mls_num = random.randint(100000, 999999)
+    base_url = str(request.base_url)
+    try:
+        meta_list = json.loads(metadata)
+    except json.JSONDecodeError:
+        raise HTTPException(status_code=400, detail="Invalid metadata format")
+    saved_files = save_photos(mls_num, photos, base_url, meta_list)
+
     # Create property
     db_property = property.model_dump()
     db_property["created_by"] = current_user.user_id
     db_property["created_at"] = datetime.now(timezone.utc)
     db_property["last_updated"] = datetime.now(timezone.utc)
-    db_property["images_urls"] = saved_files
-    db_property["mls_num"] = random.randint(100000, 999999)
+    db_property["images_urls"] = json.dumps(saved_files)
+    db_property["mls_num"] = mls_num
 
     property_sql = load_sql("property/create_property.sql")
     property_result = db.execute(text(property_sql), db_property)
@@ -377,20 +386,23 @@ def get_property_by_id(
 
 @router.put("/{property_id}")
 def update_property_by_id(
+    request: Request,
     property_id : int ,
     property_data: PropertyUpdate = Depends(PropertyUpdate.as_form),
     address_data: AddressUpdate = Depends(AddressUpdate.as_form),
     additional_data: AdditionalUpdate = Depends(AdditionalUpdate.as_form),
+    photos: Optional[List[UploadFile]] = File(None),
+    metadata: Optional[str] = Form(None),
     db: Session = Depends(database.get_db),
     current_user: User = Depends(get_current_user)
 ):
-    #get property
+    # Get property
     sql = load_sql("property/get_property_by_id.sql")
     property = db.execute(text(sql), {"property_id": property_id}).mappings().first()
     if not property:
         raise HTTPException( status_code= 404 , detail="property not found")
     
-    #authorization check
+    # Authorization check
     role_sql = load_sql("role/get_user_roles.sql")
     current_user_roles = db.execute(text(role_sql), {"user_id": current_user.user_id}).mappings().first()
     current_user_role = [key for key,value in current_user_roles.items() if value]
@@ -401,7 +413,7 @@ def update_property_by_id(
     ):
         raise HTTPException(status_code=403, detail="Not authorized")
     
-    #owner_id check
+    # owner_id check
     if property_data.owner_id:
         owner = db.execute(text(role_sql), {"user_id": property_data.owner_id}).mappings().first()
         if not owner:
@@ -409,7 +421,16 @@ def update_property_by_id(
         if owner["seller"] == False:
             raise HTTPException(status_code=404, detail="Owner is not a seller")
 
-    #update address
+    base_url = str(request.base_url)
+    try:
+        meta_list = []
+        if metadata:
+            meta_list = json.loads(metadata)
+    except json.JSONDecodeError:
+        raise HTTPException(status_code=400, detail="Invalid metadata format")
+    saved_files = update_photos(property.mls_num, photos, property_data.images_urls, base_url, meta_list)
+
+    # Update address
     if address_data:
         db_address = {
             k: v for k, v in address_data.model_dump(exclude_unset=True).items()
@@ -433,7 +454,7 @@ def update_property_by_id(
             sql = f"UPDATE additional SET {set_clause} WHERE additional_id = :additional_id"
             db.execute(text(sql), db_additional)
 
-    #update property
+    # Update property
     db_property = {
         k: v for k, v in property_data.model_dump(exclude_unset=True, exclude={"address"}).items()
         if v is not None
@@ -441,12 +462,16 @@ def update_property_by_id(
     db_property["property_id"] = property_id
     if property_data.status != property["status"]:
         db_property["last_updated"] = datetime.now()
+    if saved_files or db_property['images_urls'] == ['']:
+        db_property['images_urls'] = json.dumps(saved_files)
+        
     set_clause = ", ".join(f"{k} = :{k}" for k in db_property)
+    
     sql = f"UPDATE PROPERTIES SET {set_clause} WHERE property_id= :property_id RETURNING property_id;"
     updated_property_id = db.execute(text(sql), db_property).scalar()
     db.commit()
 
-    #fetch property data
+    # Fetch property data
     sql = load_sql("property/get_property_by_id.sql")
     row = db.execute(text(sql), {"property_id": updated_property_id}).mappings().first()
     nested_prefixes = ("owner_", "created_by_", "address_")

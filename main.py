@@ -1,3 +1,4 @@
+import os
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
@@ -17,8 +18,9 @@ app = FastAPI()
 
 Base.metadata.create_all(bind=engine) 
 
-UPLOAD_DIR = os.path.join(os.getcwd(), "uploaded_photos")
-app.mount("/uploaded_photos", StaticFiles(directory=UPLOAD_DIR), name="uploaded_photos")
+UPLOAD_DIR = os.path.join(os.getcwd(), "static")
+os.makedirs(UPLOAD_DIR, exist_ok=True)
+app.mount("/static", StaticFiles(directory=UPLOAD_DIR), name="static")
 
 app.add_middleware(
     CORSMiddleware,

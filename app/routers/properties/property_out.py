@@ -1,6 +1,7 @@
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, List, Dict
 from datetime import datetime
+import json
 
 from app.routers.users.user_out import UserOut
 from ..additional.additional_out import AdditionalOut
@@ -25,7 +26,7 @@ class PropertyOut(BaseModel):
     status: PropertyStatus
     created_at: datetime
     last_updated: datetime
-    images_urls: Optional[str]
+    images_urls: Optional[List[Dict]]
     mls_num: Optional[int] = None
 
     created_by_user: Optional[UserOut]
@@ -36,3 +37,4 @@ class PropertyOut(BaseModel):
     model_config = {
         "from_attributes": True
     }
+    
