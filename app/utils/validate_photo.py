@@ -53,8 +53,12 @@ def save_photos(mls_num, photos: list[UploadFile], base_url, metadata: list[dict
         file_url = urljoin(base_url + f"/{UPLOAD_DIR}/{mls_num}/", photo.filename)
 
         # Match metadata for is_main
-        meta = next((m for m in metadata if m["filename"] == photo.filename), {})
-        is_main = meta.get("is_main", False)
+        try:
+            meta = next((m for m in metadata if m["filename"] == photo.filename), {})
+            is_main = meta.get("is_main", False)
+        except Exception:
+            # fallback if metadata is None or malformed
+            is_main = False
 
         saved_files.append({
             "is_main": is_main,
