@@ -25,4 +25,4 @@ SELECT
     user_id,
     {role_placeholders}
 FROM inserted_user
-RETURNING roles_id;
+RETURNING user_id;
