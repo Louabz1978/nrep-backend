@@ -29,6 +29,7 @@ from .property_update import PropertyUpdate
 from ..additional.additional_create import AdditionalCreate
 from ..additional.additional_out import AdditionalOut
 from ..addresses.address_create import AddressCreate
+from .properties_status_enum import PropertyStatus
 
 from .properties_type_enum import PropertyTypes
 router = APIRouter(
@@ -530,10 +531,20 @@ def delete_property(
 
 
 
+@router.get("/status-options", tags=["Properties"])
+def get_property_status_options(
+    db: Session = Depends(database.get_db),
+    current_user: User = Depends(get_current_user)
+):
+    role_sql = load_sql("role/get_user_roles.sql")
+    role_result = db.execute(text(role_sql), {"user_id": current_user.user_id}).mappings().first()
+    current_user_role = [key for key, value in role_result.items() if value]
 
-
-
-
+    if "realtor" in current_user_role or "broker" in current_user_role or "admin" in current_user_role:
+        pass
+    else:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    return [status.value for status in PropertyStatus]
 
 @router.get("types_option")
 def get_property_type_options(
@@ -548,5 +559,5 @@ def get_property_type_options(
         pass
     else:
         raise HTTPException(status_code=403, detail="Not authorized")
-    
+
     return [types.value for types in PropertyTypes]
