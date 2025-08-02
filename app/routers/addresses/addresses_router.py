@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 from datetime import datetime ,timezone
@@ -20,6 +20,8 @@ from .address_out import AddressOut
 
 from .address_create import AddressCreate
 from .address_update import AddressUpdate
+
+from .address_pagination import PaginatedAddresses, PaginationMeta
 
 router = APIRouter(
     prefix="/address",
@@ -95,16 +97,22 @@ def get_address_by_id(
     address = AddressOut(**row)
     return address
 
-@router.get("/all", response_model=List[AddressOut2], status_code=status.HTTP_200_OK)
+@router.get("/all", response_model=PaginatedAddresses, status_code=status.HTTP_200_OK)
 def get_all_addresses(
+    page: int = Query(1, ge=1),
+    per_page: int = Query(10, ge=1),
     db: Session = Depends(database.get_db),
     current_user: User = Depends(get_current_user),
 ):
     if current_user.roles.admin is False :
         raise HTTPException(status_code=403, detail="Not authorized")
     
+    total_sql = "SELECT COUNT(*) FROM addresses"
+    total = db.execute(text(total_sql)).scalar()
+    total_pages = (total + per_page - 1) // per_page
+    
     sql = load_sql("address/get_all_addresses.sql")
-    result = db.execute(text(sql)).mappings().all()
+    result = db.execute(text(sql), {'limit': per_page, 'offset': (page - 1) * per_page}).mappings().all()
     addresses = []
     for row in result:
         # نفصل بيانات اليوزر يلي أنشأ الادريس
@@ -132,7 +140,17 @@ def get_all_addresses(
         addr = AddressOut2(**address_data)
         addresses.append(addr)
 
-    return addresses
+    return {
+        "data": addresses,
+        "pagination": {
+            "total": total,
+            "page": page,
+            "per_page": per_page,
+            "total_pages": total_pages,
+            "has_next": page < total_pages,
+            "has_prev": page > 1
+        }
+    }
 
 @router.put("/me")
 def update_user_address(
