@@ -14,6 +14,7 @@ from ...dependencies import get_current_user
 from ...models.user_model import User
 
 from .user_out import UserOut
+from .user_pagination import PaginatedUser
 from ..addresses.address_out import AddressOut
 
 from .user_create import UserCreate
@@ -74,13 +75,20 @@ def create_user(
 
     return {"message": "User created successfully", "user": user_details}
 
-@router.get("", response_model=List[UserOut], status_code=status.HTTP_200_OK)
+from typing import List
+from fastapi import Query
+
+
+@router.get("", response_model=PaginatedUser, status_code=status.HTTP_200_OK)
 def get_all_users(
+    page: int = Query(1, ge=1),
+    per_page: int = Query(10, ge=1),
     db: Session = Depends(database.get_db),
     current_user: User = Depends(get_current_user),
 ):
     role_sql = load_sql("role/get_user_roles.sql")
     roles = db.execute(text(role_sql), {"user_id": current_user.user_id}).mappings().first()
+    
     if roles["admin"] == False and roles["broker"] == False and roles["realtor"] == False:
         raise HTTPException(status_code=403, detail="Not authorized")
 
@@ -90,9 +98,19 @@ def get_all_users(
         role = 'broker'
     else:
         role = 'realtor'
-    
+
+    # total count
+    total_sql = load_sql("user/count_all_users.sql")
+    total = db.execute(text(total_sql), {"user_id": current_user.user_id, "role": role}).scalar()
+    total_pages = (total + per_page - 1) // per_page
+
     sql = load_sql("user/get_all_users.sql")
-    result = db.execute(text(sql), {"user_id": current_user.user_id, "role": role})
+    result = db.execute(text(sql), {
+        "user_id": current_user.user_id,
+        "role": role,
+        "limit": per_page,
+        "offset": (page - 1) * per_page
+    })
 
     users = []
     for row in result.mappings():
@@ -104,7 +122,19 @@ def get_all_users(
             roles=roles
         )
         users.append(user)
-    return users
+
+    return {
+        "pagination": {
+            "total": total,
+            "page": page,
+            "per_page": per_page,
+            "total_pages": total_pages,
+            "has_next": page < total_pages,
+            "has_prev": page > 1
+        },
+        "data": users
+    }
+
 
 @router.get("/me", response_model=UserOut, status_code=status.HTTP_200_OK)
 def get_user_details(
