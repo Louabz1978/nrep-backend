@@ -435,7 +435,7 @@ def update_property_by_id(
             meta_list = json.loads(metadata)
     except json.JSONDecodeError:
         raise HTTPException(status_code=400, detail="Invalid metadata format")
-    saved_files = update_photos(property.mls_num, photos, property_data.images_urls, base_url, meta_list)
+    saved_files = update_photos(property.mls_num, property['images_urls'], photos, property_data.images_urls, base_url, meta_list)
 
     # Update address
     if address_data:

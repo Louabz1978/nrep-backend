@@ -63,7 +63,7 @@ def save_photos(mls_num, photos: list[UploadFile], base_url, metadata: list[dict
 
     return saved_files
 
-def update_photos(mls_num, new_photos: list[UploadFile], update_photos_data, base_url, metadata: list[dict]):
+def update_photos(mls_num, db_images_property, new_photos: list[UploadFile], update_photos_data, base_url, metadata: list[dict]):
     saved_files = []
 
     # Create a folder with name to mls_num
@@ -83,7 +83,10 @@ def update_photos(mls_num, new_photos: list[UploadFile], update_photos_data, bas
         # Loop through files in the folder
         for file in folder_dir.iterdir():
             if file.is_file() and file.name not in keep_filenames:
-                print(f"Removing unused file: {file.name}")
+                db_images_property = [
+                    img for img in db_images_property
+                    if Path(img['url']).name != file.name
+                ]
                 file.unlink()
             else:
                 # Add base url to photo
@@ -128,5 +131,7 @@ def update_photos(mls_num, new_photos: list[UploadFile], update_photos_data, bas
                 "is_main": is_main,
                 "url": file_url
             })
-            
+
+    saved_files.extend(db_images_property)
+
     return saved_files
