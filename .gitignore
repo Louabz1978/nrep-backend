@@ -20,3 +20,6 @@ venv/
 .env
 
 static/
+
+# ignore uploaded photos directory
+/uploaded_photos/

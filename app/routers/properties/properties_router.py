@@ -273,17 +273,29 @@ def get_all_properties(
         }
     }
 
-@router.get("/my-properties", response_model=List[PropertyOut], status_code=status.HTTP_200_OK)
+@router.get("/my-properties", response_model=PaginatedProperties, status_code=status.HTTP_200_OK)
 def my_properties(
+    page: int = Query(1, ge=1),
+    per_page: int = Query(10, ge=1),
     db: Session = Depends(database.get_db),
     current_user: User = Depends(get_current_user)
 ):
+    total_sql = "SELECT COUNT(*) FROM properties WHERE created_by = :created_by"
+    total = db.execute(text(total_sql), {"created_by": current_user.user_id}).scalar()
+    total_pages = (total + per_page - 1) // per_page
+
     sql = load_sql("property/get_my_property.sql")
-    result = db.execute(text(sql), {"created_by": current_user.user_id})
+    result = db.execute(
+        text(sql),
+        {
+            "created_by": current_user.user_id,
+            "limit": per_page,
+            "offset": (page - 1) * per_page
+        }
+    )
 
     properties = []
     for row in result.mappings():
-        # Build roles for created_by and owner
         created_by_roles = [
             role for role in ["admin", "broker", "realtor", "buyer", "seller", "tenant"]
             if row.get(f"created_by_{role}") is True
@@ -292,7 +304,7 @@ def my_properties(
             role for role in ["admin", "broker", "realtor", "buyer", "seller", "tenant"]
             if row.get(f"owner_{role}") is True
         ]
-        # Build nested UserOut objects
+
         created_by = UserOut(
             user_id=row["created_by_user_id"],
             first_name=row["created_by_first_name"],
@@ -313,7 +325,6 @@ def my_properties(
             created_by=row["owner_created_by"],
             created_at=row["owner_created_at"]
         )
-        # Build address
         address = AddressOut(
             address_id=row["address_address_id"],
             floor=row["address_floor"],
@@ -326,11 +337,8 @@ def my_properties(
             building_num=row["address_building_num"],
             street=row["address_street"]
         )
-        #build additional
-        additional= AdditionalOut(
-                **row
-            )
-        # Build PropertyOut
+        additional = AdditionalOut(**row)
+
         property = PropertyOut(
             property_id=row["property_id"],
             description=row["description"],
@@ -354,7 +362,18 @@ def my_properties(
             additional=additional
         )
         properties.append(property)
-    return properties
+
+    return {
+        "pagination": {
+            "total": total,
+            "page": page,
+            "per_page": per_page,
+            "total_pages": total_pages,
+            "has_next": page < total_pages,
+            "has_prev": page > 1
+        },
+        "data": properties
+    }
 
 @router.get("/{property_id:int}", status_code=status.HTTP_200_OK)
 def get_property_by_id(
