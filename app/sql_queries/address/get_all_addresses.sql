@@ -25,4 +25,6 @@ SELECT
 
 FROM addresses a
 LEFT JOIN users u ON a.created_by = u.user_id
-LEFT JOIN roles r ON u.user_id=r.user_id;
+LEFT JOIN roles r ON u.user_id=r.user_id
+
+LIMIT :limit OFFSET :offset;
