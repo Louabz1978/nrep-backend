@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 from datetime import datetime ,timezone
@@ -21,13 +21,15 @@ from .address_out import AddressOut
 from .address_create import AddressCreate
 from .address_update import AddressUpdate
 
+from .address_pagination import PaginatedAddresses, PaginationMeta
+
 router = APIRouter(
     prefix="/address",
     tags=["addresses"]
 )
 
-@router.post("", response_model=AddressOut, status_code=status.HTTP_201_CREATED)
-def create_address(
+@router.post("/me", response_model=AddressOut, status_code=status.HTTP_201_CREATED)
+def create_user_address(
     address: AddressCreate,
     db: Session = Depends(database.get_db),
     current_user: User = Depends(get_current_user)
@@ -61,13 +63,13 @@ def create_address(
 
     return address_details
 
-@router.get("", status_code=status.HTTP_200_OK)
+@router.get("/me", status_code=status.HTTP_200_OK)
 def get_user_address(
     db: Session = Depends(database.get_db),
     current_user: User = Depends(get_current_user)
 ):
-    sql = load_sql("address/get_address.sql")
-    result = db.execute(text(sql), {'address_id': current_user.address_id})
+    sql = load_sql("address/get_address_by_created_by.sql")
+    result = db.execute(text(sql), {'user_id': current_user.user_id})
     row = result.mappings().first()
 
     if row is None:
@@ -95,17 +97,22 @@ def get_address_by_id(
     address = AddressOut(**row)
     return address
 
-@router.get("/all", response_model=List[AddressOut2], status_code=status.HTTP_200_OK)
+@router.get("/all", response_model=PaginatedAddresses, status_code=status.HTTP_200_OK)
 def get_all_addresses(
+    page: int = Query(1, ge=1),
+    per_page: int = Query(10, ge=1),
     db: Session = Depends(database.get_db),
     current_user: User = Depends(get_current_user),
 ):
-  
     if current_user.roles.admin is False :
         raise HTTPException(status_code=403, detail="Not authorized")
     
+    total_sql = "SELECT COUNT(*) FROM addresses"
+    total = db.execute(text(total_sql)).scalar()
+    total_pages = (total + per_page - 1) // per_page
+    
     sql = load_sql("address/get_all_addresses.sql")
-    result = db.execute(text(sql)).mappings().all()
+    result = db.execute(text(sql), {'limit': per_page, 'offset': (page - 1) * per_page}).mappings().all()
     addresses = []
     for row in result:
         # نفصل بيانات اليوزر يلي أنشأ الادريس
@@ -117,7 +124,7 @@ def get_all_addresses(
 
         # نبني الكائن
         roles = [role for role in ["admin", "broker", "realtor", "buyer", "seller", "tenant"] if created_by_user_data.get(role)]
-        created_by_user_data["role"] = roles
+        created_by_user_data["roles"] = roles
         created_by_user = UserOut(**created_by_user_data)
 
         # نفصل باقي البيانات تبع الادريس
@@ -133,10 +140,20 @@ def get_all_addresses(
         addr = AddressOut2(**address_data)
         addresses.append(addr)
 
-    return addresses
+    return {
+        "data": addresses,
+        "pagination": {
+            "total": total,
+            "page": page,
+            "per_page": per_page,
+            "total_pages": total_pages,
+            "has_next": page < total_pages,
+            "has_prev": page > 1
+        }
+    }
 
-@router.put("")
-def update_address(
+@router.put("/me")
+def update_user_address(
     address : AddressUpdate,
     db : Session = Depends(database.get_db),
     current_user : User = Depends(get_current_user)
@@ -147,21 +164,22 @@ def update_address(
     if not user_data:
         raise HTTPException(status_code=404, detail="user not found")
     
-    get_sql = load_sql("address/get_address_by_id.sql")
-    address_data = db.execute(text(get_sql), {"address_id":user_data["address_id"]}).mappings().first()
+    get_sql = load_sql("address/get_address_by_created_by.sql")
+    address_data = db.execute(text(get_sql), {"user_id":user_data["user_id"]}).mappings().first()
 
     if not address_data:
         raise HTTPException(status_code=404, detail="address not found")
     
     #update address
     db_address = address.model_dump(exclude_unset=True)
-    db_address["address_id"] = user_data["address_id"]
+    db_address["address_id"] = address_data["address_id"]
     set_clause = ", ".join(f"{k} = :{k}" for k in db_address)
     sql = f"UPDATE ADDRESSES SET {set_clause} WHERE address_id = :address_id RETURNING address_id;"
     updated_address_id = db.execute(text(sql), db_address).scalar()
     db.commit()
 
     #fetch address data
+    get_sql = load_sql("address/get_address_by_id.sql")
     updated_address = db.execute(text(get_sql),{"address_id":updated_address_id}).mappings().first()
     address_details = AddressOut(**updated_address)
 
@@ -178,11 +196,13 @@ def update_address_by_id(
     #get address and created_by_user data
     get_sql = load_sql("address/get_address_by_id.sql")
     address_data = db.execute(text(get_sql), {"address_id": address_id}).mappings().first()
-    sql = load_sql("user/get_user_by_id.sql")
-    created_by_user = db.execute(text(sql), {"user_id": address_data["created_by"]}).mappings().first()
 
     if not address_data:
         raise HTTPException(status_code=404, detail="address not found")
+    
+    sql = load_sql("user/get_user_by_id.sql")
+    created_by_user = db.execute(text(sql), {"user_id": address_data["created_by"]}).mappings().first()
+
     if not created_by_user:
         raise HTTPException(status_code=404, detail="creator not found")
     

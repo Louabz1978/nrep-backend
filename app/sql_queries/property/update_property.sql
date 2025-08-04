@@ -3,7 +3,6 @@ UPDATE properties SET
     description = :description,
     price = :price,
     property_type = :property_type,
-    floor = :floor,
     bedrooms = :bedrooms,
     bathrooms = :bathrooms,
     property_realtor_commission = :property_realtor_commission,
@@ -14,7 +13,6 @@ UPDATE properties SET
     longitude = :longitude,
     status = :status,
     last_updated = CURRENT_TIMESTAMP,
-    image_url = :image_url,
-    created_by = :created_by
+    images_urls = :images_urls
 WHERE property_id = :property_id
 RETURNING property_id;

@@ -12,7 +12,7 @@ class UserOut(BaseModel):
     last_name: str
     email: EmailStr
     phone_number: str
-    role: List[UserRole]
+    roles: List[UserRole]
     address: Optional[AddressOut] = None
     created_by: int
     created_at: datetime

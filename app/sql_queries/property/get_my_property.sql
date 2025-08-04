@@ -3,7 +3,6 @@ SELECT
     p.description,
     p.price,
     p.property_type,
-    p.floor,
     p.bedrooms,
     p.bathrooms,
     p.property_realtor_commission,
@@ -15,7 +14,7 @@ SELECT
     p.status,
     p.created_at,
     p.last_updated,
-    p.image_url,
+    p.images_urls,
     p.mls_num,
     
     -- Owner user fields prefixed with owner_
@@ -62,16 +61,31 @@ SELECT
     a.created_at AS address_created_at,
     a.created_by AS address_created_by,
     a.building_num AS address_building_num,
-    a.street AS address_street
+    a.street AS address_street,
+
+    -- Additional fields
+    ad.elevator,
+    ad.balcony,
+    ad.ac,
+    ad.fan_number, 
+    ad.garage, 
+    ad.garden, 
+    ad.solar_system, 
+    ad.water, 
+    ad.jacuzzi,
+    ad.pool
 
 FROM properties p
 
 LEFT JOIN users owner ON p.owner_id = owner.user_id
-LEFT JOIN roles owner_roles ON owner.role_id = owner_roles.roles_id
+LEFT JOIN roles owner_roles ON owner.user_id = owner_roles.user_id
 
 LEFT JOIN users creator ON p.created_by = creator.user_id
-LEFT JOIN roles creator_roles ON creator.role_id = creator_roles.roles_id
+LEFT JOIN roles creator_roles ON creator.user_id = creator_roles.user_id
 
-LEFT JOIN addresses a ON p.address_id = a.address_id
+LEFT JOIN addresses a ON p.property_id = a.property_id
+LEFT JOIN additional ad ON p.property_id = ad.property_id
 
-WHERE p.created_by = :created_by;
+WHERE p.created_by = :created_by
+ORDER BY p.created_at ASC
+LIMIT :limit OFFSET :offset;

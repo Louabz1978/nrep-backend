@@ -1,11 +1,9 @@
 INSERT INTO PROPERTIES (
     owner_id,
     created_by,
-    address_id,
     description,
     price,
     property_type,
-    floor,
     bedrooms,
     bathrooms,
     property_realtor_commission,
@@ -17,17 +15,15 @@ INSERT INTO PROPERTIES (
     status,
     created_at,
     last_updated ,
-    image_url,
+    images_urls,
     mls_num
 )
 VALUES(
     :owner_id,
     :created_by,
-    :address_id,
     :description,
     :price,
     :property_type,
-    :floor,
     :bedrooms,
     :bathrooms,
     :property_realtor_commission,
@@ -39,7 +35,7 @@ VALUES(
     :status,
     :created_at,
     :last_updated ,
-    :image_url,
+    :images_urls,
     :mls_num
 )
 RETURNING property_id;

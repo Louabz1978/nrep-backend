@@ -45,13 +45,22 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = 
     if not user or not pwd_context.verify(form_data.password, user.password_hash):
         raise HTTPException(status_code=400, detail="Incorrect username or password")
 
+    role_dict = user.roles.__dict__
+
+    roles = [
+        key for key, value in role_dict.items()
+        if key not in ['id', 'user_id', '_sa_instance_state'] and isinstance(value, bool) and value
+    ]
+
     access_token = create_access_token(data={
         "sub": str(user.user_id),
+        "user_id": user.user_id,
         "first_name": user.first_name,
         "last_name": user.last_name,
         "email": user.email,
         "phone_number": user.phone_number,
-        "created_at": user.created_at.date().isoformat()
+        "created_at": user.created_at.date().isoformat(),
+        "roles": roles
     })
 
     return {"access_token": access_token, "token_type": "bearer"}

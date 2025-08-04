@@ -3,15 +3,15 @@ from datetime import datetime, date, time
 from typing import Optional
 
 class AddressOut(BaseModel):
-    address_id: int
-    floor: int
-    apt: str
-    area: str
+    address_id: Optional[int]
+    floor: Optional[int]
+    apt: Optional[int]
+    area: Optional[str]
     city: Optional[str]
     county: Optional[str]
-    created_at: datetime
-    created_by: int
-    building_num: Optional[int] = None
+    created_at: Optional[datetime]
+    # created_by: int
+    building_num: Optional[str] = None
     street: Optional[str] = None
     
     model_config = {
