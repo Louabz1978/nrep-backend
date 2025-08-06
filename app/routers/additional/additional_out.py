@@ -4,7 +4,7 @@ from typing import Optional
 class AdditionalOut(BaseModel):
     elevator: Optional[ bool ]
     balcony: Optional[ int ]
-    ac: Optional[ int ]
+    ac: Optional[ bool ]
     fan_number: Optional[ int ]
     garage: Optional[ bool ]
     garden: Optional[ bool ]

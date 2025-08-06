@@ -21,7 +21,7 @@ class PropertyUpdate(BaseModel):
     latitude: Optional[ float ] = None
     longitude: Optional[ float ] = None
     status: Optional[ PropertyStatus ] = None
-    images_urls: Optional[List[str]] = None
+    preserve_images: Optional[ List[str] ] = None
     
     address: Optional[ AddressUpdate ] = None
     additional: Optional[ AdditionalUpdate ] = None
@@ -39,10 +39,10 @@ class PropertyUpdate(BaseModel):
         buyer_realtor_commission: Optional[float] = Form(None),
         area_space: Optional[int] = Form(None),
         year_built: Optional[int] = Form(None),
-        latitude: Optional[int] = Form(None),
-        longitude: Optional[int] = Form(None),
+        latitude: Optional[float] = Form(None),
+        longitude: Optional[float] = Form(None),
         status: Optional[PropertyStatus] = Form(None),
-        images_urls: Optional[List[str]] = Form(None),
+        preserve_images: Optional[List[str]] = Form(None)
     ):
 
         return cls(
@@ -59,7 +59,7 @@ class PropertyUpdate(BaseModel):
             latitude=latitude,
             longitude=longitude,
             status=status,
-            images_urls=images_urls if images_urls not in (None, "") else None,
+            preserve_images=preserve_images if preserve_images not in (None, "") else None
         )
 
     @model_validator(mode='before')
