@@ -24,7 +24,7 @@ def validate_photo(file: UploadFile):
     if file_size > MAX_FILE_SIZE_MB * 1024 * 1024:
         raise HTTPException(status_code=400, detail=f"File '{file.filename}' exceeds {MAX_FILE_SIZE_MB}MB size limit.")
     
-def save_photos(mls_num, photos: list[UploadFile], base_url, metadata: list[dict]):
+def save_photos(mls_num, photos: list[UploadFile], base_url, main_photo: str):
     valid_photos = []
 
     # Validate photos (size/type)
@@ -52,13 +52,10 @@ def save_photos(mls_num, photos: list[UploadFile], base_url, metadata: list[dict
         # Add base url to photo
         file_url = urljoin(base_url + f"/{UPLOAD_DIR}/{mls_num}/", photo.filename)
 
-        # Match metadata for is_main
-        try:
-            meta = next((m for m in metadata if m["filename"] == photo.filename), {})
-            is_main = meta.get("is_main", False)
-        except Exception:
-            # fallback if metadata is None or malformed
-            is_main = False
+        # Match main_photo
+        is_main = False
+        if main_photo == photo.filename:
+            is_main = True
 
         saved_files.append({
             "is_main": is_main,
@@ -67,75 +64,63 @@ def save_photos(mls_num, photos: list[UploadFile], base_url, metadata: list[dict
 
     return saved_files
 
-def update_photos(mls_num, db_images_property, new_photos: list[UploadFile], update_photos_data, base_url, metadata: list[dict]):
-    saved_files = []
-
-    # Create a folder with name to mls_num
-    folder_dir = Path(UPLOAD_DIR + "/" + str(mls_num))
+def update_photos(
+        mls_num,
+        db_images_property,
+        new_photos: list[UploadFile],
+        update_photos_data,
+        base_url,
+        main_photo: str
+    ):
+    folder_dir = Path(f"static/properties_photos/{mls_num}")
     os.makedirs(folder_dir, exist_ok=True)
 
-    # Removed photos that not exist in old_photos
-    if update_photos_data:
-        keep_filenames = set()
+    updated_db_images = []
 
-        # Extract filenames from URLs
-        for url in update_photos_data:
-            parsed_url = urlparse(url)
-            filename = os.path.basename(parsed_url.path)
-            keep_filenames.add(filename)
-
-        # Loop through files in the folder
+    # Step 1: Only clean up files if update_photos_data is provided
+    if update_photos_data is not None:
         for file in folder_dir.iterdir():
-            if file.is_file() and file.name not in keep_filenames:
-                db_images_property = [
-                    img for img in db_images_property
-                    if Path(img['url']).name != file.name
-                ]
-                file.unlink()
-            else:
-                # Add base url to photo
-                file_url = urljoin(base_url + f"/{UPLOAD_DIR}/{mls_num}/", file.name)
+            if file.is_file():
+                if file.name not in update_photos_data:
+                    print(f"Removing unused file: {file.name}")
+                    file.unlink()
 
-                # Match metadata for is_main
-                meta = next((m for m in metadata if m["filename"] == file.name), {})
-                is_main = meta.get("is_main", False)
-                
-                saved_files.append({
-                    "is_main": is_main,
-                    "url": file_url
-                })
+                    # Remove from db_images_property as well
+                    db_images_property = [
+                        img for img in db_images_property if not img["url"].endswith(file.name)
+                    ]
+                else:
+                    # Retain in updated_db_images
+                    for img in db_images_property:
+                        if img["url"].endswith(file.name):
+                            updated_db_images.append(img)
+                            break
+    else:
+        # If no update_photos_data sent, keep all current db images
+        updated_db_images = db_images_property.copy()
 
-    # Validate photos (size/type)
+    # Step 2: Save new photos
+    saved_files = []
     if new_photos:
-        valid_photos = []
         for photo in new_photos:
-            try:
-                validate_photo(photo)
-                valid_photos.append(photo)
-            except HTTPException as e:
-                print(f"Skipping {photo.filename}: {e.detail}")
-
-        if not valid_photos:
-            raise HTTPException(status_code=400, detail="No valid photos to upload.")
-
-        # Save valid photos
-        for photo in valid_photos:
             file_path = folder_dir / photo.filename
-            with open(file_path, "wb") as buffer:
-                shutil.copyfileobj(photo.file, buffer)
-            
-            # Add base url to photo
-            file_url = urljoin(base_url + f"/{UPLOAD_DIR}/{mls_num}/", photo.filename)
+            with open(file_path, "wb") as f:
+                f.write(photo.file.read())
 
-            # Match metadata for is_main
-            meta = next((m for m in metadata if m["filename"] == photo.filename), {})
+            file_url = f"{base_url}/static/properties_photos/{mls_num}/{photo.filename}"
+
+            # Get metadata for the photo if available
+            meta = next((item for item in (update_photos_data or []) if item == photo.filename), {})
             is_main = meta.get("is_main", False)
-            
+
             saved_files.append({
-                "is_main": is_main,
-                "url": file_url
+                "url": file_url,
+                "is_main": is_main
             })
 
-    saved_files.extend(db_images_property)
+    # Step 3: Handle main_photo if exists (update is_main flag)
+    if main_photo:
+        for image in updated_db_images + saved_files:
+            image["is_main"] = image["url"].endswith(main_photo)
 
-    return saved_files
+    return updated_db_images + saved_files

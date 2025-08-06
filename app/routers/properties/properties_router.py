@@ -44,7 +44,7 @@ async def create_property(
     additional: AdditionalCreate = Depends(AdditionalCreate.as_form),
     address: AddressCreate = Depends(AddressCreate.as_form),
     photos: List[UploadFile] = File(...),
-    metadata: str = Form(...),
+    main_photo: str = Form(None),
     db: Session = Depends(database.get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -67,11 +67,7 @@ async def create_property(
     
     mls_num = random.randint(100000, 999999)
     base_url = str(request.base_url)
-    try:
-        meta_list = json.loads(metadata)
-    except json.JSONDecodeError:
-        raise HTTPException(status_code=400, detail="Invalid metadata format")
-    saved_files = save_photos(mls_num, photos, base_url, meta_list)
+    saved_files = save_photos(mls_num, photos, base_url, main_photo)
 
     # Create property
     db_property = property.model_dump()
@@ -418,7 +414,7 @@ def update_property_by_id(
     address_data: AddressUpdate = Depends(AddressUpdate.as_form),
     additional_data: AdditionalUpdate = Depends(AdditionalUpdate.as_form),
     photos: Optional[List[UploadFile]] = File(None),
-    metadata: Optional[str] = Form(None),
+    main_photo: Optional[str] = Form(None),
     db: Session = Depends(database.get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -448,13 +444,8 @@ def update_property_by_id(
             raise HTTPException(status_code=404, detail="Owner is not a seller")
 
     base_url = str(request.base_url)
-    try:
-        meta_list = []
-        if metadata:
-            meta_list = json.loads(metadata)
-    except json.JSONDecodeError:
-        raise HTTPException(status_code=400, detail="Invalid metadata format")
-    saved_files = update_photos(property.mls_num, property['images_urls'], photos, property_data.images_urls, base_url, meta_list)
+    saved_files = update_photos(property.mls_num, property['images_urls'], photos, property_data.preserve_images, base_url, main_photo)
+    del property_data.preserve_images
 
     # Update address
     if address_data:
@@ -488,7 +479,7 @@ def update_property_by_id(
     db_property["property_id"] = property_id
     if property_data.status != property["status"]:
         db_property["last_updated"] = datetime.now()
-    if saved_files or db_property['images_urls'] == ['']:
+    if saved_files:
         db_property['images_urls'] = json.dumps(saved_files)
         
     set_clause = ", ".join(f"{k} = :{k}" for k in db_property)

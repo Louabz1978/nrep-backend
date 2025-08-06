@@ -5,7 +5,7 @@ from fastapi import Form
 class AdditionalCreate(BaseModel):
     elevator: Optional[ bool| None ] = None
     balcony: Optional[ int ] = None
-    ac: Optional[ int ] = None
+    ac: Optional[ bool ] = None
     fan_number: Optional[ int ] = None
     garage: Optional[ bool ] = None
     garden: Optional[ bool ] = None
@@ -17,16 +17,16 @@ class AdditionalCreate(BaseModel):
     @classmethod
     def as_form(
         cls,
-        elevator: Optional[ bool ]= Form(...),
-        balcony: Optional[ int ]= Form(...),
-        ac: Optional[ int ]= Form(...),
-        fan_number: Optional[ int ]= Form(...),
-        garage: Optional[ bool ]= Form(...),
-        garden: Optional[ bool ]= Form(...),
-        solar_system: Optional[ bool ]= Form(...),
-        water: Optional[ str ]= Form(...),
-        jacuzzi: Optional[ bool ]= Form(...),
-        pool: Optional[ bool ]= Form(...)
+        elevator: Optional[ bool ]= Form(None),
+        balcony: Optional[ int ]= Form(None),
+        ac: Optional[ bool ]= Form(None),
+        fan_number: Optional[ int ]= Form(None),
+        garage: Optional[ bool ]= Form(None),
+        garden: Optional[ bool ]= Form(None),
+        solar_system: Optional[ bool ]= Form(None),
+        water: Optional[ str ]= Form(None),
+        jacuzzi: Optional[ bool ]= Form(None),
+        pool: Optional[ bool ]= Form(None)
     ):
         return cls(
             elevator=elevator,
