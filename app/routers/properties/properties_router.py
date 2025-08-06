@@ -541,15 +541,6 @@ def delete_property(
     db.commit()
     return {"message": "Property deleted successfully"}
 
-
-
-
-
-
-
-
-
-
 @router.get("/status-options", tags=["Properties"])
 def get_property_status_options(
     db: Session = Depends(database.get_db),
