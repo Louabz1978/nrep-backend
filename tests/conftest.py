@@ -1,22 +1,22 @@
 import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from sqlalchemy.pool import StaticPool
-
-import sys
+from dotenv import load_dotenv
 import os
-sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
 from app.database import get_db, Base
 from main import app
+load_dotenv()
+DB_USERNAME = os.getenv("DATABASE_USERNAME")
+DB_PASSWORD = os.getenv("DATABASE_PASSWORD")
+DB_HOST = os.getenv("DATABASE_HOST")
+DB_PORT = os.getenv("DATABASE_PORT")
+DB_NAME = os.getenv("DATABASE_TEST_NAME")
 
-# Used in-memory SQLite for isolated test DB
-DATABASE_URL = "sqlite:///:memory:"
+DATABASE_URL = f"postgresql://{DB_USERNAME}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 
 engine = create_engine(
-    DATABASE_URL,
-    connect_args={"check_same_thread": False},
-    poolclass=StaticPool,
+    DATABASE_URL
 )
 
 TestingSessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
@@ -30,7 +30,7 @@ def override_db():
         yield db
     finally:
         db.close()
-        Base.metadata.drop_all(bind=engine)
+        # Base.metadata.drop_all(bind=engine)
 
 @pytest.fixture(scope="function")
 def client(override_db):
