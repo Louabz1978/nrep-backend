@@ -9,7 +9,7 @@ class Additional(Base):
     additional_id: Mapped[int] = mapped_column(primary_key=True, index=True, autoincrement=True)
     elevator: Mapped[Optional[bool]] = mapped_column(Boolean)
     balcony: Mapped[Optional[int]] = mapped_column(Integer)
-    ac: Mapped[Optional[int]] = mapped_column(Integer)
+    ac: Mapped[Optional[bool]] = mapped_column(Boolean)
     fan_number: Mapped[Optional[int]] = mapped_column(Integer)
     garage: Mapped[Optional[bool]] = mapped_column(Boolean)
     garden: Mapped[Optional[bool]] = mapped_column(Boolean)

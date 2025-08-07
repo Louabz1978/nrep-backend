@@ -5,7 +5,7 @@ from typing import Optional
 class AdditionalUpdate(BaseModel):
     elevator: Optional[ bool| None ] = None
     balcony: Optional[ int ] = None
-    ac: Optional[ int ] = None
+    ac: Optional[ bool ] = None
     fan_number: Optional[ int ] = None
     garage: Optional[ bool ] = None
     garden: Optional[ bool ] = None
@@ -19,7 +19,7 @@ class AdditionalUpdate(BaseModel):
         cls,
         elevator: Optional[ bool ]= Form(None),
         balcony: Optional[ int ]= Form(None),
-        ac: Optional[ int ]= Form(None),
+        ac: Optional[ bool ]= Form(None),
         fan_number: Optional[ int ]= Form(None),
         garage: Optional[ bool ]= Form(None),
         garden: Optional[ bool ]= Form(None),
