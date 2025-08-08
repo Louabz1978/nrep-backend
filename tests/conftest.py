@@ -3,6 +3,8 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
+from dotenv import load_dotenv
+
 import sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
@@ -10,16 +12,19 @@ sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 from app.database import get_db, Base
 from main import app
 
-# Used in-memory SQLite for isolated test DB
-DATABASE_URL = "sqlite:///:memory:"
+load_dotenv()
+DB_USERNAME = os.getenv("DATABASE_USERNAME")
+DB_PASSWORD = os.getenv("DATABASE_PASSWORD")
+DB_HOST = os.getenv("DATABASE_HOST")
+DB_PORT = os.getenv("DATABASE_PORT")
+DB_NAME = os.getenv("DATABASE_TEST_NAME")
 
-engine = create_engine(
-    DATABASE_URL,
-    connect_args={"check_same_thread": False},
-    poolclass=StaticPool,
-)
+DATABASE_URL = f"postgresql://{DB_USERNAME}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 
-TestingSessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
+engine = create_engine(DATABASE_URL)
+
+
+TestingSessionLocal = sessionmaker(bind=engine)
 
 # Override the get_db dependency for FastAPI app
 @pytest.fixture(scope="function")
