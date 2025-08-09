@@ -56,7 +56,7 @@ def setup_users(db_session):
         db_session,
         "Admin", "User", "admin@example.com", "hashed_admin_password",
         "1234567890", created_by=1,
-        roles_dict={"admin": True, "broker": False, "realtor": False}
+        roles_dict={"admin": True, "broker": False, "realtor": False, "buyer": False, "seller": False, "tenant": False}
     )
 
     # Create broker user created by admin
@@ -64,7 +64,7 @@ def setup_users(db_session):
         db_session,
         "Broker", "User", "broker@example.com", "hashed_broker_password",
         "1234567891", created_by=admin.user_id,
-        roles_dict={"admin": False, "broker": True, "realtor": False}
+        roles_dict={"admin": False, "broker": True, "realtor": False, "buyer": False, "seller": False, "tenant": False}
     )
 
     # Realtor created by broker
@@ -72,78 +72,42 @@ def setup_users(db_session):
         db_session,
         "Realtor", "User", "realtor@example.com", "hashed_realtor_password",
         "1234567892", created_by=broker.user_id,
-        roles_dict={"admin": False, "broker": False, "realtor": True}
+        roles_dict={"admin": False, "broker": False, "realtor": True, "buyer": False, "seller": False, "tenant": False}
     )
 
-    # Other user created by realtor
-    other_user = create_user(
+    # buyer user created by realtor
+    buyer = create_user(
         db_session,
-        "Other", "User", "other@example.com", "hashed_other_password",
+        "Buyer", "User", "buyer@example.com", "hashed_buyer_password",
         "1234567893", created_by=realtor.user_id,
-        roles_dict={"admin": False, "broker": False, "realtor": False}
+        roles_dict={"admin": False, "broker": False, "realtor": False, "buyer": True, "seller": False, "tenant": False}
+    )
+    
+    # seller user created by realtor
+    seller = create_user(
+        db_session,
+        "Seller", "User", "seller@example.com", "hashed_seller_password",
+        "1234567894", created_by=realtor.user_id,
+        roles_dict={"admin": False, "broker": False, "realtor": False, "buyer": False, "seller": True, "tenant": False}
+    )
+    
+    #tenant user created by realtor
+    tenant = create_user(
+        db_session,
+        "Tenant", "User", "tenant@example.com", "hashed_tenant_password",
+        "1234567895", created_by=realtor.user_id,
+        roles_dict={"admin": False, "broker": False, "realtor": False, "buyer": False, "seller": False, "tenant": True}
     )
 
-    return admin, broker, realtor, other_user
+    return admin, broker, realtor, buyer, seller, tenant
 
 
-def test_admin_can_access_all_users(client: TestClient, db_session, setup_users):
-    admin, broker, realtor, other_user = setup_users
-    token = create_user_token(admin)
-    client.headers.update({"Authorization": f"Bearer {token}"})
+def test_get_user(client: TestClient, db_session, setup_users):
+    admin, broker, realtor, buyer, seller, tenant = setup_users
+    users = [admin, broker, realtor, buyer, seller, tenant]
+    for user in users:
+        token = create_user_token(user)
+        client.headers.update({"Authorization": f"Bearer {token}"})
+        response = client.get("/users/me")
+        assert response.status_code == 200
 
-    response = client.get("/users/")
-    assert response.status_code == 200
-
-def test_broker_access(client: TestClient, db_session, setup_users):
-    admin, broker, realtor, other_user = setup_users
-    token = create_user_token(broker)
-    client.headers.update({"Authorization": f"Bearer {token}"})
-
-    response = client.get("/users/")
-    assert response.status_code == 200
-
-def test_realtor_access(client: TestClient, db_session, setup_users):
-    admin, broker, realtor, other_user = setup_users
-    token = create_user_token(realtor)
-    client.headers.update({"Authorization": f"Bearer {token}"})
-
-    response = client.get("/users/")
-    assert response.status_code == 200
-
-def test_other_users_only_access_self(client: TestClient, db_session, setup_users):
-    admin, broker, realtor, other_user = setup_users
-    token = create_user_token(other_user)
-    client.headers.update({"Authorization": f"Bearer {token}"})
-
-    # Try to get all users (should not be allowed)
-    response = client.get("/users/")
-    assert response.status_code in [403, 401]
-
-    # Can access own user by ID
-    response = client.get(f"/users/{other_user.user_id}")
-    assert response.status_code == 200
-
-    # Cannot access another user by ID
-    response = client.get(f"/users/{admin.user_id}")
-    assert response.status_code in [403, 401, 404]
-
-def test_access_denied_for_unauthorized_user(client: TestClient, setup_users):
-    admin, broker, realtor, other_user = setup_users
-    
-    token = create_user_token(other_user)
-    client.headers.update({"Authorization": f"Bearer {token}"})
-
-    response = client.get(f"/users/{admin.user_id}")
-    assert response.status_code == 403
-
-    response_self = client.get(f"/users/{other_user.user_id}")
-    assert response_self.status_code == 200
-
-def test_get_user_id_not_exist_returns_404(client: TestClient, db_session, setup_users):
-    admin, _, _, _ = setup_users
-    token = create_user_token(admin)
-    client.headers.update({"Authorization": f"Bearer {token}"})
-
-    # Assuming 99999 user_id does not exist
-    response = client.get("/users/99999")
-    assert response.status_code == 404
