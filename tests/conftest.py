@@ -1,43 +1,69 @@
-import pytest
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.pool import StaticPool
-
 import sys
 import os
+import pytest
+from sqlalchemy import create_engine, text
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy_utils import database_exists, create_database
+from dotenv import load_dotenv
+
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
 from app.database import get_db, Base
 from main import app
 
-# Used in-memory SQLite for isolated test DB
-DATABASE_URL = "sqlite:///:memory:"
+load_dotenv()
+DB_USERNAME = os.getenv("DATABASE_TEST_USERNAME")
+DB_PASSWORD = os.getenv("DATABASE_TEST_PASSWORD")
+DB_HOST = os.getenv("DATABASE_TEST_HOST")
+DB_PORT = os.getenv("DATABASE_TEST_PORT")
+DB_NAME = os.getenv("DATABASE_TEST_NAME")
 
-engine = create_engine(
-    DATABASE_URL,
-    connect_args={"check_same_thread": False},
-    poolclass=StaticPool,
-)
+DATABASE_URL = f"postgresql://{DB_USERNAME}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 
-TestingSessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
+# Create test DB if it doesn't exist
+if not database_exists(DATABASE_URL):
+    create_database(DATABASE_URL)
 
-# Override the get_db dependency for FastAPI app
+engine = create_engine(DATABASE_URL)
+SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
+
 @pytest.fixture(scope="function")
 def override_db():
+    # Import models to register tables in Base.metadata
+    import app.models
+
+    # Drop and recreate all tables fresh
+    Base.metadata.drop_all(bind=engine)
     Base.metadata.create_all(bind=engine)
-    db = TestingSessionLocal()
+
+    # Run SQL seed file
+    test_dir = os.path.dirname(os.path.abspath(__file__))
+    sql_file_path = os.path.join(test_dir, "seed_data.sql")
+    with open(sql_file_path, "r") as f:
+        seed_sql = f.read()
+
+    with engine.connect() as connection:
+        connection.execute(text(seed_sql))
+        connection.commit()
+
+    # Create a new session instance
+    db = SessionLocal()
+
     try:
         yield db
     finally:
         db.close()
-        Base.metadata.drop_all(bind=engine)
+        # Base.metadata.drop_all(bind=engine)
 
 @pytest.fixture(scope="function")
 def client(override_db):
-    # Override the app's dependency
     def _override_get_db():
-        yield override_db
+        try:
+            yield override_db
+        finally:
+            override_db.close()
 
     app.dependency_overrides[get_db] = _override_get_db
+
     from fastapi.testclient import TestClient
     return TestClient(app)
