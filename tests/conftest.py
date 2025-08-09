@@ -50,7 +50,7 @@ def override_db():
     db = SessionLocal()
 
     try:
-        yield session
+        yield db
     finally:
         db.close()
         # Base.metadata.drop_all(bind=engine)
