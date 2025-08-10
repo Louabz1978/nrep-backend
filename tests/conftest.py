@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
-from app.database import get_db, Base
+from app.database import Base, get_db
 from main import app
 
 load_dotenv()
@@ -55,6 +55,7 @@ def override_db():
         db.close()
         # Base.metadata.drop_all(bind=engine)
 
+# Override the get_db dependency in FastAPI to use the test session
 @pytest.fixture(scope="function")
 def client(override_db):
     def _override_get_db():
