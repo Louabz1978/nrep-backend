@@ -219,7 +219,8 @@ def update_user(
     result = db.execute(text(sql), {"user_id": user_id})
     user = result.mappings().first()
 
-
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
    
     result = db.execute(text(sql), {"user_id": user["created_by"]})
     creator = result.mappings().first()
