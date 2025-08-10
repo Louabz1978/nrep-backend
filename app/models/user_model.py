@@ -7,6 +7,12 @@ from app.database import Base
 from typing import Optional
 from datetime import datetime
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from app.models.role_model import Role
+    from app.models.addresses_model import Address
+
 class User(Base):
     __tablename__ = "users"
 
