@@ -18,7 +18,8 @@ DB_HOST = os.getenv("DATABASE_TEST_HOST")
 DB_PORT = os.getenv("DATABASE_TEST_PORT")
 DB_NAME = os.getenv("DATABASE_TEST_NAME")
 
-DATABASE_URL = f"postgresql://{DB_USERNAME}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+# DATABASE_URL = f"postgresql://{DB_USERNAME}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+DATABASE_URL = "postgresql://postgres:1234@localhost:5432/nrep_test_database"
 
 # Create test DB if it doesn't exist
 if not database_exists(DATABASE_URL):
