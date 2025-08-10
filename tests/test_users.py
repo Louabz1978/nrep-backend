@@ -1,37 +1,31 @@
 import pytest
 from fastapi.testclient import TestClient
 from app.models.user_model import User
-from app.routers.auth.auth_router import create_access_token
 
 @pytest.fixture
 def setup_users(override_db):
     db = override_db
-    users = db.query(User).all()
-    return users
+    return db.query(User).all()
 
-def create_user_token(user: User) -> str:
-    role_dict = user.roles.__dict__
-    roles = [
-        key for key, value in role_dict.items()
-        if key not in ['id', 'user_id', '_sa_instance_state'] and isinstance(value, bool) and value
-    ]
-
-    token_data = {
-        "sub": str(user.user_id),
-        "user_id": user.user_id,
-        "first_name": user.first_name,
-        "last_name": user.last_name,
-        "email": user.email,
-        "phone_number": user.phone_number,
-        "created_at": user.created_at.date().isoformat(),
-        "roles": roles
-    }
-
-    return create_access_token(token_data)
+def login_user(client: TestClient, email: str, password: str):
+    response = client.post("/auth/login", data={
+        "username": email,
+        "password": password
+    })
+    assert response.status_code == 200, f"Login failed for {email}"
+    token = response.json().get("access_token")
+    assert token is not None
+    return token
 
 def test_all_users_access_their_own_data(client: TestClient, setup_users):
     for user in setup_users:
-        token = create_user_token(user)
+        token = login_user(client, user.email, "1234")
         client.headers.update({"Authorization": f"Bearer {token}"})
         response = client.get("/users/me")
         assert response.status_code == 200
+        
+        data = response.json()
+        assert data["user_id"] == user.user_id
+        assert data["email"] == user.email
+        assert data["first_name"] == user.first_name
+        assert data["last_name"] == user.last_name
