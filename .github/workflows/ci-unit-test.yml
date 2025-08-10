@@ -16,7 +16,7 @@ jobs:
 
     services:
       postgres:
-        image: postgres:15
+        image: postgres:14
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: 1234
@@ -24,10 +24,10 @@ jobs:
         ports:
           - 5432:5432
         options: >-
-          --health-cmd="pg_isready -U postgres"
-          --health-interval=10s
-          --health-timeout=5s
-          --health-retries=5
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
 
     env:
       DATABASE_TEST_USERNAME: postgres
@@ -35,7 +35,7 @@ jobs:
       DATABASE_TEST_HOST: localhost
       DATABASE_TEST_PORT: 5432
       DATABASE_TEST_NAME: nrep_test_database
-
+      
     steps:
     - uses: actions/checkout@v4
 
