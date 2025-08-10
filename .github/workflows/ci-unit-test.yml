@@ -14,12 +14,27 @@ jobs:
 
     runs-on: ubuntu-latest
 
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: 1234
+          POSTGRES_DB: nrep_test_database
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U postgres"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
     env:
-      DATABASE_TEST_USERNAME: ${{ secrets.DATABASE_TEST_USERNAME }}
-      DATABASE_TEST_PASSWORD: ${{ secrets.DATABASE_TEST_PASSWORD }}
-      DATABASE_TEST_HOST: ${{ secrets.DATABASE_TEST_HOST }}
-      DATABASE_TEST_PORT: ${{ secrets.DATABASE_TEST_PORT }}
-      DATABASE_TEST_NAME: ${{ secrets.DATABASE_TEST_NAME }}
+      DATABASE_TEST_USERNAME: postgres
+      DATABASE_TEST_PASSWORD: 1234
+      DATABASE_TEST_HOST: localhost
+      DATABASE_TEST_PORT: 5432
+      DATABASE_TEST_NAME: nrep_test_database
 
     steps:
     - uses: actions/checkout@v4
