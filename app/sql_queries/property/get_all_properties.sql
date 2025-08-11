@@ -86,5 +86,7 @@ LEFT JOIN roles ro ON o.user_id = ro.user_id
 LEFT JOIN addresses a ON p.property_id = a.property_id
 LEFT JOIN additional ad ON p.property_id = ad.property_id
 
+WHERE p.exp_date >= CURRENT_DATE
+
 ORDER BY created_at DESC
 LIMIT :limit OFFSET :offset;

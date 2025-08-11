@@ -89,5 +89,6 @@ LEFT JOIN addresses a ON p.property_id = a.property_id
 LEFT JOIN additional ad ON p.property_id = ad.property_id
 
 WHERE p.created_by = :created_by
+    AND p.exp_date >= CURRENT_DATE
 ORDER BY p.created_at ASC
 LIMIT :limit OFFSET :offset;
