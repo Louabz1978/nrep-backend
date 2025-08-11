@@ -24,4 +24,18 @@ INSERT INTO users(user_id, first_name, last_name, email, password_hash, phone_nu
 VALUES (4, 'buyer', 'test', 'test@buyer.com', '$2b$12$2h9HK/lHUQxA.YnNt3qKD.XEscVHESnYPp9LodVOHRNsBZO0CHjZG', '0933111222', 3);
 
 INSERT INTO roles(roles_id, buyer, user_id)
-VALUES (4, TRUE, 4)
+VALUES (4, TRUE, 4);
+
+-- Insert seller test account
+INSERT INTO users(user_id, first_name, last_name, email, password_hash, phone_number, created_by)
+VALUES (5, 'seller', 'test', 'test@seller.com', '$2b$12$2h9HK/lHUQxA.YnNt3qKD.XEscVHESnYPp9LodVOHRNsBZO0CHjZG', '0933111222', 3);
+
+INSERT INTO roles(roles_id, seller, user_id)
+VALUES (5, TRUE, 5);
+
+-- Insert tenant test account
+INSERT INTO users(user_id, first_name, last_name, email, password_hash, phone_number, created_by)
+VALUES (6, 'tenant', 'test', 'test@tenant.com', '$2b$12$2h9HK/lHUQxA.YnNt3qKD.XEscVHESnYPp9LodVOHRNsBZO0CHjZG', '0933111222', 3);
+
+INSERT INTO roles(roles_id, tenant, user_id)
+VALUES (6, TRUE, 6);
