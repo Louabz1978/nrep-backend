@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Query
 from typing import List
 from passlib.hash import bcrypt
 from sqlalchemy.orm import Session
@@ -75,10 +75,6 @@ def create_user(
 
     return {"message": "User created successfully", "user": user_details}
 
-from typing import List
-from fastapi import Query
-
-
 @router.get("", response_model=PaginatedUser, status_code=status.HTTP_200_OK)
 def get_all_users(
     page: int = Query(1, ge=1),
@@ -134,7 +130,6 @@ def get_all_users(
         },
         "data": users
     }
-
 
 @router.get("/me", response_model=UserOut, status_code=status.HTTP_200_OK)
 def get_user_details(
