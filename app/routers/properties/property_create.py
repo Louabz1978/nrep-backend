@@ -1,6 +1,7 @@
 from pydantic import BaseModel, model_validator
 from typing import Optional
 from fastapi import Form
+from datetime import date
 
 from .properties_type_enum import PropertyTypes
 from .properties_status_enum import PropertyStatus
@@ -8,6 +9,7 @@ from .properties_status_enum import PropertyStatus
 class PropertyCreate(BaseModel):
     owner_id: int
     description: str
+    show_inst: str
     price: int
     property_type: Optional[ PropertyTypes ] = None
     bedrooms: int
@@ -19,12 +21,14 @@ class PropertyCreate(BaseModel):
     latitude: float
     longitude: float
     status: PropertyStatus
+    exp_date: date
 
     @classmethod
     def as_form(
         cls,
         owner_id: int = Form(...),
         description: str = Form(...),
+        show_inst: str = Form(...),
         price: int = Form(...),
         property_type: Optional[ PropertyTypes ] = Form(...),
         bedrooms: int = Form(...),
@@ -35,11 +39,13 @@ class PropertyCreate(BaseModel):
         year_built: int = Form(...),
         latitude: float = Form(...),
         longitude: float = Form(...),
-        status: PropertyStatus = Form(...)
+        status: PropertyStatus = Form(...),
+        exp_date: date = Form(...)
     ):
         return cls(
             owner_id = owner_id,
             description = description,
+            show_inst = show_inst,
             price = price,
             property_type = property_type,
             bedrooms = bedrooms,
@@ -50,7 +56,8 @@ class PropertyCreate(BaseModel):
             year_built = year_built,
             latitude = latitude,
             longitude = longitude,
-            status = status
+            status = status,
+            exp_date = exp_date
         )
     
     @model_validator(mode='before')
