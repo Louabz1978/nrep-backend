@@ -24,24 +24,25 @@ jobs:
         ports:
           - 5432:5432
         options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
+          --health-cmd="pg_isready -U postgres -d nrep_test_database"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
 
     env:
+      ENV: TEST
       DATABASE_USERNAME: postgres
       DATABASE_PASSWORD: 1234
       DATABASE_HOST: postgres
       DATABASE_PORT: 5432
       DATABASE_NAME: nrep_test_database
-      
+
       DATABASE_TEST_USERNAME: postgres
       DATABASE_TEST_PASSWORD: 1234
       DATABASE_TEST_HOST: postgres
       DATABASE_TEST_PORT: 5432
       DATABASE_TEST_NAME: nrep_test_database
-      
+
     steps:
     - uses: actions/checkout@v4
 
@@ -55,14 +56,19 @@ jobs:
         python -m pip install --upgrade pip
         pip install flake8
         if [ -f requirements_dev.txt ]; then pip install -r requirements_dev.txt; fi
-    
+
     - name: Lint with flake8
       run: |
-        # stop the build if there are Python syntax errors or undefined names
         flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
-        # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
         flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
-    
+
+    - name: Wait for Postgres to be ready
+      run: |
+        until pg_isready -h postgres -p 5432 -U postgres; do
+          echo "Waiting for postgres..."
+          sleep 2
+        done
+
     - name: Test with pytest
       run: |
         pytest -v
