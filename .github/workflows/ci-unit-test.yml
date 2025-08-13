@@ -33,13 +33,13 @@ jobs:
       ENV: TEST
       DATABASE_USERNAME: postgres
       DATABASE_PASSWORD: 1234
-      DATABASE_HOST: postgres
+      DATABASE_HOST: localhost
       DATABASE_PORT: 5432
       DATABASE_NAME: nrep_test_database
 
       DATABASE_TEST_USERNAME: postgres
       DATABASE_TEST_PASSWORD: 1234
-      DATABASE_TEST_HOST: postgres
+      DATABASE_TEST_HOST: localhost
       DATABASE_TEST_PORT: 5432
       DATABASE_TEST_NAME: nrep_test_database
 
