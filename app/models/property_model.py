@@ -1,4 +1,6 @@
-from sqlalchemy import String, Integer, Float, ForeignKey, TIMESTAMP, Text
+from __future__ import annotations
+
+from sqlalchemy import Integer, Float, ForeignKey, TIMESTAMP, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
 from app.database import Base
@@ -10,6 +12,11 @@ from sqlalchemy.dialects.postgresql import JSONB
 
 from ..routers.properties.properties_status_enum import PropertyStatus
 from ..routers.properties.properties_type_enum import PropertyTypes
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from app.models.addresses_model import Address
 
 class Property(Base):
     __tablename__ = "properties"
