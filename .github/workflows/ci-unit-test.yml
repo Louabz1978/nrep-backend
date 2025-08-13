@@ -24,7 +24,7 @@ jobs:
         ports:
           - 5432:5432
         options: >-
-          --health-cmd="pg_isready -U postgres -d nrep_test_database"
+          --health-cmd="pg_isready -h localhost -U postgres"
           --health-interval=10s
           --health-timeout=5s
           --health-retries=5
@@ -64,10 +64,11 @@ jobs:
 
     - name: Wait for Postgres to be ready
       run: |
-        until pg_isready -h postgres -p 5432 -U postgres; do
+        until pg_isready -h postgres -p 5432 -U postgres > /dev/null 2>&1; do
           echo "Waiting for postgres..."
           sleep 2
         done
+        echo "Postgres is ready!"
 
     - name: Test with pytest
       run: |
