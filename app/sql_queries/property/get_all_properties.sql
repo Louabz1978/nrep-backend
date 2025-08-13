@@ -2,6 +2,7 @@ SELECT
     -- Property fields
     p.property_id,
     p.description,
+    p.show_inst,
     p.price,
     p.property_type,
     p.bedrooms,
@@ -13,6 +14,7 @@ SELECT
     p.latitude,
     p.longitude,
     p.status,
+    p.exp_date,
     p.created_at,
     p.last_updated,
     p.images_urls,
@@ -83,6 +85,8 @@ LEFT JOIN roles ro ON o.user_id = ro.user_id
 
 LEFT JOIN addresses a ON p.property_id = a.property_id
 LEFT JOIN additional ad ON p.property_id = ad.property_id
+
+WHERE p.exp_date >= CURRENT_DATE
 
 ORDER BY created_at DESC
 LIMIT :limit OFFSET :offset;

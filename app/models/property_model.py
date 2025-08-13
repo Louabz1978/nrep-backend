@@ -6,7 +6,7 @@ from sqlalchemy.sql import func
 from app.database import Base
 from typing import Optional
 from datetime import datetime
-from sqlalchemy import Numeric
+from sqlalchemy import Numeric, Date
 from sqlalchemy import Enum
 from sqlalchemy.dialects.postgresql import JSONB
 
@@ -23,6 +23,7 @@ class Property(Base):
 
     property_id: Mapped[int] = mapped_column(primary_key=True, index=True, autoincrement=True)
     description: Mapped[str] = mapped_column(Text)
+    show_inst: Mapped[str] = mapped_column(Text)
     price: Mapped[float] = mapped_column(Numeric(10, 2))
     property_type: Mapped[PropertyTypes] = mapped_column(
         Enum(PropertyTypes, name="property_type_enum"),
@@ -42,6 +43,7 @@ class Property(Base):
         default=PropertyStatus.active,
         nullable=False
     )
+    exp_date: Mapped[datetime.date] = mapped_column(Date, nullable=False)
     created_at: Mapped[datetime] = mapped_column(TIMESTAMP, server_default=func.now())
     last_updated: Mapped[datetime] = mapped_column(TIMESTAMP, server_default=func.now(), onupdate=func.now())
     images_urls: Mapped[Optional[list[dict]]] = mapped_column(JSONB)
