@@ -278,22 +278,34 @@ def get_all_properties(
 def my_properties(
     page: int = Query(1, ge=1),
     per_page: int = Query(10, ge=1),
+    city: Optional[str] = Query(None),
+    area: Optional[str] = Query(None),
+    min_price: Optional[float] = Query(None, ge=0),
+    max_price: Optional[float] = Query(None, ge=0),
+    mls_num: Optional[int] = Query(None),
+    status_filter: Optional[PropertyStatus] = Query(None),
     db: Session = Depends(database.get_db),
     current_user: User = Depends(get_current_user)
 ):
-    total_sql = "SELECT COUNT(*) FROM properties WHERE created_by = :created_by"
-    total = db.execute(text(total_sql), {"created_by": current_user.user_id}).scalar()
+    params = {
+        "created_by": current_user.user_id,
+        "city": f"%{city}%" if city else None,
+        "area": f"%{area}%" if area else None,
+        "min_price": min_price,
+        "max_price": max_price,
+        "mls_num": mls_num,
+        "status": status_filter.value if status_filter else None,
+        "limit": per_page,
+        "offset": (page - 1) * per_page
+    }
+
+    # Load SQL from files (SQL already has WHERE clauses with optional filters)
+    total_sql = load_sql("property/count_my_property.sql")
+    total = db.execute(text(total_sql), params).scalar()
     total_pages = (total + per_page - 1) // per_page
 
     sql = load_sql("property/get_my_property.sql")
-    result = db.execute(
-        text(sql),
-        {
-            "created_by": current_user.user_id,
-            "limit": per_page,
-            "offset": (page - 1) * per_page
-        }
-    )
+    result = db.execute(text(sql), params)
 
     properties = []
     for row in result.mappings():
@@ -377,7 +389,7 @@ def my_properties(
         },
         "data": properties
     }
-
+    
 @router.get("/{property_id:int}", status_code=status.HTTP_200_OK)
 def get_property_by_id(
     property_id: int, 
