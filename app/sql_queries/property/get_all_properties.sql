@@ -2,6 +2,7 @@ SELECT
     -- Property fields
     p.property_id,
     p.description,
+    p.show_inst,
     p.price,
     p.property_type,
     p.bedrooms,
@@ -13,6 +14,7 @@ SELECT
     p.latitude,
     p.longitude,
     p.status,
+    p.exp_date,
     p.created_at,
     p.last_updated,
     p.images_urls,

@@ -224,6 +224,7 @@ def get_all_properties(
         property = PropertyOut(
             property_id=row["property_id"],
             description=row["description"],
+            show_inst=row["show_inst"],
             price=row["price"],
             property_type=row["property_type"],
             bedrooms=row["bedrooms"],
@@ -235,6 +236,7 @@ def get_all_properties(
             latitude=row["latitude"],
             longitude=row["longitude"],
             status=row["status"],
+            exp_date=row["exp_date"],
             created_at=row["created_at"],
             last_updated=row["last_updated"],
             images_urls=row["images_urls"],
@@ -341,6 +343,7 @@ def my_properties(
         property = PropertyOut(
             property_id=row["property_id"],
             description=row["description"],
+            show_inst=row["show_inst"],
             price=row["price"],
             property_type=row["property_type"],
             bedrooms=row["bedrooms"],
@@ -352,6 +355,7 @@ def my_properties(
             latitude=row["latitude"],
             longitude=row["longitude"],
             status=row["status"],
+            exp_date=row["exp_date"],
             created_at=row["created_at"],
             last_updated=row["last_updated"],
             images_urls=row["images_urls"],
