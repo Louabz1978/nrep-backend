@@ -19,7 +19,7 @@ VALUES (3, 'realtor', 'test', 'test@realtor.com', '$2b$12$2h9HK/lHUQxA.YnNt3qKD.
 INSERT INTO roles(roles_id, realtor, user_id)
 VALUES (3, TRUE, 3);
 
--- Insert buyer test account
+--Insert buyer test account 
 INSERT INTO users(user_id, first_name, last_name, email, password_hash, phone_number, created_by)
 VALUES (4, 'buyer', 'test', 'test@buyer.com', '$2b$12$2h9HK/lHUQxA.YnNt3qKD.XEscVHESnYPp9LodVOHRNsBZO0CHjZG', '0933111222', 3);
 

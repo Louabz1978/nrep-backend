@@ -169,6 +169,8 @@ async def create_property(
 
 @router.get("", response_model=PaginatedProperties, status_code=status.HTTP_200_OK)
 def get_all_properties(
+    sort_by: str = Query("property_id", regex="^(property_id|status|mls_num|price|area|city|created_at)$"),
+    sort_order: str = Query("asc", regex="^(asc|desc)$"),
     page: int = Query(1, ge=1),
     per_page: int = Query(10, ge=1),
     db: Session = Depends(database.get_db),
@@ -181,7 +183,8 @@ def get_all_properties(
     total = db.execute(text(total_sql)).scalar()
     total_pages = (total + per_page - 1) // per_page
     
-    sql = load_sql("property/get_all_properties.sql")
+    sql = load_sql("property/get_all_properties.sql") +  f" ORDER BY {sort_by} {sort_order} LIMIT :limit OFFSET :offset"
+
     result = db.execute(text(sql), {'limit': per_page, 'offset': (page - 1) * per_page})
 
     properties = []
