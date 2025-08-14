@@ -38,7 +38,8 @@ class Consumer(Base):
     created_by_user = relationship("User", back_populates="consumer_created", foreign_keys=[created_by])
 
     roles: Mapped["Role"] = relationship(
-        back_populates="user",
+        "Role",
+        back_populates="consumer",
         cascade="all, delete-orphan",
         uselist=False,
         lazy="joined"

@@ -20,13 +20,19 @@ SELECT
     p.mls_num,
     
     -- Owner user fields prefixed with owner_
-    owner.user_id AS owner_user_id,
-    owner.first_name AS owner_first_name,
-    owner.last_name AS owner_last_name,
+    owner.consumer_id AS owner_consumer_id,
+    owner.name AS owner_name,
+    owner.father_name AS owner_father_name,
+    owner.surname AS owner_surname,
+    owner.mother_name_surname AS owner_mother_name_surname,
+    owner.place_birth AS owner_place_birth,
+    owner.date_birth AS owner_date_birth,
+    owner.registry AS owner_registry,
+    owner.national_number AS owner_national_number,
     owner.email AS owner_email,
     owner.phone_number AS owner_phone_number,
-    owner.created_by AS owner_created_by,
     owner.created_at AS owner_created_at,
+    owner.created_by AS owner_created_by,
     
     -- Owner roles prefixed
     owner_roles.admin AS owner_admin,
@@ -80,8 +86,8 @@ SELECT
     
 FROM properties p
 
-LEFT JOIN users owner ON p.owner_id = owner.user_id
-LEFT JOIN roles owner_roles ON owner.user_id = owner_roles.user_id
+LEFT JOIN consumers owner ON p.owner_id = owner.consumer_id
+LEFT JOIN roles owner_roles ON owner.consumer_id = owner_roles.consumer_id
 
 LEFT JOIN users creator ON p.created_by = creator.user_id
 LEFT JOIN roles creator_roles ON creator.user_id = creator_roles.user_id
