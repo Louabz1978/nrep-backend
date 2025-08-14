@@ -1,13 +1,13 @@
 import sys
 import os
 import pytest
+import time
+import psycopg2
+from psycopg2 import OperationalError
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy_utils import database_exists, create_database
 from dotenv import load_dotenv
-import time
-import psycopg2
-from psycopg2 import OperationalError
 
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
@@ -29,13 +29,7 @@ DB_NAME = os.getenv("DATABASE_TEST_NAME", "nrep_test_database")
 
 DATABASE_URL = f"postgresql://{DB_USERNAME}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 
-# Create test DB if it doesn't exist
-if not database_exists(DATABASE_URL):
-    create_database(DATABASE_URL)
-
-engine = create_engine(DATABASE_URL)
-SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
-
+# Wait for PostgreSQL to be ready before creating engine
 def wait_for_postgres(host, port, user, password, dbname, timeout=60):
     start_time = time.time()
     while True:
@@ -56,19 +50,24 @@ def wait_for_postgres(host, port, user, password, dbname, timeout=60):
             print("⏳ Waiting for PostgreSQL...")
             time.sleep(2)
 
-# Call it before creating the engine in conftest.py
 wait_for_postgres(DB_HOST, DB_PORT, DB_USERNAME, DB_PASSWORD, DB_NAME)
+
+# Create test DB if it doesn't exist
+if not database_exists(DATABASE_URL):
+    create_database(DATABASE_URL)
+
+engine = create_engine(DATABASE_URL)
+SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
 
 @pytest.fixture(scope="function")
 def override_db():
-    # Import models to register tables in Base.metadata
-    import app.models
+    import app.models  # register tables in Base.metadata
 
     # Drop and recreate all tables fresh
     Base.metadata.drop_all(bind=engine)
     Base.metadata.create_all(bind=engine)
 
-    # Run SQL seed file
+    # Seed data
     test_dir = os.path.dirname(os.path.abspath(__file__))
     sql_file_path = os.path.join(test_dir, "seed_data.sql")
     with open(sql_file_path, "r") as f:
@@ -78,21 +77,17 @@ def override_db():
         connection.execute(text(seed_sql))
         connection.commit()
 
-    # Create a new session instance
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+    # No session yielded here — only setup done
+    yield
 
-# Override the get_db dependency in FastAPI to use the test session
 @pytest.fixture(scope="function")
 def client(override_db):
     def _override_get_db():
+        db = SessionLocal()  # fresh session per request
         try:
-            yield override_db
+            yield db
         finally:
-            override_db.close()
+            db.close()
 
     app.dependency_overrides[get_db] = _override_get_db
 
