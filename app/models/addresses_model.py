@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from sqlalchemy import String, Integer, ForeignKey, TIMESTAMP
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
@@ -5,6 +7,11 @@ from datetime import datetime
 from typing import Optional
 from app.database import Base
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from app.models.property_model import Property
+    
 class Address(Base):
     __tablename__ = "addresses"
 

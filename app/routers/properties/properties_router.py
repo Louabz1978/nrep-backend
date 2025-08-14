@@ -18,6 +18,7 @@ from ...models.user_model import User
 from ..users.roles_enum import UserRole
 
 from ..users.user_out import UserOut
+from ..consumers.consumer_out import ConsumerOut
 from .property_out import PropertyOut
 from .property_pagination import PaginatedProperties
 from ..addresses.address_out import AddressOut
@@ -57,14 +58,11 @@ async def create_property(
     else:
         raise HTTPException(status_code=403, detail="Not authorized")
 
-    sql = load_sql("user/get_user_by_id.sql")
-    owner_result = db.execute(text(sql), {"user_id": property.owner_id}).mappings().first()
+    sql = load_sql("consumer/get_consumer_by_id.sql")
+    owner_result = db.execute(text(sql), {"consumer_id": property.owner_id}).mappings().first()
     if not owner_result :
         raise HTTPException(status_code=400, detail="invalid owner_id")
-    
-    if not owner_result["seller"]:
-        raise HTTPException(status_code=400, detail="Owner must be seller")
-    
+
     mls_num = random.randint(100000, 999999)
     base_url = str(request.base_url)
     saved_files = save_photos(mls_num, photos, base_url, main_photo)
@@ -118,23 +116,15 @@ async def create_property(
     }
     address_obj = AddressOut(**address_dict) if address_dict else None
     
+    consumer_sql = load_sql("consumer/get_consumer_by_id.sql")
     user_sql = load_sql("user/get_user_by_id.sql")
     role_sql = load_sql("role/get_user_roles.sql")
     additional_sql = load_sql("additional/get_additional_by_id.sql")
 
     owner_id = property.owner_id
-    owner_result = db.execute(text(user_sql), {"user_id": owner_id}).mappings().first()
-    owner_roles_result = db.execute(text(role_sql), {"user_id": owner_id}).mappings().first()
-    owner_roles = [key for key, value in owner_roles_result.items() if value is True and key in UserRole.__members__] if owner_roles_result else []
-    if owner_result:
-        owner_data = dict(owner_result)
-        owner_data["roles"] = owner_roles
-        owner_obj = UserOut(
-            **owner_data,
-            address = AddressOut(**owner_result) if owner_result.get("address_id") else None,
-        )
-    else:
-        owner_obj = None
+    owner_result = db.execute(text(consumer_sql), {"consumer_id": owner_id}).mappings().first()
+    owner_data = dict(owner_result)
+    owner_obj = ConsumerOut(**owner_data)
 
     created_by_id = current_user.user_id
     created_by_result = db.execute(text(user_sql), {"user_id": created_by_id}).mappings().first()
@@ -171,18 +161,42 @@ async def create_property(
 def get_all_properties(
     page: int = Query(1, ge=1),
     per_page: int = Query(10, ge=1),
+    
+    sort_by: str = Query("property_id", regex="^(property_id|status|mls_num|price|area|city|created_at)$"),
+    sort_order: str = Query("asc", regex="^(asc|desc)$"),
+    
+    city: Optional[str] = Query(None),
+    area: Optional[str] = Query(None),
+    min_price: Optional[float] = Query(None, ge=0),
+    max_price: Optional[float] = Query(None, ge=0),
+    mls_num: Optional[int] = Query(None),
+    status_filter: Optional[PropertyStatus] = Query(None),
+
     db: Session = Depends(database.get_db),
     current_user: User = Depends(get_current_user)
 ):
     if not current_user.roles.admin and not current_user.roles.broker and not current_user.roles.realtor:
         raise HTTPException(status_code=403, detail="Not authorized")
     
+    params = {
+        "created_by": current_user.user_id,
+        "city": f"%{city}%" if city else None,
+        "area": f"%{area}%" if area else None,
+        "min_price": min_price,
+        "max_price": max_price,
+        "mls_num": mls_num,
+        "status": status_filter.value if status_filter else None,
+        "limit": per_page,
+        "offset": (page - 1) * per_page
+    }
+
     total_sql = "SELECT COUNT(*) FROM properties"
     total = db.execute(text(total_sql)).scalar()
     total_pages = (total + per_page - 1) // per_page
     
     sql = load_sql("property/get_all_properties.sql")
-    result = db.execute(text(sql), {'limit': per_page, 'offset': (page - 1) * per_page})
+    sql = sql.format(sort_by=sort_by, sort_order=sort_order)
+    result = db.execute(text(sql), params)
 
     properties = []
     for row in result.mappings():
@@ -202,25 +216,26 @@ def get_all_properties(
             created_at=row["created_by_created_at"] 
         )
 
-        owner_roles = [
-            role for role in ["admin", "broker", "realtor", "buyer", "seller", "tenant"]
-            if row.get(f"owner_{role}") is True
-        ]
-
-        owner = UserOut(
-            user_id=row["owner_user_id"],
-            first_name=row["owner_first_name"],
-            last_name=row["owner_last_name"],
+        owner = ConsumerOut(
+            consumer_id=row["owner_consumer_id"],
+            name=row["owner_name"],
+            father_name=row["owner_father_name"],
+            surname=row["owner_surname"],
+            mother_name_surname=row["owner_mother_name_surname"],
+            place_birth=row["owner_place_birth"],
+            date_birth=row["owner_date_birth"],
+            registry=row["owner_registry"],
+            national_number=row["owner_national_number"],
             email=row["owner_email"],
             phone_number=row["owner_phone_number"],
-            roles=owner_roles,
-            created_by=row["owner_created_by"],  # from users.created_by
+            created_by=row["owner_created_by"],
             created_at=row["owner_created_at"] 
         )
             
         property = PropertyOut(
             property_id=row["property_id"],
             description=row["description"],
+            show_inst=row["show_inst"],
             price=row["price"],
             property_type=row["property_type"],
             bedrooms=row["bedrooms"],
@@ -232,6 +247,7 @@ def get_all_properties(
             latitude=row["latitude"],
             longitude=row["longitude"],
             status=row["status"],
+            exp_date=row["exp_date"],
             created_at=row["created_at"],
             last_updated=row["last_updated"],
             images_urls=row["images_urls"],
@@ -273,32 +289,46 @@ def get_all_properties(
 def my_properties(
     page: int = Query(1, ge=1),
     per_page: int = Query(10, ge=1),
+
+    sort_by: str = Query("property_id", regex="^(property_id|status|mls_num|price|area|city|created_at)$"),
+    sort_order: str = Query("asc", regex="^(asc|desc)$"),
+    
+    city: Optional[str] = Query(None),
+    area: Optional[str] = Query(None),
+    min_price: Optional[float] = Query(None, ge=0),
+    max_price: Optional[float] = Query(None, ge=0),
+    mls_num: Optional[int] = Query(None),
+    status_filter: Optional[PropertyStatus] = Query(None),
+
     db: Session = Depends(database.get_db),
     current_user: User = Depends(get_current_user)
 ):
-    total_sql = "SELECT COUNT(*) FROM properties WHERE created_by = :created_by"
-    total = db.execute(text(total_sql), {"created_by": current_user.user_id}).scalar()
+    params = {
+        "created_by": current_user.user_id,
+        "city": f"%{city}%" if city else None,
+        "area": f"%{area}%" if area else None,
+        "min_price": min_price,
+        "max_price": max_price,
+        "mls_num": mls_num,
+        "status": status_filter.value if status_filter else None,
+        "limit": per_page,
+        "offset": (page - 1) * per_page
+    }
+
+    # Load SQL from files (SQL already has WHERE clauses with optional filters)
+    total_sql = load_sql("property/count_my_property.sql")
+    total = db.execute(text(total_sql), params).scalar()
     total_pages = (total + per_page - 1) // per_page
 
     sql = load_sql("property/get_my_property.sql")
-    result = db.execute(
-        text(sql),
-        {
-            "created_by": current_user.user_id,
-            "limit": per_page,
-            "offset": (page - 1) * per_page
-        }
-    )
+    sql = sql.format(sort_by=sort_by, sort_order=sort_order)
+    result = db.execute(text(sql), params)
 
     properties = []
     for row in result.mappings():
         created_by_roles = [
             role for role in ["admin", "broker", "realtor", "buyer", "seller", "tenant"]
             if row.get(f"created_by_{role}") is True
-        ]
-        owner_roles = [
-            role for role in ["admin", "broker", "realtor", "buyer", "seller", "tenant"]
-            if row.get(f"owner_{role}") is True
         ]
 
         created_by = UserOut(
@@ -311,33 +341,39 @@ def my_properties(
             created_by=row["created_by_created_by"],
             created_at=row["created_by_created_at"]
         )
-        owner = UserOut(
-            user_id=row["owner_user_id"],
-            first_name=row["owner_first_name"],
-            last_name=row["owner_last_name"],
+        owner = ConsumerOut(
+            consumer_id=row["owner_consumer_id"],
+            name=row["owner_name"],
+            father_name=row["owner_father_name"],
+            surname=row["owner_surname"],
+            mother_name_surname=row["owner_mother_name_surname"],
+            place_birth=row["owner_place_birth"],
+            date_birth=row["owner_date_birth"],
+            registry=row["owner_registry"],
+            national_number=row["owner_national_number"],
             email=row["owner_email"],
             phone_number=row["owner_phone_number"],
-            roles=owner_roles,
             created_by=row["owner_created_by"],
-            created_at=row["owner_created_at"]
+            created_at=row["owner_created_at"] 
         )
         address = AddressOut(
             address_id=row["address_address_id"],
-            floor=row["address_floor"],
-            apt=row["address_apt"],
-            area=row["address_area"],
-            city=row["address_city"],
-            county=row["address_county"],
+            floor=row["floor"],
+            apt=row["apt"],
+            area=row["area"],
+            city=row["city"],
+            county=row["county"],
             created_at=row["address_created_at"],
             created_by=row["address_created_by"],
-            building_num=row["address_building_num"],
-            street=row["address_street"]
+            building_num=row["building_num"],
+            street=row["street"]
         )
         additional = AdditionalOut(**row)
 
         property = PropertyOut(
             property_id=row["property_id"],
             description=row["description"],
+            show_inst=row["show_inst"],
             price=row["price"],
             property_type=row["property_type"],
             bedrooms=row["bedrooms"],
@@ -349,10 +385,12 @@ def my_properties(
             latitude=row["latitude"],
             longitude=row["longitude"],
             status=row["status"],
+            exp_date=row["exp_date"],
             created_at=row["created_at"],
             last_updated=row["last_updated"],
             images_urls=row["images_urls"],
-            owner=owner,
+            mls_num=row["mls_num"],
+            owner=owner, 
             created_by_user=created_by,
             address=address,
             additional=additional
@@ -370,7 +408,7 @@ def my_properties(
         },
         "data": properties
     }
-
+    
 @router.get("/{property_id:int}", status_code=status.HTTP_200_OK)
 def get_property_by_id(
     property_id: int, 
@@ -391,6 +429,7 @@ def get_property_by_id(
         raise HTTPException(status_code=404, detail="Property not found")
 
     nested_prefixes = ("owner_", "created_by_", "address_")
+
     property_data = {
         k: v for k, v in row.items()
         if not any(k.startswith(prefix) for prefix in nested_prefixes)
@@ -437,11 +476,13 @@ def update_property_by_id(
     
     # owner_id check
     if property_data.owner_id:
-        owner = db.execute(text(role_sql), {"user_id": property_data.owner_id}).mappings().first()
-        if not owner:
+        consumer_sql = load_sql("consumer/get_consumer_by_id.sql")
+        owner_result = db.execute(text(consumer_sql), {"consumer_id": property_data.owner_id}).mappings().first()
+        
+        if not owner_result:
             raise HTTPException(status_code=404, detail="Owner not found")
-        if owner["seller"] == False:
-            raise HTTPException(status_code=404, detail="Owner is not a seller")
+        
+        owner = ConsumerOut(**owner_result)
 
     base_url = str(request.base_url)
     saved_files = update_photos(property.mls_num, property['images_urls'], photos, property_data.preserve_images, base_url, main_photo)
@@ -491,7 +532,7 @@ def update_property_by_id(
     # Fetch property data
     sql = load_sql("property/get_property_by_id.sql")
     row = db.execute(text(sql), {"property_id": updated_property_id}).mappings().first()
-    nested_prefixes = ("owner_", "created_by_", "address_")
+    nested_prefixes = ("created_by_", "address_")
     property_data = {
         k: v for k, v in row.items()
         if not any(k.startswith(prefix) for prefix in nested_prefixes)
@@ -499,7 +540,7 @@ def update_property_by_id(
     address_data = {k[len("address_"):]: v for k, v in row.items() if k.startswith("address_")}
     property_details = PropertyOut(
         **property_data,
-        owner=build_user_out(row, "owner_"),
+        owner=owner,
         created_by_user=build_user_out(row, "created_by_"),
         address=AddressOut(**address_data) if address_data.get("address_id") else None,
         additional=AdditionalOut(**row)
@@ -531,15 +572,6 @@ def delete_property(
     
     db.commit()
     return {"message": "Property deleted successfully"}
-
-
-
-
-
-
-
-
-
 
 @router.get("/status-options", tags=["Properties"])
 def get_property_status_options(

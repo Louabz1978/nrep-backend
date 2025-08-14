@@ -97,7 +97,7 @@ def update_photos(
                             break
     else:
         # If no update_photos_data sent, keep all current db images
-        updated_db_images = db_images_property.copy()
+        updated_db_images = db_images_property.copy() if db_images_property else []
 
     # Step 2: Save new photos
     saved_files = []

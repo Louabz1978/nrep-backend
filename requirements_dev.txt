@@ -31,3 +31,4 @@ python-jose
 requests
 pytest
 httpx
+sqlalchemy-utils

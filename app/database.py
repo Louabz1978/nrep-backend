@@ -5,7 +5,6 @@ import os
 from typing import Annotated
 from fastapi import Depends
 
-
 load_dotenv()
 DB_USERNAME = os.getenv("DATABASE_USERNAME")
 DB_PASSWORD = os.getenv("DATABASE_PASSWORD")
@@ -21,7 +20,6 @@ LocalSession = sessionmaker(bind=engine)
 
 Base = declarative_base()
 
-
 def get_db():
     db = LocalSession()
     try:
@@ -31,13 +29,10 @@ def get_db():
 
 db_depends = Annotated[Session, Depends(get_db)]
 
-
-try:
-    next(get_db())
-    print("connection established")
-except Exception as e:
-    print(e)
-
-
-
-
+# try:
+#     db_gen = get_db()
+#     db = next(db_gen)
+#     print("connection established")
+#     db_gen.close() 
+# except Exception as e:
+#     print(e)

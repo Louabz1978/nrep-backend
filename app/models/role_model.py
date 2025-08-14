@@ -1,7 +1,14 @@
+from __future__ import annotations
+
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.database import Base
 
 from sqlalchemy import Boolean, ForeignKey, text
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from app.models.user_model import User
 
 class Role(Base):
     __tablename__ = "roles"
@@ -18,4 +25,4 @@ class Role(Base):
     user_id: Mapped[int] = mapped_column(ForeignKey("users.user_id", ondelete="CASCADE"), unique=True)
 
     #Relationships
-    user: Mapped["User"] = relationship(back_populates="roles")
+    user: Mapped["User"] = relationship("User", back_populates="roles")
