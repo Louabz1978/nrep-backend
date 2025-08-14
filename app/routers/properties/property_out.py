@@ -5,6 +5,7 @@ import json
 from datetime import date
 
 from app.routers.users.user_out import UserOut
+from app.routers.consumers.consumer_out import ConsumerOut
 from ..additional.additional_out import AdditionalOut
 from app.routers.addresses.address_out import AddressOut
 
@@ -33,7 +34,7 @@ class PropertyOut(BaseModel):
     mls_num: Optional[int] = None
 
     created_by_user: Optional[UserOut]
-    owner: Optional[UserOut]
+    owner: Optional[ConsumerOut]
     address: Optional[AddressOut] = None
     additional: Optional[AdditionalOut] = None
 
