@@ -1,12 +1,8 @@
-from fastapi import APIRouter, Depends, HTTPException, Form
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import text
-from datetime import datetime
-from typing import Optional
 
 from app import database
-from app.models.consumer_model import Consumer
-from app.models.role_model import Role
 from app.dependencies import get_current_user
 from app.utils.file_helper import load_sql
 from app.routers.consumers.consumer_out import ConsumerOut
