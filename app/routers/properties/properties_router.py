@@ -10,7 +10,6 @@ from app import database
 
 from ...utils.file_helper import load_sql
 from ...utils.out_helper import build_user_out
-from ...utils.out_helper import build_consumer_out
 from ...dependencies import get_current_user
 from ...utils.validate_photo import save_photos, update_photos
 
@@ -19,7 +18,6 @@ from ...models.user_model import User
 from ..users.roles_enum import UserRole
 
 from ..users.user_out import UserOut
-from ..consumers.consumer_out import ConsumerOut
 from .property_out import PropertyOut
 from .property_pagination import PaginatedProperties
 from ..addresses.address_out import AddressOut
@@ -59,8 +57,8 @@ async def create_property(
     else:
         raise HTTPException(status_code=403, detail="Not authorized")
 
-    sql = load_sql("consumer/get_consumer_by_id.sql")
-    owner_result = db.execute(text(sql), {"consumer_id": property.owner_id}).mappings().first()
+    sql = load_sql("user/get_user_by_id.sql")
+    owner_result = db.execute(text(sql), {"user_id": property.owner_id}).mappings().first()
     if not owner_result :
         raise HTTPException(status_code=400, detail="invalid owner_id")
     
@@ -120,28 +118,27 @@ async def create_property(
     }
     address_obj = AddressOut(**address_dict) if address_dict else None
     
-    consumer_sql = load_sql("consumer/get_consumer_by_id.sql")
     user_sql = load_sql("user/get_user_by_id.sql")
-    user_role_sql = load_sql("role/get_user_roles.sql")
-    consumer_role_sql = load_sql("role/get_consumer_roles.sql")
+    role_sql = load_sql("role/get_user_roles.sql")
     additional_sql = load_sql("additional/get_additional_by_id.sql")
 
     owner_id = property.owner_id
-    owner_result = db.execute(text(consumer_sql), {"consumer_id": owner_id}).mappings().first()
-    owner_roles_result = db.execute(text(consumer_role_sql), {"consumer_id": owner_id}).mappings().first()
+    owner_result = db.execute(text(user_sql), {"user_id": owner_id}).mappings().first()
+    owner_roles_result = db.execute(text(role_sql), {"user_id": owner_id}).mappings().first()
     owner_roles = [key for key, value in owner_roles_result.items() if value is True and key in UserRole.__members__] if owner_roles_result else []
     if owner_result:
         owner_data = dict(owner_result)
         owner_data["roles"] = owner_roles
-        owner_obj = ConsumerOut(
+        owner_obj = UserOut(
             **owner_data,
+            address = AddressOut(**owner_result) if owner_result.get("address_id") else None,
         )
     else:
         owner_obj = None
 
     created_by_id = current_user.user_id
     created_by_result = db.execute(text(user_sql), {"user_id": created_by_id}).mappings().first()
-    created_by_roles_result = db.execute(text(user_role_sql), {"user_id": created_by_id}).mappings().first()
+    created_by_roles_result = db.execute(text(role_sql), {"user_id": created_by_id}).mappings().first()
     created_by_roles = [key for key, value in created_by_roles_result.items() if value is True and key in UserRole.__members__] if created_by_roles_result else []
     
     if created_by_result:
@@ -234,16 +231,10 @@ def get_all_properties(
             if row.get(f"owner_{role}") is True
         ]
 
-        owner = ConsumerOut(
-            consumer_id=row["owner_consumer_id"],
-            name=row["owner_name"],
-            father_name=row["owner_father_name"],
-            surname=row["owner_surname"],
-            mother_name_surname=row["owner_mother_name_surname"],
-            place_birth=row["owner_place_birth"],
-            date_birth=row["owner_date_birth"],
-            registry=row["owner_registry"],
-            national_number=row["owner_national_number"],
+        owner = UserOut(
+            user_id=row["owner_user_id"],
+            first_name=row["owner_first_name"],
+            last_name=row["owner_last_name"],
             email=row["owner_email"],
             phone_number=row["owner_phone_number"],
             roles=owner_roles,
@@ -364,21 +355,15 @@ def my_properties(
             created_by=row["created_by_created_by"],
             created_at=row["created_by_created_at"]
         )
-        owner = ConsumerOut(
-            consumer_id=row["owner_consumer_id"],
-            name=row["owner_name"],
-            father_name=row["owner_father_name"],
-            surname=row["owner_surname"],
-            mother_name_surname=row["owner_mother_name_surname"],
-            place_birth=row["owner_place_birth"],
-            date_birth=row["owner_date_birth"],
-            registry=row["owner_registry"],
-            national_number=row["owner_national_number"],
+        owner = UserOut(
+            user_id=row["owner_user_id"],
+            first_name=row["owner_first_name"],
+            last_name=row["owner_last_name"],
             email=row["owner_email"],
             phone_number=row["owner_phone_number"],
             roles=owner_roles,
-            created_by=row["owner_created_by"],  # from users.created_by
-            created_at=row["owner_created_at"] 
+            created_by=row["owner_created_by"],
+            created_at=row["owner_created_at"]
         )
         address = AddressOut(
             address_id=row["address_address_id"],
@@ -460,7 +445,7 @@ def get_property_by_id(
     address_data = {k[len("address_"):]: v for k, v in row.items() if k.startswith("address_")}
     property = PropertyOut(
         **property_data,
-        owner=build_consumer_out(row, "owner_"),
+        owner=build_user_out(row, "owner_"),
         created_by_user=build_user_out(row, "created_by_"),
         address=AddressOut(**address_data) if address_data.get("address_id") else None,
         additional=AdditionalOut(**row)
@@ -562,7 +547,7 @@ def update_property_by_id(
     address_data = {k[len("address_"):]: v for k, v in row.items() if k.startswith("address_")}
     property_details = PropertyOut(
         **property_data,
-        owner=build_consumer_out(row, "owner_"),
+        owner=build_user_out(row, "owner_"),
         created_by_user=build_user_out(row, "created_by_"),
         address=AddressOut(**address_data) if address_data.get("address_id") else None,
         additional=AdditionalOut(**row)
