@@ -5,6 +5,9 @@ from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy_utils import database_exists, create_database
 from dotenv import load_dotenv
+import time
+import psycopg2
+from psycopg2 import OperationalError
 
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
@@ -32,6 +35,29 @@ if not database_exists(DATABASE_URL):
 
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
+
+def wait_for_postgres(host, port, user, password, dbname, timeout=60):
+    start_time = time.time()
+    while True:
+        try:
+            conn = psycopg2.connect(
+                host=host,
+                port=port,
+                user=user,
+                password=password,
+                dbname=dbname
+            )
+            conn.close()
+            print("✅ PostgreSQL is ready!")
+            break
+        except OperationalError as e:
+            if time.time() - start_time > timeout:
+                raise TimeoutError(f"PostgreSQL not ready after {timeout} seconds") from e
+            print("⏳ Waiting for PostgreSQL...")
+            time.sleep(2)
+
+# Call it before creating the engine in conftest.py
+wait_for_postgres(DB_HOST, DB_PORT, DB_USERNAME, DB_PASSWORD, DB_NAME)
 
 @pytest.fixture(scope="function")
 def override_db():
