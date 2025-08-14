@@ -55,15 +55,15 @@ SELECT
 
     -- Address fields
     a.address_id AS address_address_id,
-    a.floor AS address_floor,
-    a.apt AS address_apt,
-    a.area AS address_area,
-    a.city AS address_city,
-    a.county AS address_county,
+    a.floor,
+    a.apt,
+    a.area,
+    a.city,
+    a.county,
     a.created_at AS address_created_at,
     a.created_by AS address_created_by,
-    a.building_num AS address_building_num,
-    a.street AS address_street,
+    a.building_num,
+    a.street,
 
     -- Additional fields
     ad.elevator,
@@ -94,5 +94,5 @@ WHERE p.created_by = :created_by
     AND (:mls_num IS NULL OR p.mls_num = :mls_num)
     AND (:status IS NULL OR p.status = :status)
 
-ORDER BY p.created_at ASC
+ORDER BY {sort_by} {sort_order}
 LIMIT :limit OFFSET :offset;

@@ -86,3 +86,14 @@ LEFT JOIN roles ro ON o.user_id = ro.user_id
 LEFT JOIN addresses a ON p.property_id = a.property_id
 LEFT JOIN additional ad ON p.property_id = ad.property_id
 
+WHERE p.created_by = :created_by
+    AND p.exp_date >= CURRENT_DATE
+    AND (:city IS NULL OR a.city ILIKE :city)
+    AND (:area IS NULL OR a.area ILIKE :area)
+    AND (:min_price IS NULL OR p.price >= :min_price)
+    AND (:max_price IS NULL OR p.price <= :max_price)
+    AND (:mls_num IS NULL OR p.mls_num = :mls_num)
+    AND (:status IS NULL OR p.status = :status)
+
+ORDER BY {sort_by} {sort_order}
+LIMIT :limit OFFSET :offset;

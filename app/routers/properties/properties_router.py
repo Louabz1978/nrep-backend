@@ -169,23 +169,44 @@ async def create_property(
 
 @router.get("", response_model=PaginatedProperties, status_code=status.HTTP_200_OK)
 def get_all_properties(
-    sort_by: str = Query("property_id", regex="^(property_id|status|mls_num|price|area|city|created_at)$"),
-    sort_order: str = Query("asc", regex="^(asc|desc)$"),
     page: int = Query(1, ge=1),
     per_page: int = Query(10, ge=1),
+    
+    sort_by: str = Query("property_id", regex="^(property_id|status|mls_num|price|area|city|created_at)$"),
+    sort_order: str = Query("asc", regex="^(asc|desc)$"),
+    
+    city: Optional[str] = Query(None),
+    area: Optional[str] = Query(None),
+    min_price: Optional[float] = Query(None, ge=0),
+    max_price: Optional[float] = Query(None, ge=0),
+    mls_num: Optional[int] = Query(None),
+    status_filter: Optional[PropertyStatus] = Query(None),
+
     db: Session = Depends(database.get_db),
     current_user: User = Depends(get_current_user)
 ):
     if not current_user.roles.admin and not current_user.roles.broker and not current_user.roles.realtor:
         raise HTTPException(status_code=403, detail="Not authorized")
     
+    params = {
+        "created_by": current_user.user_id,
+        "city": f"%{city}%" if city else None,
+        "area": f"%{area}%" if area else None,
+        "min_price": min_price,
+        "max_price": max_price,
+        "mls_num": mls_num,
+        "status": status_filter.value if status_filter else None,
+        "limit": per_page,
+        "offset": (page - 1) * per_page
+    }
+
     total_sql = "SELECT COUNT(*) FROM properties"
     total = db.execute(text(total_sql)).scalar()
     total_pages = (total + per_page - 1) // per_page
     
-    sql = load_sql("property/get_all_properties.sql") +  f" ORDER BY {sort_by} {sort_order} LIMIT :limit OFFSET :offset"
-
-    result = db.execute(text(sql), {'limit': per_page, 'offset': (page - 1) * per_page})
+    sql = load_sql("property/get_all_properties.sql")
+    sql = sql.format(sort_by=sort_by, sort_order=sort_order)
+    result = db.execute(text(sql), params)
 
     properties = []
     for row in result.mappings():
@@ -278,12 +299,17 @@ def get_all_properties(
 def my_properties(
     page: int = Query(1, ge=1),
     per_page: int = Query(10, ge=1),
+
+    sort_by: str = Query("property_id", regex="^(property_id|status|mls_num|price|area|city|created_at)$"),
+    sort_order: str = Query("asc", regex="^(asc|desc)$"),
+    
     city: Optional[str] = Query(None),
     area: Optional[str] = Query(None),
     min_price: Optional[float] = Query(None, ge=0),
     max_price: Optional[float] = Query(None, ge=0),
     mls_num: Optional[int] = Query(None),
     status_filter: Optional[PropertyStatus] = Query(None),
+
     db: Session = Depends(database.get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -305,6 +331,7 @@ def my_properties(
     total_pages = (total + per_page - 1) // per_page
 
     sql = load_sql("property/get_my_property.sql")
+    sql = sql.format(sort_by=sort_by, sort_order=sort_order)
     result = db.execute(text(sql), params)
 
     properties = []
@@ -340,15 +367,15 @@ def my_properties(
         )
         address = AddressOut(
             address_id=row["address_address_id"],
-            floor=row["address_floor"],
-            apt=row["address_apt"],
-            area=row["address_area"],
-            city=row["address_city"],
-            county=row["address_county"],
+            floor=row["floor"],
+            apt=row["apt"],
+            area=row["area"],
+            city=row["city"],
+            county=row["county"],
             created_at=row["address_created_at"],
             created_by=row["address_created_by"],
-            building_num=row["address_building_num"],
-            street=row["address_street"]
+            building_num=row["building_num"],
+            street=row["street"]
         )
         additional = AdditionalOut(**row)
 
