@@ -58,7 +58,7 @@ async def create_property(
     else:
         raise HTTPException(status_code=403, detail="Not authorized")
 
-    sql = load_sql("consumers/get_consumer_by_id.sql")
+    sql = load_sql("consumer/get_consumer_by_id.sql")
     owner_result = db.execute(text(sql), {"consumer_id": property.owner_id}).mappings().first()
     if not owner_result :
         raise HTTPException(status_code=400, detail="invalid owner_id")
@@ -116,7 +116,7 @@ async def create_property(
     }
     address_obj = AddressOut(**address_dict) if address_dict else None
     
-    consumer_sql = load_sql("consumers/get_consumer_by_id.sql")
+    consumer_sql = load_sql("consumer/get_consumer_by_id.sql")
     user_sql = load_sql("user/get_user_by_id.sql")
     role_sql = load_sql("role/get_user_roles.sql")
     additional_sql = load_sql("additional/get_additional_by_id.sql")
@@ -476,7 +476,7 @@ def update_property_by_id(
     
     # owner_id check
     if property_data.owner_id:
-        consumer_sql = load_sql("consumers/get_consumer_by_id.sql")
+        consumer_sql = load_sql("consumer/get_consumer_by_id.sql")
         owner_result = db.execute(text(consumer_sql), {"consumer_id": property_data.owner_id}).mappings().first()
         
         if not owner_result:
