@@ -12,11 +12,17 @@ from app.database import Base, get_db
 from main import app
 
 load_dotenv()
-DB_USERNAME = os.getenv("DATABASE_TEST_USERNAME")
-DB_PASSWORD = os.getenv("DATABASE_TEST_PASSWORD")
-DB_HOST = os.getenv("DATABASE_TEST_HOST")
-DB_PORT = os.getenv("DATABASE_TEST_PORT")
-DB_NAME = os.getenv("DATABASE_TEST_NAME")
+
+# Detect CI environment
+if os.getenv("CI"):
+    DB_HOST = "localhost"  # GitHub Actions service is exposed on localhost
+else:
+    DB_HOST = os.getenv("DATABASE_TEST_HOST", "localhost")
+
+DB_USERNAME = os.getenv("DATABASE_TEST_USERNAME", "postgres")
+DB_PASSWORD = os.getenv("DATABASE_TEST_PASSWORD", "1234")
+DB_PORT = os.getenv("DATABASE_TEST_PORT", "5432")
+DB_NAME = os.getenv("DATABASE_TEST_NAME", "nrep_test_database")
 
 DATABASE_URL = f"postgresql://{DB_USERNAME}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 
@@ -48,12 +54,10 @@ def override_db():
 
     # Create a new session instance
     db = SessionLocal()
-
     try:
         yield db
     finally:
         db.close()
-        # Base.metadata.drop_all(bind=engine)
 
 # Override the get_db dependency in FastAPI to use the test session
 @pytest.fixture(scope="function")
