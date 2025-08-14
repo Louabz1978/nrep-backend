@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from app.models.user_model import User
+    from app.models.consumer_model import Consumer
 
 class Role(Base):
     __tablename__ = "roles"
@@ -22,7 +23,9 @@ class Role(Base):
     tenant: Mapped[bool] = mapped_column(Boolean, server_default=text("false"))
 
     # ForeignKey
-    user_id: Mapped[int] = mapped_column(ForeignKey("users.user_id", ondelete="CASCADE"), unique=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.user_id", ondelete="CASCADE"), nullable=True, unique=True)
+    consumer_id: Mapped[int] = mapped_column(ForeignKey("consumers.consumer_id", ondelete="CASCADE"), nullable=True, unique=True)
 
     #Relationships
     user: Mapped["User"] = relationship(back_populates="roles")
+    consumer: Mapped["Consumer"] = relationship(back_populates="roles")
