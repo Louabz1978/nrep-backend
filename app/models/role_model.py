@@ -27,5 +27,5 @@ class Role(Base):
     consumer_id: Mapped[int] = mapped_column(ForeignKey("consumers.consumer_id", ondelete="CASCADE"), nullable=True, unique=True)
 
     #Relationships
-    user: Mapped["User"] = relationship(back_populates="roles")
-    consumer: Mapped["Consumer"] = relationship(back_populates="roles")
+    user: Mapped["User"] = relationship("User", back_populates="roles")
+    consumer: Mapped["Consumer"] = relationship("Consumer", back_populates="roles")
