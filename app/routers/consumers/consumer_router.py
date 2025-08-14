@@ -64,21 +64,6 @@ def update_consumer_by_id(
         if row.get(role)
     ]
 
-    consumer_out = ConsumerOut(
-        consumer_id=row["consumer_id"],
-        name=row["name"],
-        father_name=row["father_name"],
-        surname=row["surname"],
-        mother_name_surname=row["mother_name_surname"],
-        place_birth=row["place_birth"],
-        date_birth=row["date_birth"],
-        registry=row["registry"],
-        national_number=row["national_number"],
-        email=row["email"],
-        phone_number=row["phone_number"],
-        created_at=row["created_at"],
-        created_by=row["created_by"],
-        roles=roles  # Pass list directly
-    )
+    consumer_out = ConsumerOut(**row)
 
     return {"message": "Consumer updated successfully", "consumer": consumer_out}
