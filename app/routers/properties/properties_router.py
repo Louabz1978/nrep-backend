@@ -351,7 +351,7 @@ def my_properties(
             status=row["status"],
             created_at=row["created_at"],
             last_updated=row["last_updated"],
-            images_urls=row["images_urls"] ,
+            images_urls=row["images_urls"],
             mls_num=row["mls_num"],
             owner=owner, 
             created_by_user=created_by,
