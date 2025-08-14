@@ -498,8 +498,9 @@ def update_property_by_id(
         raise HTTPException(status_code=403, detail="Not authorized")
     
     # owner_id check
+    consumer_role_sql = load_sql("role/get_consumer_roles.sql")
     if property_data.owner_id:
-        owner = db.execute(text(role_sql), {"user_id": property_data.owner_id}).mappings().first()
+        owner = db.execute(text(consumer_role_sql), {"consumer_id": property_data.owner_id}).mappings().first()
         if not owner:
             raise HTTPException(status_code=404, detail="Owner not found")
         if owner["seller"] == False:
