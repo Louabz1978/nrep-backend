@@ -24,22 +24,15 @@ jobs:
         ports:
           - 5432:5432
         options: >-
-          --health-cmd="pg_isready -U postgres"
-          --health-interval=10s
-          --health-timeout=5s
-          --health-retries=10
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
 
     env:
-      CI: true
-      DATABASE_USERNAME: postgres
-      DATABASE_PASSWORD: 1234
-      DATABASE_HOST: localhost
-      DATABASE_PORT: 5432
-      DATABASE_NAME: nrep_test_database
-
       DATABASE_TEST_USERNAME: postgres
       DATABASE_TEST_PASSWORD: 1234
-      DATABASE_TEST_HOST: localhost
+      DATABASE_TEST_HOST: postgres
       DATABASE_TEST_PORT: 5432
       DATABASE_TEST_NAME: nrep_test_database
       

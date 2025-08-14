@@ -1,9 +1,6 @@
 import sys
 import os
 import pytest
-import time
-import psycopg2
-from psycopg2 import OperationalError
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy_utils import database_exists, create_database
@@ -15,42 +12,13 @@ from app.database import Base, get_db
 from main import app
 
 load_dotenv()
-
-# Detect CI environment
-if os.getenv("CI"):
-    DB_HOST = "localhost"  # GitHub Actions service is exposed on localhost
-else:
-    DB_HOST = os.getenv("DATABASE_TEST_HOST", "localhost")
-
-DB_USERNAME = os.getenv("DATABASE_TEST_USERNAME", "postgres")
-DB_PASSWORD = os.getenv("DATABASE_TEST_PASSWORD", "1234")
-DB_PORT = os.getenv("DATABASE_TEST_PORT", "5432")
-DB_NAME = os.getenv("DATABASE_TEST_NAME", "nrep_test_database")
+DB_USERNAME = os.getenv("DATABASE_TEST_USERNAME")
+DB_PASSWORD = os.getenv("DATABASE_TEST_PASSWORD")
+DB_HOST = os.getenv("DATABASE_TEST_HOST")
+DB_PORT = os.getenv("DATABASE_TEST_PORT")
+DB_NAME = os.getenv("DATABASE_TEST_NAME")
 
 DATABASE_URL = f"postgresql://{DB_USERNAME}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
-
-# Wait for PostgreSQL to be ready before creating engine
-def wait_for_postgres(host, port, user, password, dbname, timeout=60):
-    start_time = time.time()
-    while True:
-        try:
-            conn = psycopg2.connect(
-                host=host,
-                port=port,
-                user=user,
-                password=password,
-                dbname=dbname
-            )
-            conn.close()
-            print("✅ PostgreSQL is ready!")
-            break
-        except OperationalError as e:
-            if time.time() - start_time > timeout:
-                raise TimeoutError(f"PostgreSQL not ready after {timeout} seconds") from e
-            print("⏳ Waiting for PostgreSQL...")
-            time.sleep(2)
-
-wait_for_postgres(DB_HOST, DB_PORT, DB_USERNAME, DB_PASSWORD, DB_NAME)
 
 # Create test DB if it doesn't exist
 if not database_exists(DATABASE_URL):
@@ -61,13 +29,14 @@ SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
 
 @pytest.fixture(scope="function")
 def override_db():
-    import app.models  # register tables in Base.metadata
+    # Import models to register tables in Base.metadata
+    import app.models
 
     # Drop and recreate all tables fresh
     Base.metadata.drop_all(bind=engine)
     Base.metadata.create_all(bind=engine)
 
-    # Seed data
+    # Run SQL seed file
     test_dir = os.path.dirname(os.path.abspath(__file__))
     sql_file_path = os.path.join(test_dir, "seed_data.sql")
     with open(sql_file_path, "r") as f:
@@ -77,17 +46,23 @@ def override_db():
         connection.execute(text(seed_sql))
         connection.commit()
 
-    # No session yielded here — only setup done
-    yield
+    # Create a new session instance
+    db = SessionLocal()
 
+    try:
+        yield db
+    finally:
+        db.close()
+        # Base.metadata.drop_all(bind=engine)
+
+# Override the get_db dependency in FastAPI to use the test session
 @pytest.fixture(scope="function")
 def client(override_db):
     def _override_get_db():
-        db = SessionLocal()  # fresh session per request
         try:
-            yield db
+            yield override_db
         finally:
-            db.close()
+            override_db.close()
 
     app.dependency_overrides[get_db] = _override_get_db
 
