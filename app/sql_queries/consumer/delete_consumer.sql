@@ -1,0 +1,1 @@
+DELETE From consumers where consumer_id=:consumer_id
