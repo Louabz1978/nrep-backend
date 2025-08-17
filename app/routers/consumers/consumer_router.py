@@ -6,13 +6,14 @@ from datetime import datetime, timezone
 from app import database
 from app.dependencies import get_current_user
 from app.utils.file_helper import load_sql
+
 from app.routers.consumers.consumer_out import ConsumerOut
+from app.routers.consumers.consumer_create import ConsumerCreate
 from app.routers.consumers.consumer_update import ConsumerUpdate
 
 from app.models.user_model import User
 
 router = APIRouter(prefix="/consumers", tags=["Consumers"])
-
 
 @router.post("", status_code=status.HTTP_201_CREATED)
 def create_consumer(
