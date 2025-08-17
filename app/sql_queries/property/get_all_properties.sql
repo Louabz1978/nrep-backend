@@ -84,9 +84,7 @@ LEFT JOIN consumers o ON p.owner_id = o.consumer_id
 LEFT JOIN addresses a ON p.property_id = a.property_id
 LEFT JOIN additional ad ON p.property_id = ad.property_id
 
-WHERE p.created_by = :created_by
-    AND p.exp_date >= CURRENT_DATE
-    AND (:city IS NULL OR a.city ILIKE :city)
+WHERE (:city IS NULL OR a.city ILIKE :city)
     AND (:area IS NULL OR a.area ILIKE :area)
     AND (:min_price IS NULL OR p.price >= :min_price)
     AND (:max_price IS NULL OR p.price <= :max_price)
