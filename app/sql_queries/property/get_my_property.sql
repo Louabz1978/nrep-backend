@@ -20,21 +20,19 @@ SELECT
     p.mls_num,
 
     -- Owner user fields
-    owner.user_id AS owner_user_id,
-    owner.first_name AS owner_first_name,
-    owner.last_name AS owner_last_name,
+    owner.consumer_id AS owner_consumer_id,
+    owner.name AS owner_name,
+    owner.father_name AS owner_father_name,
+    owner.surname AS owner_surname,
+    owner.mother_name_surname AS owner_mother_name_surname,
+    owner.place_birth AS owner_place_birth,
+    owner.date_birth AS owner_date_birth,
+    owner.registry AS owner_registry,
+    owner.national_number AS owner_national_number,
     owner.email AS owner_email,
     owner.phone_number AS owner_phone_number,
     owner.created_by AS owner_created_by,
     owner.created_at AS owner_created_at,
-
-    -- Owner roles
-    owner_roles.admin AS owner_admin,
-    owner_roles.broker AS owner_broker,
-    owner_roles.realtor AS owner_realtor,
-    owner_roles.buyer AS owner_buyer,
-    owner_roles.seller AS owner_seller,
-    owner_roles.tenant AS owner_tenant,
 
     -- Created by user fields
     creator.user_id AS created_by_user_id,
@@ -78,16 +76,13 @@ SELECT
     ad.pool
 
 FROM properties p
-LEFT JOIN users owner ON p.owner_id = owner.user_id
-LEFT JOIN roles owner_roles ON owner.user_id = owner_roles.user_id
+LEFT JOIN consumers owner ON p.owner_id = owner.consumer_id
 LEFT JOIN users creator ON p.created_by = creator.user_id
 LEFT JOIN roles creator_roles ON creator.user_id = creator_roles.user_id
 LEFT JOIN addresses a ON p.property_id = a.property_id
 LEFT JOIN additional ad ON p.property_id = ad.property_id
 
-WHERE p.created_by = :created_by
-    AND p.exp_date >= CURRENT_DATE
-    AND (:city IS NULL OR a.city ILIKE :city)
+WHERE (:city IS NULL OR a.city ILIKE :city)
     AND (:area IS NULL OR a.area ILIKE :area)
     AND (:min_price IS NULL OR p.price >= :min_price)
     AND (:max_price IS NULL OR p.price <= :max_price)

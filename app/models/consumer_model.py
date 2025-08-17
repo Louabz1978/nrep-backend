@@ -8,11 +8,6 @@ from typing import Optional
 from datetime import datetime
 from sqlalchemy import Date
 
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from app.models.role_model import Role
-
 class Consumer(Base):
     __tablename__ = "consumers"
 
@@ -36,11 +31,3 @@ class Consumer(Base):
 
     # Relationships
     created_by_user = relationship("User", back_populates="consumer_created", foreign_keys=[created_by])
-
-    roles: Mapped["Role"] = relationship(
-        "Role",
-        back_populates="consumer",
-        cascade="all, delete-orphan",
-        uselist=False,
-        lazy="joined"
-    )
