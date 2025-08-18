@@ -2,8 +2,10 @@ from pydantic import BaseModel
 from typing import Optional, List, Dict
 from datetime import datetime
 import json
+from datetime import date
 
 from app.routers.users.user_out import UserOut
+from app.routers.consumers.consumer_out import ConsumerOut
 from ..additional.additional_out import AdditionalOut
 from app.routers.addresses.address_out import AddressOut
 
@@ -13,6 +15,7 @@ from .properties_status_enum import PropertyStatus
 class PropertyOut(BaseModel):
     property_id: int
     description: str
+    show_inst: str
     price: int
     property_type: Optional[PropertyTypes]
     bedrooms: int
@@ -24,13 +27,14 @@ class PropertyOut(BaseModel):
     latitude: float
     longitude: float
     status: PropertyStatus
+    exp_date: date
     created_at: datetime
     last_updated: datetime
     images_urls: Optional[List[Dict]]
     mls_num: Optional[int] = None
 
     created_by_user: Optional[UserOut]
-    owner: Optional[UserOut]
+    owner: Optional[ConsumerOut]
     address: Optional[AddressOut] = None
     additional: Optional[AdditionalOut] = None
 

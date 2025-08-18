@@ -1,6 +1,7 @@
 from fastapi import Form
 from pydantic import BaseModel, model_validator
 from typing import Optional, List
+from datetime import date
 from .properties_type_enum import PropertyTypes
 from .properties_status_enum import PropertyStatus
 
@@ -10,6 +11,7 @@ from ..additional.additional_update import AdditionalUpdate
 class PropertyUpdate(BaseModel):
     owner_id: Optional[ int ] = None
     description: Optional[ str ] = None
+    show_inst: Optional[ str ] = None
     price: Optional[ int ] = None
     property_type: Optional[ PropertyTypes ] = None
     bedrooms: Optional[ int ] = None
@@ -21,6 +23,7 @@ class PropertyUpdate(BaseModel):
     latitude: Optional[ float ] = None
     longitude: Optional[ float ] = None
     status: Optional[ PropertyStatus ] = None
+    exp_date: Optional[ date ] = None
     preserve_images: Optional[ List[str] ] = None
     
     address: Optional[ AddressUpdate ] = None
@@ -31,6 +34,7 @@ class PropertyUpdate(BaseModel):
         cls,
         owner_id: Optional[int] = Form(None),
         description: Optional[str] = Form(None),
+        show_inst: Optional[ str ] = Form(None),
         price: Optional[int] = Form(None),
         property_type: Optional[PropertyTypes] = Form(None),
         bedrooms: Optional[int] = Form(None),
@@ -42,12 +46,14 @@ class PropertyUpdate(BaseModel):
         latitude: Optional[float] = Form(None),
         longitude: Optional[float] = Form(None),
         status: Optional[PropertyStatus] = Form(None),
+        exp_date: Optional[date] = Form(None),
         preserve_images: Optional[List[str]] = Form(None)
     ):
 
         return cls(
             owner_id=owner_id,
             description=description,
+            show_inst=show_inst,
             price=price,
             property_type=property_type,
             bedrooms=bedrooms,
@@ -59,6 +65,7 @@ class PropertyUpdate(BaseModel):
             latitude=latitude,
             longitude=longitude,
             status=status,
+            exp_date=exp_date,
             preserve_images=preserve_images if preserve_images not in (None, "") else None
         )
 

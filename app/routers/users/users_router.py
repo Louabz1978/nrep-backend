@@ -181,22 +181,26 @@ def get_user_by_id(
             # broker can access the users that the realtor that her created created
             realtor_ids = db.execute(
                 text(
-                    "SELECT user_id FROM users WHERE created_by = :broker_id AND role_id IN (SELECT roles_id FROM roles WHERE realtor = TRUE)"
+                    """SELECT u.user_id 
+                FROM users u
+                LEFT JOIN roles r ON r.user_id = u.user_id
+                WHERE u.created_by = :broker_id AND r.realtor = TRUE
+                """
                 ),
                 {"broker_id": current_user.user_id}
             ).scalars().all()
 
             if target_user_creator_id not in realtor_ids:
-                raise HTTPException(status_code=403, detail="Not authorized to view this user")
+                raise HTTPException(status_code=403, detail="Not authorized")
 
     elif current_user.roles.realtor:
         if target_user_creator_id == current_user.user_id:
             pass # realtors can access users that they created
         else:
-            raise HTTPException(status_code=403, detail="Not authorized to view this user")
+            raise HTTPException(status_code=403, detail="Not authorized")
 
     else:
-        raise HTTPException(status_code=403, detail="Not authorized to view this user")
+        raise HTTPException(status_code=403, detail="Not authorized")
 
     roles = [role for role in ["admin", "broker", "realtor", "buyer", "seller", "tenant"] if row.get(role)]
 
@@ -219,7 +223,8 @@ def update_user(
     result = db.execute(text(sql), {"user_id": user_id})
     user = result.mappings().first()
 
-
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
    
     result = db.execute(text(sql), {"user_id": user["created_by"]})
     creator = result.mappings().first()
