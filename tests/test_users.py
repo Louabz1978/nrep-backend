@@ -339,10 +339,6 @@ def test_check_user_out(client):
         assert "city" in address
         assert "street" in address
 
-
-
-# GET ALL USERS
-
 def test_get_all_users_admin(client: TestClient, setup_users):
     # Admin can get all users
     login_response = client.post(
@@ -396,16 +392,6 @@ def test_get_all_users_no_token(client: TestClient):
     # Request without token returns 401
     response = client.get("/users")
     assert response.status_code == 401
-
-
-
-def test_get_all_users_no_token(client: TestClient):
-    # Request without token returns 401
-    response = client.get("/users")
-    assert response.status_code == 401
-
-
-# DELETE USER (Admin only)
 
 def test_delete_user_admin(client: TestClient, setup_users):
     # Admin can delete another user
@@ -470,3 +456,4 @@ def test_delete_user_not_exist(client: TestClient, setup_users):
     response = client.delete("/users/99999")
 
     assert response.status_code == 404
+
