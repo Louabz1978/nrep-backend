@@ -52,7 +52,7 @@ def create_license(
 
     return license_details
 
-@router.post("/{license_id}", status_code=status.HTTP_200_OK)
+@router.put("/{license_id}", status_code=status.HTTP_200_OK)
 def update_license(
     license_id: int,
     license_in: LicenseUpdate = Depends(LicenseUpdate.as_form),
