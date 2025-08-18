@@ -47,6 +47,34 @@ def create_consumer(
         "consumer": consumer_details  
     }
 
+@router.get("/{consumer_id:int}", status_code=status.HTTP_200_OK)
+def get_consumer_by_id(
+    consumer_id: int, 
+    db: Session = Depends(database.get_db),
+    current_user: User = Depends(get_current_user),
+):
+    sql = load_sql("consumer/get_consumer_by_id.sql")
+    consumer_data = db.execute(text(sql), {"consumer_id": consumer_id}).mappings().first()
+
+    if consumer_data is None:
+        raise HTTPException(status_code=404, detail="consumer not found")
+    
+    role_sql = load_sql("role/get_user_roles.sql")
+    roles = db.execute(text(role_sql), {"user_id": current_user.user_id}).mappings().first()
+    realtor_ids = db.execute(text("""SELECT u.user_id FROM users u LEFT JOIN roles r ON r.user_id = u.user_id
+                WHERE u.created_by = :broker_id AND r.realtor = TRUE"""),
+                {"broker_id": current_user.user_id}).scalars().all()
+    if not (
+        roles["admin"] == True
+        or (roles["realtor"] == True and current_user.user_id == consumer_data["created_by"])
+        or (roles["broker"] == True and (current_user.user_id == consumer_data["created_by"] or current_user.user_id in realtor_ids) )
+    ):
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    consumer = ConsumerOut(**consumer_data)
+    return consumer
+
+
 @router.put("/{consumer_id}")
 def update_consumer_by_id(
     consumer_id: int,
