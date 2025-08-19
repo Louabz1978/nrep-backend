@@ -16,5 +16,7 @@ class ConsumerCreate(BaseModel):
     email: Optional[EmailStr] = None
     phone_number: Optional[str] = Field(None, max_length=20)
 
-    class Config:
-        orm_mode = True
+    model_config = {
+        "from_attributes": True
+    }
+

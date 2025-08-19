@@ -39,3 +39,11 @@ VALUES (6, 'tenant', 'test', 'test@tenant.com', '$2b$12$2h9HK/lHUQxA.YnNt3qKD.XE
 
 INSERT INTO roles(roles_id, tenant, user_id)
 VALUES (6, TRUE, 6);
+
+-- Insert address test account
+INSERT INTO addresses (floor, apt, area, city, county, building_num, street, created_by)
+VALUES (2, 5, 'Downtown', 'Amsterdam', 'Noord-Holland', '12B', 'Main Street', 1);
+
+-- Insert agenct test account
+INSERT INTO agencies (agency_id, name, email, phone_number, created_by, broker_id, address_id)
+VALUES (1, 'test', 'test@test.com', '0959804457', 1, 2, 1)
