@@ -603,3 +603,53 @@ def get_property_type_options(
         raise HTTPException(status_code=403, detail="Not authorized")
 
     return [types.value for types in PropertyTypes]
+
+@router.get("/mls", status_code=status.HTTP_200_OK)
+def filter_by_mls(
+    page: int = Query(1, ge=1),
+    per_page: int = Query(10, ge=1, le=100),
+    mls: str | None = Query(None, description="Filter by MLS number (contains)"),
+    db: Session = Depends(database.get_db),
+    current_user : User = Depends(get_current_user)
+):
+    
+    role_sql = load_sql("role/get_user_roles.sql")
+    role_result = db.execute(text(role_sql), {"user_id": current_user.user_id}).mappings().first()
+    current_user_role = [key for key, value in role_result.items() if value]
+
+    if "realtor" in current_user_role or "broker" in current_user_role or "admin" in current_user_role:
+        pass
+    else:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    offset = (page - 1) * per_page
+
+    base_query = """
+        SELECT p.*
+        FROM properties p
+        WHERE (:mls IS NULL OR CAST(p.mls_num AS TEXT) ILIKE :mls)
+        ORDER BY p.property_id
+        LIMIT :limit OFFSET :offset
+    """
+
+    count_query = """
+        SELECT COUNT(*)
+        FROM properties p
+        WHERE (:mls IS NULL OR CAST(p.mls_num AS TEXT) ILIKE :mls)
+    """
+
+    params = {
+        "mls": f"%{mls}%" if mls else None,
+        "limit": per_page,
+        "offset": offset
+    }
+
+    items = db.execute(text(base_query), params).mappings().all()
+    total = db.execute(text(count_query), {"mls": f"%{mls}%" if mls else None}).scalar()
+
+    return {
+        "page": page,
+        "per_page": per_page,
+        "total": total,
+        "items": items
+    }
