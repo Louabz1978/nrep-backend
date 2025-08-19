@@ -87,3 +87,25 @@ def update_license(
     # Fetch updated license
     updated_license = db.execute(text(get_sql), {"license_id": updated_license_id}).mappings().first()
     return {"message": "License updated successfully", "license": updated_license}
+
+@router.delete("/{license_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_license(
+    license_id: int,
+    db: Session = Depends(database.get_db),
+    current_user: User = Depends(get_current_user)
+):
+    role_sql = load_sql("role/get_user_roles.sql")
+    roles = db.execute(text(role_sql), {"user_id": current_user.user_id}).mappings().first()
+    if roles["admin"] == False:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    sql = load_sql("license/get_license_by_id.sql")
+    license_existing = db.execute(text(sql), {"license_id": license_id}).mappings().first()
+    if not license_existing:
+        raise HTTPException(status_code=404, detail="license not found")
+    
+    delete_sql = load_sql("license/delete_license.sql")
+    db.execute(text(delete_sql), {"license_id": license_id})
+
+    db.commit()
+    return {"message": "license deleted successfully"}

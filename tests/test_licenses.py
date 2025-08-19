@@ -177,3 +177,64 @@ def test_update_license_as_non_admin(client: TestClient, get_users_by_roles):
     )
     assert update_resp.status_code == 403, update_resp.text
 
+#-----Tests for delete ------
+
+def test_delete_existing_license_as_admin(client :TestClient, get_users_by_roles):
+    admin_user_dict = get_users_by_roles(['admin'])
+    admin_user = admin_user_dict.get('admin')
+    assert admin_user
+
+    response = client.post(
+        "/auth/login",
+        data={"username": admin_user["email"], "password": "1234"}
+    )
+    token = response.json()["access_token"]
+    client.headers.update({"Authorization": f"Bearer {token}"})
+
+    create_resp = client.post("/licenses", json={
+        "lic_num": 88888,
+        "lic_status": "active",
+        "lic_type": "initial_type",
+        "agency_id": 1,
+        "user_id": admin_user["user_id"]
+    })
+    license_id = create_resp.json()["license_id"]
+
+    response = client.delete(f"/licenses/{license_id}")
+    assert response.status_code == 204
+
+def test_delete_existing_license_as_non_admin(client: TestClient, get_users_by_roles):
+    broker_user_dict = get_users_by_roles(['broker'])
+    broker_user = broker_user_dict.get('broker')
+    assert broker_user
+
+    response = client.post(
+        "/auth/login",
+        data={"username": broker_user["email"], "password": "1234"}
+    )
+    token = response.json()["access_token"]
+    client.headers.update({"Authorization": f"Bearer {token}"})
+
+    response = client.delete("/licenses/1")
+    assert response.status_code == 403
+    data = response.json()
+    assert data["detail"] == "Not authorized"
+
+
+
+def test_delete_non_existing_license_as_admin(client: TestClient, get_users_by_roles):
+    admin_user_dict = get_users_by_roles(['admin'])
+    admin_user = admin_user_dict.get('admin')
+    assert admin_user
+
+    response = client.post(
+        "/auth/login",
+        data={"username": admin_user["email"], "password": "1234"}
+    )
+    token = response.json()["access_token"]
+    client.headers.update({"Authorization": f"Bearer {token}"})
+
+    response = client.delete("/licenses/999")
+    assert response.status_code == 404
+    data = response.json()
+    assert data["detail"] == "license not found"
