@@ -355,7 +355,7 @@ def test_delete_user_by_id_non_admin_access(client, get_users_by_roles):
         assert response.status_code == 403
 
 def test_delete_user_by_id_without_token(client):
-    response = client.delete("/users/4")  # بدون Authorization
+    response = client.delete("/users/4")  
     assert response.status_code == 401
     data = response.json()
     assert data["detail"] == "Not authenticated"
