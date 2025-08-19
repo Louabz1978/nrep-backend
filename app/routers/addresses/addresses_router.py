@@ -28,7 +28,7 @@ router = APIRouter(
     tags=["addresses"]
 )
 
-@router.post("/me", response_model=AddressOut, status_code=status.HTTP_201_CREATED)
+@router.post("/create_address", response_model=AddressOut, status_code=status.HTTP_201_CREATED)
 def create_user_address(
     address: AddressCreate,
     db: Session = Depends(database.get_db),
@@ -152,7 +152,7 @@ def get_all_addresses(
         }
     }
 
-@router.put("/me")
+@router.put("/user_address")
 def update_user_address(
     address : AddressUpdate,
     db : Session = Depends(database.get_db),

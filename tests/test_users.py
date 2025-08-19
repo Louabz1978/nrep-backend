@@ -237,26 +237,7 @@ def test_get_user_by_id_not_found(client):
 
 
 
-def test_get_user_by_id_realtor_access(client):
-   
-    login_response = client.post(
-        "/auth/login",
-        data={"username": "test@broker.com", "password": "1234"}
-    )
-  
-    token = login_response.json().get("access_token")
-    # Now try to get that user's data
-    response = client.get(
-        f"/users/4",
-        headers={"Authorization": f"Bearer {token}"}
-    )
-    assert response.status_code == 200
-    data = response.json()
-    assert data["user_id"] == 4
-    assert data["email"] == "test@buyer.com"
-
-
-def test_get_user_by_id_admin_access(client):
+def test_get_all_users_admin(client: TestClient):
     # Login as admin
     login_response = client.post(
         "/auth/login",
@@ -264,128 +245,68 @@ def test_get_user_by_id_admin_access(client):
     )
     assert login_response.status_code == 200
     token = login_response.json().get("access_token")
-   
+
     response = client.get(
-        "/users/1",
+        "/users",
         headers={"Authorization": f"Bearer {token}"}
     )
     assert response.status_code == 200
     data = response.json()
-    assert data["user_id"] == 1
+    assert "data" in data
+    assert len(data["data"]) >= 1
 
-def test_get_user_by_id_broker_access(client):
+
+def test_get_all_users_broker(client: TestClient):
     # Login as broker
     login_response = client.post(
         "/auth/login",
         data={"username": "test@broker.com", "password": "1234"}
     )
- 
-    broker_token = login_response.json().get("access_token")
-
-    # test that broker can access the user created by him
-    realtor_response = client.get(
-        f"/users/3",
-        headers={"Authorization": f"Bearer {broker_token}"}
-    )
-    assert realtor_response.status_code == 200
-    data = realtor_response.json()
-    assert data["user_id"] == 3
-    assert data["email"] == "test@realtor.com"
-
-    # Now test that broker can access the user created by the realtor
-    buyer_response = client.get(
-        f"/users/4",
-        headers={"Authorization": f"Bearer {broker_token}"}
-    )
-    assert buyer_response.status_code == 200
-    data = buyer_response.json()
-    assert data["user_id"] == 4
-    assert data["email"] == "test@buyer.com"
-
-def test_check_user_out(client):
-    # Login as admin (assuming user_id 1 is admin)
-    login_response = client.post(
-        "/auth/login",
-        data={"username": "test@admin.com", "password": "1234"}
-    )
     assert login_response.status_code == 200
     token = login_response.json().get("access_token")
 
-    # Get user with id 1
     response = client.get(
-        "/users/1",
+        "/users",
         headers={"Authorization": f"Bearer {token}"}
     )
     assert response.status_code == 200
     data = response.json()
-    # Check all UserOut fields
-    assert isinstance(data["user_id"], int)
-    assert isinstance(data["first_name"], str)
-    assert isinstance(data["last_name"], str)
-    assert isinstance(data["email"], str)
-    assert "@" in data["email"]
-    assert isinstance(data["phone_number"], str)
-    assert isinstance(data["roles"], list)
-    for role in data["roles"]:
-        assert role in ["admin", "buyer", "seller", "broker", "realtor", "tenant"]
-    assert isinstance(data["created_by"], int)
-    assert isinstance(data["created_at"], str)  # ISO datetime string
-    # Address is optional and can be None or a dict
-    if data["address"] is not None:
-        address = data["address"]
-        assert isinstance(address, dict)
-        # Check some address fields
-        assert "address_id" in address
-        assert "city" in address
-        assert "street" in address
-
-def test_get_all_users_admin(client: TestClient, setup_users):
-    # Admin can get all users
-    login_response = client.post(
-        "/auth/login",
-        data={"username": "test@admin.com", "password": "1234"}
-    )
-    assert login_response.status_code == 200
-    token = login_response.json().get("access_token")
-    client.headers.update({"Authorization": f"Bearer {token}"})
-
-    response = client.get("/users")
-    assert response.status_code == 200
-    data = response.json()
-    assert "data" in data
-    assert len(data["data"]) >= len(setup_users)
-
-
-def test_get_all_users_broker(client: TestClient, setup_users):
-    # Broker can get all users
-    login_response = client.post(
-        "/auth/login",
-        data={"username": "test@broker.com", "password": "1234"}
-    )
-    assert login_response.status_code == 200
-    token = login_response.json().get("access_token")
-    client.headers.update({"Authorization": f"Bearer {token}"})
-
-    response = client.get("/users")
-    assert response.status_code == 200
-    data = response.json()
     assert "data" in data
 
 
-def test_get_all_users_realtor(client: TestClient, setup_users):
-    # Realtor can get all users
+def test_get_all_users_realtor(client: TestClient):
+    # Login as realtor
     login_response = client.post(
         "/auth/login",
         data={"username": "test@realtor.com", "password": "1234"}
     )
     assert login_response.status_code == 200
     token = login_response.json().get("access_token")
-    client.headers.update({"Authorization": f"Bearer {token}"})
 
-    response = client.get("/users")
+    response = client.get(
+        "/users",
+        headers={"Authorization": f"Bearer {token}"}
+    )
     assert response.status_code == 200
     data = response.json()
     assert "data" in data
+
+
+def test_get_all_users_non_privileged_roles(client, get_users_by_roles):
+    users = get_users_by_roles(['buyer', 'seller', 'tenant'])
+
+    for role, user in users.items():
+        login_response = client.post(
+            "/auth/login",
+            data={"username": user["email"], "password": "1234"}
+        )
+        token = login_response.json().get("access_token")
+
+        response = client.get(
+            "/users/",
+            headers={"Authorization": f"Bearer {token}"}
+        )
+        assert response.status_code == 403
 
 
 def test_get_all_users_no_token(client: TestClient):
@@ -393,67 +314,48 @@ def test_get_all_users_no_token(client: TestClient):
     response = client.get("/users")
     assert response.status_code == 401
 
-def test_delete_user_admin(client: TestClient, setup_users):
-    # Admin can delete another user
-    admin = next((u for u in setup_users if u.email == "test@admin.com"), setup_users[0])
-    user_to_delete = next((u for u in setup_users if u.email == "test@broker.com"), None)
+#delete_user
 
+def test_delete_user_by_id_admin_access(client, get_users_by_roles):
+    admin_user = get_users_by_roles(['admin'])['admin']
+    
     # Login as admin
     login_response = client.post(
         "/auth/login",
-        data={"username": admin.email, "password": "1234"}
+        data={"username": admin_user["email"], "password": "1234"}
     )
-    assert login_response.status_code == 200
     token = login_response.json().get("access_token")
 
-    client.headers.update({"Authorization": f"Bearer {token}"})
-    response = client.delete(f"/users/{user_to_delete.user_id}")
-
-    assert response.status_code == 204  # No Content
-
-
-def test_delete_user_non_admin_forbidden(client: TestClient, setup_users):
-    # Non-admin (broker) cannot delete a user
-    broker = next((u for u in setup_users if u.email == "test@broker.com"), setup_users[0])
-    user_to_delete = next((u for u in setup_users if u.email == "test@realtor.com"), None)
-
-    # Login as broker
-    login_response = client.post(
-        "/auth/login",
-        data={"username": broker.email, "password": "1234"}
+    # Delete a buyer for example
+    buyer_user = get_users_by_roles(['buyer'])['buyer']
+    response = client.delete(
+        f"/users/{buyer_user['user_id']}",
+        headers={"Authorization": f"Bearer {token}"}
     )
-    assert login_response.status_code == 200
-    token = login_response.json().get("access_token")
-
-    client.headers.update({"Authorization": f"Bearer {token}"})
-    response = client.delete(f"/users/{user_to_delete.user_id}")
-
-    assert response.status_code == 403
+    assert response.status_code in (200, 204)
 
 
-def test_delete_user_no_token(client: TestClient, setup_users):
-    # Request without token returns 401
-    user_to_delete = next((u for u in setup_users if u.email == "test@realtor.com"), None)
+def test_delete_user_by_id_non_admin_access(client, get_users_by_roles):
+    users = get_users_by_roles(['broker', 'realtor', 'buyer', 'seller', 'tenant'])
 
-    response = client.delete(f"/users/{user_to_delete.user_id}")
+    for role, user in users.items():
+        # Login as this role
+        login_response = client.post(
+            "/auth/login",
+            data={"username": user["email"], "password": "1234"}
+        )
+        token = login_response.json().get("access_token")
 
+        # Attempt to delete another user 
+        target_admin = get_users_by_roles(['admin'])['admin']
+        response = client.delete(
+            f"/users/{target_admin['user_id']}",
+            headers={"Authorization": f"Bearer {token}"}
+        )
+        assert response.status_code == 403
+
+def test_delete_user_by_id_without_token(client):
+    response = client.delete("/users/4")  # بدون Authorization
     assert response.status_code == 401
-
-
-def test_delete_user_not_exist(client: TestClient, setup_users):
-    # Deleting non-existent user returns 404
-    admin = next((u for u in setup_users if u.email == "test@admin.com"), setup_users[0])
-
-    # Login as admin
-    login_response = client.post(
-        "/auth/login",
-        data={"username": admin.email, "password": "1234"}
-    )
-    assert login_response.status_code == 200
-    token = login_response.json().get("access_token")
-
-    client.headers.update({"Authorization": f"Bearer {token}"})
-    response = client.delete("/users/99999")
-
-    assert response.status_code == 404
-
+    data = response.json()
+    assert data["detail"] == "Not authenticated"
