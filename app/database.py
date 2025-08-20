@@ -29,10 +29,10 @@ def get_db():
 
 db_depends = Annotated[Session, Depends(get_db)]
 
-# try:
-#     db_gen = get_db()
-#     db = next(db_gen)
-#     print("connection established")
-#     db_gen.close() 
-# except Exception as e:
-#     print(e)
+try:
+    db_gen = get_db()
+    db = next(db_gen)
+    print("connection established")
+    db_gen.close() 
+except Exception as e:
+    print(e)

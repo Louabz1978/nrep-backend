@@ -1,5 +1,5 @@
 from fastapi import Form
-from pydantic import BaseModel, model_validator
+from pydantic import BaseModel, EmailStr, model_validator
 from typing import Optional
 from datetime import date
 
@@ -13,7 +13,7 @@ class ConsumerUpdate(BaseModel):
     date_birth: Optional[date] = None
     registry: Optional[str] = None
     national_number: Optional[int] = None
-    email: Optional[str] = None
+    email: Optional[EmailStr] = None
     phone_number: Optional[str] = None
 
     @classmethod
@@ -27,7 +27,7 @@ class ConsumerUpdate(BaseModel):
         date_birth: Optional[date] = Form(None),
         registry: Optional[str] = Form(None),
         national_number: Optional[int] = Form(None),
-        email: Optional[str] = Form(None),
+        email: Optional[EmailStr] = Form(None),
         phone_number: Optional[str] = Form(None),
     ):
         return cls(

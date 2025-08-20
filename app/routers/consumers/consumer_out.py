@@ -17,6 +17,7 @@ class ConsumerOut(BaseModel):
     phone_number: Optional[ str ]
     created_at: datetime
     created_by: int
+    created_by_type: str
 
     model_config = {
         "from_attributes": True
