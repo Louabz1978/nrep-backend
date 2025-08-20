@@ -12,4 +12,5 @@ WHERE
             SELECT u1.user_id FROM users u1 WHERE u1.created_by = :user_id
         )
     ))
+ORDER BY {sort_by} {sort_order}
 LIMIT :limit OFFSET :offset;

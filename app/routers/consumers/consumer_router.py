@@ -168,11 +168,16 @@ def get_all_consumers(
     # total count
     total_sql = load_sql("consumer/count_all_consumers.sql")
     total = db.execute(text(total_sql), {
+        "user_id" : current_user.user_id,
         "role" : role,
-    })
+    }).scalar()
     total_pages = (total + per_page - 1) // per_page
-    sql = load_sql("consumer/get_all_consumers.sql")
+    sql = load_sql("consumer/get_all_consumers.sql").format(
+    sort_by=sort_by,
+    sort_order=sort_order
+)
     result = db.execute(text(sql), {
+        "user_id" : current_user.user_id,
         "role" : role,
         "limit": per_page,
         "offset": (page - 1) * per_page
