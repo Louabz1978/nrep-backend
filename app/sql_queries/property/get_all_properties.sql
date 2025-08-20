@@ -1,4 +1,4 @@
-SELECT
+SELECT DISTINCT ON (p.property_id)
     -- Property fields
     p.property_id,
     p.description,
@@ -49,6 +49,7 @@ SELECT
     o.email AS owner_email,
     o.phone_number AS owner_phone_number,
     o.created_by AS owner_created_by,
+    o.created_by_type AS owner_created_by_type,
     o.created_at AS owner_created_at,
 
     -- Address fields
@@ -88,7 +89,7 @@ WHERE (:city IS NULL OR a.city ILIKE :city)
     AND (:area IS NULL OR a.area ILIKE :area)
     AND (:min_price IS NULL OR p.price >= :min_price)
     AND (:max_price IS NULL OR p.price <= :max_price)
-    AND (:mls_num IS NULL OR p.mls_num = :mls_num)
+    AND (:mls_num IS NULL OR p.mls_num::TEXT ILIKE :mls_num)
     AND (:status IS NULL OR p.status = :status)
 
 ORDER BY {sort_by} {sort_order}
