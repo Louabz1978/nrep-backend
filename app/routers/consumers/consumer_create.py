@@ -1,7 +1,6 @@
 from pydantic import BaseModel, EmailStr, Field
-from typing import Optional, List
+from typing import Optional
 from datetime import date
-from ..users.roles_enum import UserRole
 
 class ConsumerCreate(BaseModel):
     name: str = Field(..., max_length=50)

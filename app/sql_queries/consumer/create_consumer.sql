@@ -10,6 +10,7 @@ INSERT INTO consumers (
     email,
     phone_number,
     created_by,
+    created_by_type,
     created_at
 )
 VALUES (
@@ -24,6 +25,7 @@ VALUES (
     :email,
     :phone_number,
     :created_by,
+    :created_by_type,
     :created_at
 )
 RETURNING consumer_id;
