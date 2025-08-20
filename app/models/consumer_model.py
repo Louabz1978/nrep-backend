@@ -26,6 +26,8 @@ class Consumer(Base):
 
     created_at: Mapped[datetime] = mapped_column(TIMESTAMP, server_default=func.now())
     
+    created_by_type: Mapped[str] = mapped_column(String, nullable=False)
+    
     # ForeignKey
     created_by : Mapped[Optional[int]] = mapped_column(ForeignKey("users.user_id"), nullable=False)
 
