@@ -1,4 +1,14 @@
 SELECT
-  a.agency_id AS agency_id, a.name AS agency_name, a.phone_number AS agency_phone_number
+  a.*,
+  d.address_id,
+  d.floor,
+  d.apt,
+  d.area,
+  d.city,
+  d.county,
+  d.building_num,
+  d.street,
+  d.created_at AS address_created_at
 FROM agencies a
+LEFT JOIN addresses d ON d.address_id = a.address_id
 WHERE a.agency_id = :agency_id;
