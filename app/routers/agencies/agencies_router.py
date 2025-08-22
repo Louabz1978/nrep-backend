@@ -148,7 +148,9 @@ def delete_agency(
     db: Session = Depends(database.get_db),
     current_user: User = Depends(get_current_user)
 ):
-    if current_user.role != "admin":
+    role_sql = load_sql("role/get_user_roles.sql")
+    roles = db.execute(text(role_sql), {"user_id": current_user.user_id}).mappings().first()
+    if roles["admin"] == False:
         raise HTTPException(status_code=403, detail="Not authorized")
 
     sql = load_sql("agency/get_agency_by_id.sql")
