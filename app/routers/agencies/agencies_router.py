@@ -14,6 +14,8 @@ from ...utils.out_helper import build_user_out
 from .agency_create import AgencyCreate
 from .agency_out import AgencyOut
 from app.routers.addresses.address_out import AddressOut
+from .agencies_update import AgencyUpdate
+from app.models.addresses_model import Address
 
 router = APIRouter(
     prefix="/agencies",
@@ -106,42 +108,58 @@ def get_agency_by_id(
 @router.put("/{agency_id}")
 def update_agency(
     agency_id: int,
-    agency_data: AgencyCreate,
+    agency_data: AgencyUpdate,
     db: Session = Depends(database.get_db),
-    current_user: User = Depends(get_current_user)
+    current_user=Depends(get_current_user),
 ):
-    if current_user.role != "admin":
-        raise HTTPException(status_code=403, detail="Not authorized")
-
+    # 1) get the agency
     agency = db.query(Agency).filter(Agency.agency_id == agency_id).first()
     if not agency:
-        raise HTTPException(status_code=404, detail="Agency not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Agency not found"
+        )
 
-    if agency_data.broker_id is not None:
-        broker = db.query(User).filter(User.user_id == agency_data.broker_id).first()
-        if not broker or broker.role != "broker":
-            raise HTTPException(status_code=400, detail="Invalid broker_id or user is not a broker")
+    # 2) update agency fields if present
+    if agency_data.name is not None:
+        agency.name = agency_data.name
+    if agency_data.email is not None:
+        agency.email = agency_data.email
+    if agency_data.phone_number is not None:
+        agency.phone_number = agency_data.phone_number
 
-    sql = load_sql("agency/update_agency.sql")
+    # 3) update or create the address if provided
+    if agency_data.address:
+        if agency.address:  # already exists
+            agency.address.floor = agency_data.address.floor or agency.address.floor
+            agency.address.apt = agency_data.address.apt or agency.address.apt
+            agency.address.area = agency_data.address.area or agency.address.area
+            agency.address.city = agency_data.address.city or agency.address.city
+            agency.address.county = agency_data.address.county or agency.address.county
+            agency.address.building_num = (
+                agency_data.address.building_num or agency.address.building_num
+            )
+            agency.address.street = (
+                agency_data.address.street or agency.address.street
+            )
+        else:  # no address yet → create one
+            new_address = Address(
+                floor=agency_data.address.floor,
+                apt=agency_data.address.apt,
+                area=agency_data.address.area,
+                city=agency_data.address.city,
+                county=agency_data.address.county,
+                building_num=agency_data.address.building_num,
+                street=agency_data.address.street,
+                created_by=current_user.user_id,
+                agency_id=agency.agency_id,
+            )
+            db.add(new_address)
+            agency.address = new_address
 
-    db.execute(
-        text(sql),
-        {
-            "agency_id": agency_id,
-            "name": agency_data.name,
-            "email": agency_data.email,
-            "phone_number": agency_data.phone_number,
-            "address": agency_data.address,
-            "neighborhood": agency_data.neighborhood,
-            "city": agency_data.city,
-            "county": agency_data.county,
-            "broker_id": agency_data.broker_id,
-        }
-    )
     db.commit()
+    db.refresh(agency)
 
-    return {"message": "Agency updated successfully", "agency_id": agency_id}
-
+    return {"message": "Agency updated successfully", "agency": agency}
 @router.delete("/{agency_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_agency(
     agency_id: int,
