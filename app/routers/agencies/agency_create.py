@@ -1,22 +1,22 @@
-from pydantic import BaseModel, EmailStr, model_validator, Field
+from pydantic import BaseModel, EmailStr, field_validator
 from typing import Optional
+import re
 
 class AgencyCreate(BaseModel):
     name: str
     email: EmailStr
     phone_number: str
-    address: Optional[str] = None
-    neighborhood: Optional[str] = None
-    city: Optional[str] = None
-    county: Optional[str] = None
-    broker_id: Optional[int] = Field(
-        None,
-        description="Optional broker user_id to assign as agency broker"
-    )
+    broker_id: int
 
-    @model_validator(mode='before')
-    def validate_broker(cls, values):
-        broker_id = values.get("broker_id")
-        if broker_id == 0:
-            values["broker_id"] = None
-        return values
+    @field_validator("phone_number")
+    def validate_and_convert_phone(cls, v):
+        # Optional: remove '+' if exists
+        v = v.strip()
+        if v.startswith('+'):
+            v = v[1:]
+
+        # Validate
+        if not re.match(r"^\d{7,15}$", v):
+            raise ValueError("must be a valid phone number")
+
+        return int(v)

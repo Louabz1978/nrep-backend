@@ -2,15 +2,18 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List
 from sqlalchemy import text
+from datetime import datetime, timezone
 
 from app import database
 from ...models.user_model import User
 from ...models.agency_model import Agency
 from app.utils.file_helper import load_sql
 from ...dependencies import get_current_user
+from ...utils.out_helper import build_user_out
 
 from .agency_create import AgencyCreate
 from .agency_out import AgencyOut
+from app.routers.addresses.address_out import AddressOut
 from .agencies_update import AgencyUpdate
 
 router = APIRouter(
@@ -24,19 +27,22 @@ def create_agency(
     db: Session = Depends(database.get_db),
     current_user: User = Depends(get_current_user)
 ):
-    if current_user.role != "admin":
+    role_sql = load_sql("role/get_user_roles.sql")
+    roles = db.execute(text(role_sql), {"user_id": current_user.user_id}).mappings().first()
+    if roles["admin"] == False:
         raise HTTPException(status_code=403, detail="Not authorized")
 
     # Validate broker_id if provided
     if agency.broker_id:
-        sql = load_sql("user/get_user_by_id.sql")
-        broker = db.execute(text(sql), {"user_id" : agency.broker_id}).mappings().first()
+        broker = db.execute(text(role_sql), {"user_id" : agency.broker_id}).mappings().first()
         if not broker:
             raise HTTPException(status_code=400, detail="Broker not found")
-        if broker.role != "broker":
+        if broker["broker"] == False:
             raise HTTPException(status_code=400, detail="Assigned broker must have role 'broker'")
 
     db_agency = agency.model_dump()
+    db_agency["created_at"] = datetime.now(timezone.utc)
+    db_agency["created_by"] = current_user.user_id
 
     sql = load_sql("agency/create_agency.sql")
     result = db.execute(text(sql), db_agency)
@@ -46,7 +52,11 @@ def create_agency(
 
     sql = load_sql("agency/get_agency_by_id.sql")
     created_agency = db.execute(text(sql), {"agency_id": new_agency_id}).mappings().first()
-    agency_details = AgencyOut(**created_agency, name = created_agency["agency_name"])
+    address_data = {k[len("address_"):]: v for k, v in created_agency.items() if k.startswith("address_")}
+    agency_details = AgencyOut(
+        **created_agency, 
+        broker=build_user_out(created_agency, "broker_"), 
+        address = AddressOut(**address_data) if address_data.get("address_id") else None,)
 
     return {"message": "Agency created successfully", "agency": agency_details}
 
@@ -184,7 +194,9 @@ def delete_agency(
     db: Session = Depends(database.get_db),
     current_user: User = Depends(get_current_user)
 ):
-    if current_user.role != "admin":
+    role_sql = load_sql("role/get_user_roles.sql")
+    roles = db.execute(text(role_sql), {"user_id": current_user.user_id}).mappings().first()
+    if roles["admin"] == False:
         raise HTTPException(status_code=403, detail="Not authorized")
 
     sql = load_sql("agency/get_agency_by_id.sql")

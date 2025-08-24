@@ -238,3 +238,62 @@ def test_delete_non_existing_license_as_admin(client: TestClient, get_users_by_r
     assert response.status_code == 404
     data = response.json()
     assert data["detail"] == "license not found"
+
+#
+
+def test_get_all_licenses_as_admin(client: TestClient, get_users_by_roles):
+    admin_user_dict = get_users_by_roles(['admin'])
+    admin_user = admin_user_dict.get('admin')
+    assert admin_user
+
+    # login as admin
+    resp = client.post("/auth/login", data={"username": admin_user["email"], "password": "1234"})
+    token = resp.json()["access_token"]
+    client.headers.update({"Authorization": f"Bearer {token}"})
+
+    # call endpoint
+    response = client.get("/licenses")
+    assert response.status_code == 200, response.text
+
+    licenses = response.json()
+    assert isinstance(licenses, list)
+
+
+def test_get_all_licenses_as_broker(client: TestClient, get_users_by_roles):
+    broker_user_dict = get_users_by_roles(['broker'])
+    broker_user = broker_user_dict.get('broker')
+    assert broker_user
+
+    # login as broker
+    resp = client.post("/auth/login", data={"username": broker_user["email"], "password": "1234"})
+    token = resp.json()["access_token"]
+    client.headers.update({"Authorization": f"Bearer {token}"})
+
+    response = client.get("/licenses")
+    assert response.status_code == 200, response.text
+
+    licenses = response.json()
+    assert isinstance(licenses, list)
+    # broker should only see licenses of their realtors (not admin ones)
+    # Example: check all user_ids belong to broker’s group
+    for lic in licenses:
+        assert "user_id" in lic
+
+
+def test_get_all_licenses_as_realtor(client: TestClient, get_users_by_roles):
+    realtor_user_dict = get_users_by_roles(['realtor'])
+    realtor_user = realtor_user_dict.get('realtor')
+    assert realtor_user
+
+    resp = client.post("/auth/login", data={"username": realtor_user["email"], "password": "1234"})
+    token = resp.json()["access_token"]
+    client.headers.update({"Authorization": f"Bearer {token}"})
+
+    response = client.get("/licenses")
+    assert response.status_code == 200, response.text
+
+    licenses = response.json()
+    assert isinstance(licenses, list)
+    # Realtor should only see their own licenses
+    for lic in licenses:
+        assert lic["user_id"] == realtor_user["user_id"]
