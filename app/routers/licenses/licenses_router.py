@@ -88,6 +88,33 @@ def update_license(
     updated_license = db.execute(text(get_sql), {"license_id": updated_license_id}).mappings().first()
     return {"message": "License updated successfully", "license": updated_license}
 
+@router.get("", response_model=list[LicenseOut], status_code=status.HTTP_200_OK)
+def get_all_licenses(
+    db: Session = Depends(database.get_db),
+    current_user: User = Depends(get_current_user),
+):
+    role_sql = load_sql("role/get_user_roles.sql")
+    roles = db.execute(text(role_sql), {"user_id": current_user.user_id}).mappings().first()
+
+    if not roles["admin"] and not roles["broker"] and not roles["realtor"]:
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    if roles["admin"]:
+        role = "admin"
+    elif roles["broker"]:
+        role = "broker"
+    else:
+        role = "realtor"
+
+    sql = load_sql("license/get_all_licenses.sql")
+    result = db.execute(
+        text(sql),
+        {"user_id": current_user.user_id, "role": role}
+    )
+
+    licenses = [LicenseOut(**row) for row in result.mappings()]
+    return licenses
+
 @router.delete("/{license_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_license(
     license_id: int,
