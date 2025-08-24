@@ -179,12 +179,12 @@ def get_all_properties(
         raise HTTPException(status_code=403, detail="Not authorized")
     
     params = {
-        "created_by": current_user.user_id,
+        # "created_by": current_user.user_id,
         "city": f"%{city}%" if city else None,
         "area": f"%{area}%" if area else None,
         "min_price": min_price,
         "max_price": max_price,
-        "mls_num": mls_num,
+        "mls_num": f"%{mls_num}%" if mls_num else None,
         "status": status_filter.value if status_filter else None,
         "limit": per_page,
         "offset": (page - 1) * per_page
@@ -229,7 +229,8 @@ def get_all_properties(
             email=row["owner_email"],
             phone_number=row["owner_phone_number"],
             created_by=row["owner_created_by"],
-            created_at=row["owner_created_at"] 
+            created_at=row["owner_created_at"],
+            created_by_type=row["owner_created_by_type"]
         )
             
         property = PropertyOut(
@@ -309,7 +310,7 @@ def my_properties(
         "area": f"%{area}%" if area else None,
         "min_price": min_price,
         "max_price": max_price,
-        "mls_num": mls_num,
+        "mls_num": f"%{mls_num}%" if mls_num else None,
         "status": status_filter.value if status_filter else None,
         "limit": per_page,
         "offset": (page - 1) * per_page
@@ -354,7 +355,8 @@ def my_properties(
             email=row["owner_email"],
             phone_number=row["owner_phone_number"],
             created_by=row["owner_created_by"],
-            created_at=row["owner_created_at"] 
+            created_at=row["owner_created_at"],
+            created_by_type=row["owner_created_by_type"]
         )
         address = AddressOut(
             address_id=row["address_address_id"],
@@ -428,16 +430,20 @@ def get_property_by_id(
     if row is None:
         raise HTTPException(status_code=404, detail="Property not found")
 
-    nested_prefixes = ("owner_", "created_by_", "address_")
+    nested_prefixes = ("created_by_", "address_")
 
     property_data = {
         k: v for k, v in row.items()
         if not any(k.startswith(prefix) for prefix in nested_prefixes)
     }
     address_data = {k[len("address_"):]: v for k, v in row.items() if k.startswith("address_")}
+
+    consumer_sql = load_sql("consumer/get_consumer_by_id.sql")
+    owner = db.execute(text(consumer_sql), {"consumer_id": row.owner_consumer_id}).mappings().first()
+    
     property = PropertyOut(
         **property_data,
-        owner=build_user_out(row, "owner_"),
+        owner=owner,
         created_by_user=build_user_out(row, "created_by_"),
         address=AddressOut(**address_data) if address_data.get("address_id") else None,
         additional=AdditionalOut(**row)
@@ -538,6 +544,10 @@ def update_property_by_id(
         if not any(k.startswith(prefix) for prefix in nested_prefixes)
     }
     address_data = {k[len("address_"):]: v for k, v in row.items() if k.startswith("address_")}
+
+    consumer_sql = load_sql("consumer/get_consumer_by_id.sql")
+    owner = db.execute(text(consumer_sql), {"consumer_id": row.owner_consumer_id}).mappings().first()
+    
     property_details = PropertyOut(
         **property_data,
         owner=owner,

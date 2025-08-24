@@ -1,7 +1,6 @@
 from pydantic import BaseModel, EmailStr, Field
-from typing import Optional, List
+from typing import Optional
 from datetime import date
-from ..users.roles_enum import UserRole
 
 class ConsumerCreate(BaseModel):
     name: str = Field(..., max_length=50)
@@ -16,5 +15,7 @@ class ConsumerCreate(BaseModel):
     email: Optional[EmailStr] = None
     phone_number: Optional[str] = Field(None, max_length=20)
 
-    class Config:
-        orm_mode = True
+    model_config = {
+        "from_attributes": True
+    }
+

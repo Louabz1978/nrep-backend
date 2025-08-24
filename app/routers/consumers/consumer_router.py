@@ -1,10 +1,12 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException,status, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 from datetime import datetime, timezone
 
 from app import database
 from app.dependencies import get_current_user
+from app.models.user_model import User
+from app.routers.consumers.consumer_pagination import PaginatedConsumer
 from app.utils.file_helper import load_sql
 
 from app.routers.consumers.consumer_out import ConsumerOut
@@ -25,12 +27,13 @@ def create_consumer(
     current_user_roles = db.execute(text(role_sql), {"user_id": current_user.user_id}).mappings().first()
     current_user_role_list = [key for key, value in current_user_roles.items() if value]
 
-    if not ("admin" in current_user_role_list or "broker" in current_user_role_list):
+    if not any(role in current_user_role_list for role in ["admin", "broker", "realtor"]):
         raise HTTPException(status_code=403, detail="Not authorized to create consumers")
 
     db_consumer = consumer.model_dump(exclude={"roles"})
     db_consumer["created_by"] = current_user.user_id
     db_consumer["created_at"] = datetime.now(timezone.utc)
+    db_consumer["created_by_type"] = current_user_role_list[1]
     params = {**db_consumer}
 
     sql = load_sql("consumer/create_consumer.sql")
@@ -46,6 +49,29 @@ def create_consumer(
         "message": "Consumer created successfully",
         "consumer": consumer_details  
     }
+
+@router.get("/{consumer_id:int}", status_code=status.HTTP_200_OK)
+def get_consumer_by_id(
+    consumer_id: int, 
+    db: Session = Depends(database.get_db),
+    current_user: User = Depends(get_current_user),
+):
+    sql = load_sql("consumer/get_consumer_by_id.sql")
+    consumer_data = db.execute(text(sql), {"consumer_id": consumer_id}).mappings().first()
+
+    if consumer_data is None:
+        raise HTTPException(status_code=404, detail="consumer not found")
+    
+    role_sql = load_sql("role/get_user_roles.sql")
+    roles = db.execute(text(role_sql), {"user_id": current_user.user_id}).mappings().first()
+    if not (
+        roles["admin"] == True
+        or current_user.user_id == consumer_data["created_by"]
+    ):
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    consumer = ConsumerOut(**consumer_data)
+    return consumer
 
 @router.put("/{consumer_id}")
 def update_consumer_by_id(
@@ -90,12 +116,6 @@ def update_consumer_by_id(
     sql = load_sql("consumer/get_consumer_by_id.sql")
     row = db.execute(text(sql), {"consumer_id": updated_consumer_id}).mappings().first()
 
-    roles = [
-        role
-        for role in ["admin", "broker", "realtor", "buyer", "seller", "tenant"]
-        if row.get(role)
-    ]
-
     consumer_out = ConsumerOut(**row)
 
     return {"message": "Consumer updated successfully", "consumer": consumer_out}
@@ -122,3 +142,57 @@ def delete_consumer(
     db.commit()
     
     return {"message": "Consumer deleted successfully"}
+
+
+@router.get("/consumers", response_model=PaginatedConsumer, status_code=status.HTTP_200_OK)
+def get_all_consumers(
+    page: int = Query(1, ge=1),
+    per_page: int = Query(10, ge=1),
+    sort_by: str = Query("consumer_id", regex="^(consumer_id|surname|father_name|name|created_at)$"),
+    sort_order: str = Query("asc", regex="^(asc|desc)$"),
+    db: Session = Depends(database.get_db),
+    current_user: User = Depends(get_current_user),
+):
+    role_sql = load_sql("role/get_user_roles.sql")
+    roles = db.execute(text(role_sql), {"user_id": current_user.user_id}).mappings().first()
+    
+    if roles["admin"] == False and roles["broker"] == False and roles["realtor"] == False:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    if roles["admin"] == True:
+        role = 'admin'
+    elif roles["broker"] == True:
+        role = 'broker'
+    else:
+        role = 'realtor'
+    # total count
+    total_sql = load_sql("consumer/count_all_consumers.sql")
+    total = db.execute(text(total_sql), {
+        "user_id" : current_user.user_id,
+        "role" : role,
+    }).scalar()
+    total_pages = (total + per_page - 1) // per_page
+    sql = load_sql("consumer/get_all_consumers.sql").format(
+    sort_by=sort_by,
+    sort_order=sort_order
+)
+    result = db.execute(text(sql), {
+        "user_id" : current_user.user_id,
+        "role" : role,
+        "limit": per_page,
+        "offset": (page - 1) * per_page
+    })
+
+    consumers = [ConsumerOut(**row) for row in result.mappings()]
+
+    return {
+        "pagination": {
+            "total": total,
+            "page": page,
+            "per_page": per_page,
+            "total_pages": total_pages,
+            "has_next": page < total_pages,
+            "has_prev": page > 1
+        },
+        "data": consumers
+    }
