@@ -5,6 +5,11 @@ from app.database import Base
 from typing import Optional
 from datetime import datetime
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from app.models.addresses_model import Address
+
 class Agency(Base):
     __tablename__ = "agencies"
 
@@ -17,11 +22,15 @@ class Agency(Base):
     # ForeignKey
     created_by: Mapped[Optional[int]] = mapped_column(ForeignKey("users.user_id"), nullable=True)
     broker_id: Mapped[Optional[int]] = mapped_column(ForeignKey("users.user_id"), nullable=True)
-    address_id: Mapped[int] = mapped_column(ForeignKey("addresses.address_id"), nullable=False)
 
     # Relationships
     created_by_user = relationship("User", back_populates="agency_created", foreign_keys=[created_by])
     broker = relationship("User", back_populates="agency_broker", foreign_keys=[broker_id])
-    address = relationship("Address", back_populates="agencies", foreign_keys=[address_id])
+    address: Mapped["Address"] = relationship(
+        back_populates="agencies",
+        cascade="all, delete-orphan",
+        uselist=False,
+        lazy="joined"
+    )
     
     licenses = relationship("License", back_populates="agency", uselist=False)

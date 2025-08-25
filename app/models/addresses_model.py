@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from app.models.property_model import Property
+    from app.models.agency_model import Agency
     
 class Address(Base):
     __tablename__ = "addresses"
@@ -28,10 +29,11 @@ class Address(Base):
     # ForeignKey
     created_by: Mapped[Optional[int]] = mapped_column(ForeignKey("users.user_id"), nullable=False)
     property_id: Mapped[int] = mapped_column(ForeignKey("properties.property_id", ondelete="CASCADE"), unique=True, nullable=True)
+    agency_id: Mapped[int] = mapped_column(ForeignKey("agencies.agency_id", ondelete="CASCADE"), unique=True, nullable=True)
 
     # Relationship
     created_by_user = relationship("User", back_populates="address_created", foreign_keys=[created_by])
     properties: Mapped["Property"] = relationship(back_populates="address")
 
-    agencies = relationship("Agency", back_populates="address", uselist=False)
+    agencies : Mapped["Agency"] = relationship(back_populates="address")
     
