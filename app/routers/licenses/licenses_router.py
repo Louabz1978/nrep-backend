@@ -115,6 +115,38 @@ def get_all_licenses(
     licenses = [LicenseOut(**row) for row in result.mappings()]
     return licenses
 
+@router.get("/{license_id}", response_model=LicenseOut, status_code=status.HTTP_200_OK)
+def get_license_by_id(
+    license_id: int,
+    db: Session = Depends(database.get_db),
+    current_user: User = Depends(get_current_user),
+):
+    # Check user roles
+    role_sql = load_sql("role/get_user_roles.sql")
+    roles = db.execute(text(role_sql), {"user_id": current_user.user_id}).mappings().first()
+
+    if not roles["admin"] and not roles["broker"] and not roles["realtor"]:
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    if roles["admin"]:
+        role = "admin"
+    elif roles["broker"]:
+        role = "broker"
+    else:
+        role = "realtor"
+
+    # Load query for license by id
+    sql = load_sql("license/get_license_by_id.sql")
+    result = db.execute(
+        text(sql),
+        {"user_id": current_user.user_id, "role": role, "license_id": license_id}
+    ).mappings().first()
+
+    if not result:
+        raise HTTPException(status_code=404, detail="License not found")
+
+    return LicenseOut(**result)
+
 @router.delete("/{license_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_license(
     license_id: int,
