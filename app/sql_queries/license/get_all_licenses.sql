@@ -12,4 +12,5 @@ WHERE (
     ))
     OR (:role = 'realtor' AND l.user_id = :user_id)
 )
-ORDER BY l.license_id;
+ORDER BY l.license_id
+LIMIT :limit OFFSET :offset;

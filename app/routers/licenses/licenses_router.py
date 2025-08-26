@@ -1,7 +1,8 @@
-from fastapi import Depends, HTTPException, APIRouter, status
+from fastapi import Depends, HTTPException, APIRouter, status, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 from datetime import datetime, timezone
+from .license_pagination import PaginatedLicenses
 
 from app import database
 from ...dependencies import get_current_user
@@ -88,8 +89,11 @@ def update_license(
     updated_license = db.execute(text(get_sql), {"license_id": updated_license_id}).mappings().first()
     return {"message": "License updated successfully", "license": updated_license}
 
-@router.get("", response_model=list[LicenseOut], status_code=status.HTTP_200_OK)
+@router.get("", response_model=PaginatedLicenses, status_code=status.HTTP_200_OK)
 def get_all_licenses(
+    page: int = Query(1, ge=1),
+    per_page: int = Query(10, ge=1),
+
     db: Session = Depends(database.get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -106,14 +110,49 @@ def get_all_licenses(
     else:
         role = "realtor"
 
+    # --- Count total for pagination ---
+    count_sql = """
+        SELECT COUNT(*)
+        FROM licenses l
+        WHERE (
+            :role = 'admin'
+            OR (:role = 'broker' AND l.agency_id = (
+                SELECT agency_id FROM users WHERE user_id = :user_id
+            ))
+            OR (:role = 'realtor' AND l.user_id = :user_id)
+        )
+    """
+    total = db.execute(
+        text(count_sql),
+        {"user_id": current_user.user_id, "role": role}
+    ).scalar()
+    total_pages = (total + per_page - 1) // per_page
+
     sql = load_sql("license/get_all_licenses.sql")
     result = db.execute(
         text(sql),
-        {"user_id": current_user.user_id, "role": role}
+        {
+            "user_id": current_user.user_id,
+            "role": role,
+            "limit": per_page,
+            "offset": (page - 1) * per_page
+        }
     )
 
     licenses = [LicenseOut(**row) for row in result.mappings()]
-    return licenses
+
+    return {
+        "data": licenses,
+        "pagination": {
+            "total": total,
+            "page": page,
+            "per_page": per_page,
+            "total_pages": total_pages,
+            "has_next": page < total_pages,
+            "has_prev": page > 1
+        }
+    }
+
 
 @router.get("/{license_id}", response_model=LicenseOut, status_code=status.HTTP_200_OK)
 def get_license_by_id(
