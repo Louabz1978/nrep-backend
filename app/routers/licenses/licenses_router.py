@@ -1,3 +1,4 @@
+from typing import Optional
 from fastapi import Depends, HTTPException, APIRouter, status, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import text
@@ -94,6 +95,11 @@ def get_all_licenses(
     page: int = Query(1, ge=1),
     per_page: int = Query(10, ge=1),
 
+    lic_status: Optional[str] = Query(None),
+    lic_type: Optional[str] = Query(None),
+    agency_id: Optional[int] = Query(None),
+    filter_user_id: Optional[int] = Query(None),
+
     db: Session = Depends(database.get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -110,7 +116,6 @@ def get_all_licenses(
     else:
         role = "realtor"
 
-    # --- Count total for pagination ---
     count_sql = """
         SELECT COUNT(*)
         FROM licenses l
@@ -121,23 +126,28 @@ def get_all_licenses(
             ))
             OR (:role = 'realtor' AND l.user_id = :user_id)
         )
+        AND (:lic_status IS NULL OR l.lic_status = :lic_status)
+        AND (:lic_type IS NULL OR l.lic_type = :lic_type)
+        AND (:agency_id IS NULL OR l.agency_id = :agency_id)
+        AND (:filter_user_id IS NULL OR l.user_id = :filter_user_id)
     """
-    total = db.execute(
-        text(count_sql),
-        {"user_id": current_user.user_id, "role": role}
-    ).scalar()
+    params = {
+        "user_id": current_user.user_id,
+        "role": role,
+        "lic_status": lic_status,
+        "lic_type": lic_type,
+        "agency_id": agency_id,
+        "filter_user_id": filter_user_id,
+    }
+    total = db.execute(text(count_sql), params).scalar()
     total_pages = (total + per_page - 1) // per_page
 
     sql = load_sql("license/get_all_licenses.sql")
-    result = db.execute(
-        text(sql),
-        {
-            "user_id": current_user.user_id,
-            "role": role,
-            "limit": per_page,
-            "offset": (page - 1) * per_page
-        }
-    )
+    params.update({
+        "limit": per_page,
+        "offset": (page - 1) * per_page
+    })
+    result = db.execute(text(sql), params)
 
     licenses = [LicenseOut(**row) for row in result.mappings()]
 
