@@ -1,7 +1,8 @@
+from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException,status, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import text
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 
 from app import database
 from app.dependencies import get_current_user
@@ -142,14 +143,27 @@ def delete_consumer(
     db.commit()
     
     return {"message": "Consumer deleted successfully"}
-
-
-@router.get("/consumers", response_model=PaginatedConsumer, status_code=status.HTTP_200_OK)
+@router.get("/", response_model=PaginatedConsumer, status_code=status.HTTP_200_OK)
 def get_all_consumers(
     page: int = Query(1, ge=1),
     per_page: int = Query(10, ge=1),
     sort_by: str = Query("consumer_id", regex="^(consumer_id|surname|father_name|name|created_at)$"),
     sort_order: str = Query("asc", regex="^(asc|desc)$"),
+
+    name: Optional[str] = Query(None),
+    father_name: Optional[str] = Query(None),
+    surname: Optional[str] = Query(None),
+    mother_name_surname: Optional[str] = Query(None),
+    place_birth: Optional[str] = Query(None),
+    date_birth: Optional[date] = Query(None),
+    registry: Optional[str] = Query(None),
+    national_number: Optional[str] = Query(None),
+    email: Optional[str] = Query(None),
+    phone_number: Optional[str] = Query(None),
+    created_by: Optional[int] = Query(None),
+    created_by_type: Optional[str] = Query(None),
+    created_at: Optional[date] = Query(None),
+
     db: Session = Depends(database.get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -165,24 +179,38 @@ def get_all_consumers(
         role = 'broker'
     else:
         role = 'realtor'
+    params = {
+        "user_id": current_user.user_id,
+        "role": role,
+        "name": f"%{name}%" if name else None,
+        "father_name": f"%{father_name}%" if father_name else None,
+        "surname": f"%{surname}%" if surname else None,
+        "mother_name_surname": f"%{mother_name_surname}%" if mother_name_surname else None,
+        "place_birth": f"%{place_birth}%" if place_birth else None,
+        "date_birth": date_birth,
+        "registry": f"%{registry}%" if registry else None,
+        "national_number": f"%{national_number}%" if national_number else None,
+        "email": f"%{email}%" if email else None,
+        "phone_number": f"%{phone_number}%" if phone_number else None,
+        "created_by": created_by,
+        "created_by_type": f"%{created_by_type}%" if created_by_type else None,
+        "created_at": created_at,
+    }
+
     # total count
     total_sql = load_sql("consumer/count_all_consumers.sql")
-    total = db.execute(text(total_sql), {
-        "user_id" : current_user.user_id,
-        "role" : role,
-    }).scalar()
+    total = db.execute(text(total_sql), params).scalar()
     total_pages = (total + per_page - 1) // per_page
     sql = load_sql("consumer/get_all_consumers.sql").format(
-    sort_by=sort_by,
-    sort_order=sort_order
-)
-    result = db.execute(text(sql), {
-        "user_id" : current_user.user_id,
-        "role" : role,
+        sort_by=sort_by,
+        sort_order=sort_order
+    )
+    params.update({
         "limit": per_page,
         "offset": (page - 1) * per_page
     })
 
+    result = db.execute(text(sql), params)
     consumers = [ConsumerOut(**row) for row in result.mappings()]
 
     return {
