@@ -83,3 +83,113 @@ def test_delete_non_existing_agency_as_admin(client: TestClient, get_users_by_ro
     assert response.status_code == 404
     data = response.json()
     assert data["detail"] == "Agency not found"
+
+#get all agencies
+def test_get_all_agencies_as_admin(client: TestClient, get_users_by_roles):
+    admin_user_dict = get_users_by_roles(['admin'])
+    admin_user = admin_user_dict.get('admin')
+    assert admin_user
+
+    response = client.post(
+        "/auth/login",
+        data={"username": admin_user["email"], "password": "1234"}
+    )
+    token = response.json()["access_token"]
+    client.headers.update({"Authorization": f"Bearer {token}"})
+
+    response = client.get("/agencies?page=1&per_page=10&sort_by=agency_id&sort_order=asc")
+    assert response.status_code == 200
+    data = response.json()
+    assert len(data["data"]) == 4
+    assert data["pagination"]["total"] == 4
+    assert data["pagination"]["page"] == 1
+    assert data["pagination"]["per_page"] == 10
+    assert data["pagination"]["total_pages"] == 1
+    assert data["pagination"]["has_next"] is False
+    assert data["pagination"]["has_prev"] is False
+    assert data["data"][0]["agency_id"] == 1
+    assert data["data"][0]["name"] == "test"
+    assert data["data"][1]["agency_id"] == 2
+    assert data["data"][1]["name"] == "Agency A"
+    assert data["data"][2]["agency_id"] == 3
+    assert data["data"][2]["name"] == "Agency B"
+    assert data["data"][3]["agency_id"] == 4
+    assert data["data"][3]["name"] == "Agency C"
+
+def test_get_all_agencies_as_non_admin(client: TestClient, get_users_by_roles):
+    broker_user_dict = get_users_by_roles(['broker'])
+    broker_user = broker_user_dict.get('broker')
+    assert broker_user
+
+    response = client.post(
+        "/auth/login",
+        data={"username": broker_user["email"], "password": "1234"}
+    )
+    token = response.json()["access_token"]
+    client.headers.update({"Authorization": f"Bearer {token}"})
+
+    response = client.get("/agencies?page=1&per_page=10&sort_by=agency_id&sort_order=asc")
+    assert response.status_code == 403
+    data = response.json()
+    assert data["detail"] == "Not authorized"
+
+def test_get_all_agencies_filter_by_name(client: TestClient, get_users_by_roles):
+    admin_user_dict = get_users_by_roles(['admin'])
+    admin_user = admin_user_dict.get('admin')
+    assert admin_user
+
+    response = client.post(
+        "/auth/login",
+        data={"username": admin_user["email"], "password": "1234"}
+    )
+    token = response.json()["access_token"]
+    client.headers.update({"Authorization": f"Bearer {token}"})
+
+    response = client.get("/agencies?name=test&page=1&per_page=10&sort_by=agency_id&sort_order=asc")
+    assert response.status_code == 200
+    data = response.json()
+    assert len(data["data"]) == 1
+    assert data["data"][0]["name"] == "test"
+
+def test_get_all_agencies_filter_by_city(client: TestClient, get_users_by_roles):
+    admin_user_dict = get_users_by_roles(['admin'])
+    admin_user = admin_user_dict.get('admin')
+    assert admin_user
+
+    response = client.post(
+        "/auth/login",
+        data={"username": admin_user["email"], "password": "1234"}
+    )
+    token = response.json()["access_token"]
+    client.headers.update({"Authorization": f"Bearer {token}"})
+
+    response = client.get("/agencies?city=Amsterdam&page=1&per_page=10&sort_by=agency_id&sort_order=asc")
+    assert response.status_code == 200
+    data = response.json()
+    assert len(data["data"]) == 1
+    assert data["data"][0]["address"]["city"] == "Amsterdam"
+
+def test_get_all_agencies_pagination(client: TestClient, get_users_by_roles):
+    admin_user_dict = get_users_by_roles(['admin'])
+    admin_user = admin_user_dict.get('admin')
+    assert admin_user
+
+    response = client.post(
+        "/auth/login",
+        data={"username": admin_user["email"], "password": "1234"}
+    )
+    token = response.json()["access_token"]
+    client.headers.update({"Authorization": f"Bearer {token}"})
+
+    # Assuming more agencies are added in seed_data.sql later
+    response = client.get("/agencies?page=1&per_page=1&sort_by=agency_id&sort_order=asc")
+    assert response.status_code == 200
+    data = response.json()
+    assert len(data["data"]) == 1
+    assert data["pagination"]["total"] == 4
+    assert data["pagination"]["page"] == 1
+    assert data["pagination"]["per_page"] == 1
+    assert data["pagination"]["total_pages"] == 4
+    assert data["pagination"]["has_next"] is True
+    assert data["pagination"]["has_prev"] is False
+    assert data["data"][0]["agency_id"]== 1
