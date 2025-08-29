@@ -1,10 +1,14 @@
-from fastapi import APIRouter, Depends, HTTPException, status ,Query
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
-from typing import List , Optional
+from typing import List, Optional
 from sqlalchemy import text
 from datetime import datetime, timezone
 
 from app import database
+from app.routers.addresses.address_out import AddressOut
+from app.routers.agencies.agencies_pagination import PaginatedAgency
+from app.routers.roles.roles_out import RoleOut
+from app.routers.users.user_out import UserOut
 from ...models.user_model import User
 from ...models.agency_model import Agency
 from app.utils.file_helper import load_sql
@@ -17,7 +21,7 @@ from app.routers.addresses.address_out import AddressOut
 from .agencies_update import AgencyUpdate
 from app.models.addresses_model import Address
 from .agency_pagination import PaginatedAgencyOut
-from app.routers.users.user_out import UserOut
+from app.routers.agencies import agency_out
 
 router = APIRouter(
     prefix="/agencies",
@@ -186,27 +190,57 @@ def get_all_agencies(
         },
     }
     
+
 @router.get("/{agency_id}", response_model=AgencyOut, status_code=status.HTTP_200_OK)
 def get_agency_by_id(
     agency_id: int,
     db: Session = Depends(database.get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
 ):
-    if current_user.role != "admin":
+    # Authorization
+    role_sql = load_sql("role/get_user_roles.sql")
+    roles = db.execute(
+        text(role_sql), {"user_id": current_user.user_id}
+    ).mappings().first()
+    if not roles or not roles.get("admin"):
         raise HTTPException(status_code=403, detail="Not authorized")
     
+    # Fetch data
     sql = load_sql("agency/get_agency_by_id.sql")
-    result = db.execute(text(sql), {"agency_id": agency_id})
-    row = result.mappings().first()
+    row = db.execute(
+        text(sql),
+        {"agency_id": agency_id}
+    ).mappings().first()
+
+    if not row:
+        raise HTTPException(status_code=404, detail="Agency not found")
     
-    if row is None:
-        raise HTTPException(status_code=404, detail="Not found")
-    
+    # Parse data
+    agency_data = {k.replace("agency_", ""): v for k, v in row.items() if k.startswith("agency_")}
+    broker_data = {k.replace("broker_", ""): v for k, v in row.items() if k.startswith("broker_")}
+    address_data = {k.replace("address_", ""): v for k, v in row.items() if k.startswith("address_")}
+    if "id" in agency_data:
+     agency_data["agency_id"] = agency_data.pop("id")
+
+    # Build roles list (only roles with True value)
+    roles_list = [
+        k.replace("roles_", "") 
+        for k, v in row.items() 
+        if k.startswith("roles_") and v
+    ]
+    broker_data["roles"] = roles_list
+
+    # Debug (optional)
+    print("Broker Data:", broker_data)
+    print("Roles:", roles_list)
+
+    # Build response
     agency = AgencyOut(
-        agency_id=row["agency_id"],
-        name=row["agency_name"],
-        phone_number=row["agency_phone_number"]
+        **agency_data,
+        broker=UserOut(**broker_data),
+        address=AddressOut(**address_data) if address_data.get("address_id") else None,
     )
+    
     return agency
 
 @router.put("/{agency_id}")
