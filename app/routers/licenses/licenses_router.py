@@ -95,6 +95,9 @@ def get_all_licenses(
     page: int = Query(1, ge=1),
     per_page: int = Query(10, ge=1),
 
+    sort_by: str = Query("license_id", regex="^(license_id|lic_num|lic_status|lic_type|user_id|agency_id)$"),
+    sort_order: str = Query("asc", regex="^(asc|desc)$"),
+
     lic_status: Optional[str] = Query(None),
     lic_type: Optional[str] = Query(None),
     agency_id: Optional[int] = Query(None),
@@ -142,7 +145,10 @@ def get_all_licenses(
     total = db.execute(text(count_sql), params).scalar()
     total_pages = (total + per_page - 1) // per_page
 
-    sql = load_sql("license/get_all_licenses.sql")
+    sql = load_sql("license/get_all_licenses.sql").format(
+        sort_by=sort_by,
+        sort_order=sort_order
+    )
     params.update({
         "limit": per_page,
         "offset": (page - 1) * per_page
