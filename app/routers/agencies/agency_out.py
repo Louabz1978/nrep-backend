@@ -14,7 +14,7 @@ class AgencyOut(BaseModel):
     email: str
     phone_number: Optional[str] = None
     created_at: datetime
-    created_by: int
+    created_by: Optional[UserOut]
     broker: Optional[UserOut]
     address: Optional[AddressOut] = None
 

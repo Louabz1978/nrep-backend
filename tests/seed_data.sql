@@ -47,3 +47,15 @@ VALUES (2, 5, 'Downtown', 'Amsterdam', 'Noord-Holland', '12B', 'Main Street', 1)
 -- Insert agenct test account
 INSERT INTO agencies (agency_id, name, email, phone_number, created_by, broker_id)
 VALUES (1, 'test', 'test@test.com', '0959804457', 1, 2);
+
+INSERT INTO agencies (agency_id, name, email, phone_number, created_by, broker_id)
+VALUES
+    (2, 'Agency A', 'a@test.com', '0959804457', 1, 2),
+    (3, 'Agency B', 'b@test.com', '0959804458', 2, 3),
+    (4, 'Agency C', 'c@test.com', '0959804459', 1, 2);
+
+INSERT INTO addresses (floor, apt, area, city, county, building_num, street, created_by, agency_id)
+VALUES
+    (2, 5, 'Downtown', 'Amsterdam', 'Noord-Holland', '12B', 'Main Street', 1, 1),
+    (3, 6, 'Uptown', 'Berlin', 'Berlin', '34C', 'Park Ave', 2, 2),
+    (1, 4, 'Midtown', 'Paris', 'Paris', '78D', 'Rue St', 1, 3);
