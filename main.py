@@ -10,6 +10,9 @@ from app.routers.roles.roles_router import router as roles_router
 from app.routers.addresses.addresses_router import router as addresses_router
 from app.routers.consumers.consumer_router import router as consumer_router
 from app.routers.licenses.licenses_router import router as license_router
+from app.routers.cities.cities_router import router as city_router
+from app.routers.counties.counties_router import router as county_router
+from app.routers.areas.areas_router import router as area_router
 
 from app.database import engine, Base
 from fastapi.middleware.cors import CORSMiddleware
@@ -40,3 +43,7 @@ app.include_router(roles_router)
 app.include_router(addresses_router)
 app.include_router(consumer_router)
 app.include_router(license_router)
+
+app.include_router(city_router)
+app.include_router(county_router)
+app.include_router(area_router)
