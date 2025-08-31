@@ -2,11 +2,8 @@ from datetime import datetime
 from pydantic import BaseModel
 from typing import Optional
 from datetime import datetime
-from app.routers.addresses.address_out import AddressOut
-from app.routers.users.user_out import UserOut
 
-from app.routers.addresses.address_out import AddressOut
-from app.routers.users.user_out import UserOut
+from ...routers.addresses.address_out import AddressOut
 
 class AgencyOut(BaseModel):
     agency_id: int
@@ -14,8 +11,8 @@ class AgencyOut(BaseModel):
     email: str
     phone_number: Optional[str] = None
     created_at: datetime
-    created_by: Optional[UserOut]
-    broker: Optional[UserOut]
+    created_by: object
+    broker: object
     address: Optional[AddressOut] = None
 
     model_config = {

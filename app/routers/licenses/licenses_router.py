@@ -2,7 +2,6 @@ from typing import Optional
 from fastapi import Depends, HTTPException, APIRouter, status, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import text
-from datetime import datetime, timezone
 from .license_pagination import PaginatedLicenses
 
 from app import database
@@ -10,9 +9,9 @@ from ...dependencies import get_current_user
 from ...models.user_model import User
 from ...utils.file_helper import load_sql
 
-from app.routers.licenses.licenses_create import LicenseCreate
-from app.routers.licenses.licenses_out import LicenseOut
-from app.routers.licenses.licenses_update import LicenseUpdate
+from ...routers.licenses.licenses_create import LicenseCreate
+from ...routers.licenses.licenses_out import LicenseOut
+from ...routers.licenses.licenses_update import LicenseUpdate
 
 router = APIRouter(prefix="/licenses", tags=["Licenses"])
 
@@ -26,16 +25,20 @@ def create_license(
     role_result = db.execute(text(role_sql), {"user_id": current_user.user_id}).mappings().first()
     current_user_roles = [key for key, value in role_result.items() if value]
 
-    if "admin" in current_user_roles:
-        pass
-    else:
+    if "admin" not in current_user_roles:
         raise HTTPException(status_code=403, detail="Not authorized")
 
+    sql = load_sql("user/get_user_by_id.sql")
+    user_result = db.execute(text(sql), {"user_id": license.user_id}).mappings().first()
+    if not user_result:
+        raise HTTPException(status_code=400, detail="No user exist!")
+    elif "broker" in user_result and user_result["broker"] == False:
+        raise HTTPException(status_code=400, detail="User should be broker!")
+    
     existing_sql = load_sql("license/get_license_by_user.sql")  # make SQL that checks by user_id
-    existing_license = db.execute(text(existing_sql), {"user_id": current_user.user_id}).mappings().first()
+    existing_license = db.execute(text(existing_sql), {"user_id": license.user_id}).mappings().first()
     if existing_license:
         raise HTTPException(status_code=400, detail="User already has a license")
-
     
     license_data = license.model_dump()
 
@@ -45,12 +48,20 @@ def create_license(
 
     db.commit()
 
+    role_result = db.execute(text(role_sql), {"user_id": license.user_id}).mappings().first()
+    current_user_roles = [key for key, value in role_result.items() if value]
+
     sql = load_sql("license/get_license_by_id.sql")
     created_license = db.execute(text(sql), {"license_id": new_license_id}).mappings().first()
 
-    license_out_data = dict(created_license)
+    broker_data = {k.replace("broker_", ""): v for k, v in created_license.items() if k.startswith("broker_")}
+    agency_data = {k[len("agency_"):]: v for k, v in created_license.items() if k.startswith("agency_")}
 
-    license_details = LicenseOut(**license_out_data)
+    license_details = LicenseOut(
+        **created_license,
+        user=broker_data,
+        agency=agency_data
+    )
 
     return license_details
 
@@ -88,7 +99,45 @@ def update_license(
 
     # Fetch updated license
     updated_license = db.execute(text(get_sql), {"license_id": updated_license_id}).mappings().first()
-    return {"message": "License updated successfully", "license": updated_license}
+
+    broker_data = {k.replace("broker_", ""): v for k, v in updated_license.items() if k.startswith("broker_")}
+    agency_data = {k[len("agency_"):]: v for k, v in updated_license.items() if k.startswith("agency_")}
+
+    license = LicenseOut(
+        **updated_license,
+        user=broker_data,
+        agency=agency_data
+    )
+
+    return {"message": "License updated successfully", "license": license}
+
+@router.get("/me", response_model=LicenseOut, status_code=status.HTTP_200_OK)
+def get_license_by_id(
+    db: Session = Depends(database.get_db),
+    current_user: User = Depends(get_current_user),
+):
+    # Check user roles
+    role_sql = load_sql("role/get_user_roles.sql")
+    roles = db.execute(text(role_sql), {"user_id": current_user.user_id}).mappings().first()
+
+    if not (roles.get("broker") or roles.get("realtor")):
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    # Load query for license by id
+    sql = load_sql("license/get_license_by_user.sql")
+    result = db.execute(text(sql), {"user_id": current_user.user_id}).mappings().first()
+
+    if not result:
+        raise HTTPException(status_code=404, detail="License not found")
+
+    broker_data = {k.replace("broker_", ""): v for k, v in result.items() if k.startswith("broker_")}
+    agency_data = {k[len("agency_"):]: v for k, v in result.items() if k.startswith("agency_")}
+
+    return LicenseOut(
+        **result,
+        user=broker_data,
+        agency=agency_data
+    )
 
 @router.get("", response_model=PaginatedLicenses, status_code=status.HTTP_200_OK)
 def get_all_licenses(
@@ -109,7 +158,7 @@ def get_all_licenses(
     role_sql = load_sql("role/get_user_roles.sql")
     roles = db.execute(text(role_sql), {"user_id": current_user.user_id}).mappings().first()
 
-    if not roles["admin"] and not roles["broker"] and not roles["realtor"]:
+    if not roles["admin"]:
         raise HTTPException(status_code=403, detail="Not authorized")
 
     if roles["admin"]:
@@ -119,21 +168,6 @@ def get_all_licenses(
     else:
         role = "realtor"
 
-    count_sql = """
-        SELECT COUNT(*)
-        FROM licenses l
-        WHERE (
-            :role = 'admin'
-            OR (:role = 'broker' AND l.agency_id = (
-                SELECT agency_id FROM users WHERE user_id = :user_id
-            ))
-            OR (:role = 'realtor' AND l.user_id = :user_id)
-        )
-        AND (:lic_status IS NULL OR l.lic_status = :lic_status)
-        AND (:lic_type IS NULL OR l.lic_type = :lic_type)
-        AND (:agency_id IS NULL OR l.agency_id = :agency_id)
-        AND (:filter_user_id IS NULL OR l.user_id = :filter_user_id)
-    """
     params = {
         "user_id": current_user.user_id,
         "role": role,
@@ -142,23 +176,30 @@ def get_all_licenses(
         "agency_id": agency_id,
         "filter_user_id": filter_user_id,
     }
-    total = db.execute(text(count_sql), params).scalar()
+
+    # total count
+    total_sql = load_sql("license/count_licenses.sql")
+    total = db.execute(text(total_sql), params).scalar()
     total_pages = (total + per_page - 1) // per_page
 
-    sql = load_sql("license/get_all_licenses.sql").format(
-        sort_by=sort_by,
-        sort_order=sort_order
-    )
-    params.update({
-        "limit": per_page,
-        "offset": (page - 1) * per_page
-    })
-    result = db.execute(text(sql), params)
+    sql = load_sql("license/get_all_licenses.sql").format(sort_by=sort_by, sort_order=sort_order)
+    params.update({"limit": per_page, "offset": (page - 1) * per_page})
+    query_result = db.execute(text(sql), params)
 
-    licenses = [LicenseOut(**row) for row in result.mappings()]
+    licenses = []
+    for result in query_result.mappings():
+        broker_data = {k.replace("broker_", ""): v for k, v in result.items() if k.startswith("broker_")}
+        agency_data = {k[len("agency_"):]: v for k, v in result.items() if k.startswith("agency_")}
+
+        licenses.append(
+            LicenseOut(
+                **result,
+                user=broker_data,
+                agency=agency_data
+            )
+        )
 
     return {
-        "data": licenses,
         "pagination": {
             "total": total,
             "page": page,
@@ -166,9 +207,9 @@ def get_all_licenses(
             "total_pages": total_pages,
             "has_next": page < total_pages,
             "has_prev": page > 1
-        }
+        },
+        "data": licenses
     }
-
 
 @router.get("/{license_id}", response_model=LicenseOut, status_code=status.HTTP_200_OK)
 def get_license_by_id(
@@ -180,7 +221,7 @@ def get_license_by_id(
     role_sql = load_sql("role/get_user_roles.sql")
     roles = db.execute(text(role_sql), {"user_id": current_user.user_id}).mappings().first()
 
-    if not roles["admin"] and not roles["broker"] and not roles["realtor"]:
+    if not roles["admin"]:
         raise HTTPException(status_code=403, detail="Not authorized")
 
     if roles["admin"]:
@@ -192,15 +233,21 @@ def get_license_by_id(
 
     # Load query for license by id
     sql = load_sql("license/get_license_by_id.sql")
-    result = db.execute(
-        text(sql),
+    result = db.execute(text(sql),
         {"user_id": current_user.user_id, "role": role, "license_id": license_id}
     ).mappings().first()
 
     if not result:
         raise HTTPException(status_code=404, detail="License not found")
 
-    return LicenseOut(**result)
+    broker_data = {k.replace("broker_", ""): v for k, v in result.items() if k.startswith("broker_")}
+    agency_data = {k[len("agency_"):]: v for k, v in result.items() if k.startswith("agency_")}
+
+    return LicenseOut(
+        **result,
+        user=broker_data,
+        agency=agency_data
+    )
 
 @router.delete("/{license_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_license(
