@@ -14,6 +14,8 @@ from app.routers.cities.cities_router import router as city_router
 from app.routers.counties.counties_router import router as county_router
 from app.routers.areas.areas_router import router as area_router
 
+from app.routers.market_watcher.market_watcher_route import router as market_watcher_route
+
 from app.database import engine, Base
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -47,3 +49,5 @@ app.include_router(license_router)
 app.include_router(city_router)
 app.include_router(county_router)
 app.include_router(area_router)
+
+app.include_router(market_watcher_route)
