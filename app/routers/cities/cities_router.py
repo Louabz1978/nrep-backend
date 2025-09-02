@@ -11,6 +11,7 @@ from ...dependencies import get_current_user
 
 from .city_create import CityCreate
 from .city_out import CityOut
+from .city_update import CityUpdate
 
 router = APIRouter(
     prefix="/cities",
@@ -54,3 +55,41 @@ def create_city(
         "message": "City created successfully",
         "city": city_details  
     }
+
+@router.put("/{city_id}", response_model=dict)
+def update_city_by_id(
+    city_id: int,
+    city_data: CityUpdate,
+    db: Session = Depends(database.get_db),
+    current_user=Depends(get_current_user)
+):
+    sql = load_sql("city/get_city_by_id.sql")
+    city_row = db.execute(text(sql), {"city_id": city_id}).mappings().first()
+
+    if not city_row:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="City not found"
+        )
+
+    update_data = city_data.model_dump(exclude_unset=True)
+    if not update_data:
+        return {"message": "No changes provided", "city": CityOut(**city_row)}
+
+    # Build SET clause dynamically
+    set_clause = ", ".join([f"{field} = :{field}" for field in update_data.keys()])
+
+    update_sql = f"""
+    UPDATE cities
+    SET {set_clause},
+        updated_at = NOW(),
+        updated_by = :updated_by
+    WHERE city_id = :city_id
+    """
+
+    update_data.update({"city_id": city_id, "updated_by": current_user.user_id})
+    db.execute(text(update_sql), update_data)
+    db.commit()
+
+    updated_row = db.execute(text(sql), {"city_id": city_id}).mappings().first()
+    return {"message": "City updated successfully", "city": CityOut(**updated_row)}
