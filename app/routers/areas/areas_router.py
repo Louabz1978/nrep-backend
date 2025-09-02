@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status
+from typing import List
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 
@@ -141,3 +142,17 @@ def get_area_by_id(
         raise HTTPException(status_code=404, detail="Area not found")
 
     return {"area": AreaOut(**row)}
+
+@router.get("/areas", response_model=List[AreaOut], status_code=status.HTTP_200_OK)
+def get_all_areas(
+    db: Session = Depends(database.get_db),
+    current_user = Depends(get_current_user)
+):
+    # Role check
+    if not current_user.roles.admin and not current_user.roles.broker and not current_user.roles.realtor:
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    sql = load_sql("area/get_all_areas.sql")
+    rows = db.execute(text(sql)).mappings().all()
+
+    return [AreaOut(**row) for row in rows]
