@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status
+from typing import List
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 
@@ -11,6 +12,7 @@ from ...dependencies import get_current_user
 
 from .area_create import AreaCreate
 from .area_out import AreaOut
+from .area_update import AreaUpdate
 
 router = APIRouter(
     prefix="/areas",
@@ -56,6 +58,74 @@ def create_area(
         "area": area_details  
     }
 
+@router.put("/areas/{area_id}", status_code=status.HTTP_200_OK)
+def update_area_by_id(
+    area_id: int,
+    area_data: AreaUpdate,
+    db: Session = Depends(database.get_db),
+    current_user = Depends(get_current_user)
+):
+    # 1. Check if area exists
+    sql = load_sql("area/get_area_by_id.sql")
+    area_row = db.execute(text(sql), {"area_id": area_id}).mappings().first()
+    if not area_row:
+        raise HTTPException(status_code=404, detail="Area not found")
+
+    # 2. Check user roles
+    role_sql = load_sql("role/get_user_roles.sql")
+    current_user_roles = db.execute(
+        text(role_sql), {"user_id": current_user.user_id}
+    ).mappings().first()
+    current_user_role_list = [key for key, value in current_user_roles.items() if value]
+
+    if not "admin" in current_user_role_list:
+        raise HTTPException(status_code=403, detail="Not authorized to update this area")
+
+    update_data = area_data.model_dump(exclude_unset=True)
+    if not update_data:
+        return {"message": "No changes provided", "area": AreaOut(**area_row)}
+
+    # ✅ Validate county_id if provided
+    if "county_id" in update_data:
+        county_check = db.execute(
+            text("SELECT county_id FROM counties WHERE county_id = :county_id"),
+            {"county_id": update_data["county_id"]}
+        ).first()
+
+        if not county_check:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"County with id {update_data['county_id']} does not exist"
+            )
+    
+    # 3. Prepare update data
+    db_area_update = {
+        k: v for k, v in area_data.model_dump(exclude_unset=True).items()
+        if v is not None
+    }
+    db_area_update["area_id"] = area_id
+    db_area_update["updated_by"] = current_user.user_id
+
+    if not db_area_update:
+        raise HTTPException(status_code=400, detail="No fields provided for update")
+
+    set_clause = ", ".join(f"{k} = :{k}" for k in db_area_update if k != "area_id")
+    sql = f"""
+        UPDATE areas
+        SET {set_clause}, updated_at = NOW()
+        WHERE area_id = :area_id
+        RETURNING area_id;
+    """
+    updated_area_id = db.execute(text(sql), db_area_update).scalar()
+    db.commit()
+
+    # 4. Fetch updated area
+    sql = load_sql("area/get_area_by_id.sql")
+    row = db.execute(text(sql), {"area_id": updated_area_id}).mappings().first()
+    area_out = AreaOut(**row)
+
+    return {"message": "Area updated successfully", "area": area_out}
+
 @router.get("/{area_id:int}", status_code=status.HTTP_200_OK)
 def get_area_by_id(
     area_id: int,
@@ -72,3 +142,17 @@ def get_area_by_id(
         raise HTTPException(status_code=404, detail="Area not found")
 
     return {"area": AreaOut(**row)}
+
+@router.get("/areas", response_model=List[AreaOut], status_code=status.HTTP_200_OK)
+def get_all_areas(
+    db: Session = Depends(database.get_db),
+    current_user = Depends(get_current_user)
+):
+    # Role check
+    if not current_user.roles.admin and not current_user.roles.broker and not current_user.roles.realtor:
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    sql = load_sql("area/get_all_areas.sql")
+    rows = db.execute(text(sql)).mappings().all()
+
+    return [AreaOut(**row) for row in rows]

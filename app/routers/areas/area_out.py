@@ -11,8 +11,8 @@ class AreaOut(BaseModel):
     created_by: int
     created_at: datetime
 
-    updated_at: Optional[int]
-    updated_by: Optional[datetime]
+    updated_by: Optional[int] = None
+    updated_at: Optional[datetime] = None
 
     model_config = {
         "from_attributes": True

@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from sqlalchemy import text
+from typing import List, Optional
 
 from app import database
 
@@ -11,6 +12,7 @@ from ...dependencies import get_current_user
 
 from .city_create import CityCreate
 from .city_out import CityOut
+from .city_update import CityUpdate
 
 from ..counties.county_create import CountyCreate
 from ..counties.county_out import CountyOut
@@ -61,8 +63,46 @@ def create_city(
         "city": city_details  
     }
 
+@router.put("/{city_id}", response_model=dict)
+def update_city_by_id(
+    city_id: int,
+    city_data: CityUpdate,
+    db: Session = Depends(database.get_db),
+    current_user=Depends(get_current_user)
+):
+    sql = load_sql("city/get_city_by_id.sql")
+    city_row = db.execute(text(sql), {"city_id": city_id}).mappings().first()
+
+    if not city_row:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="City not found"
+        )
+
+    update_data = city_data.model_dump(exclude_unset=True)
+    if not update_data:
+        return {"message": "No changes provided", "city": CityOut(**city_row)}
+
+    # Build SET clause dynamically
+    set_clause = ", ".join([f"{field} = :{field}" for field in update_data.keys()])
+
+    update_sql = f"""
+    UPDATE cities
+    SET {set_clause},
+        updated_at = NOW(),
+        updated_by = :updated_by
+    WHERE city_id = :city_id
+    """
+
+    update_data.update({"city_id": city_id, "updated_by": current_user.user_id})
+    db.execute(text(update_sql), update_data)
+    db.commit()
+
+    updated_row = db.execute(text(sql), {"city_id": city_id}).mappings().first()
+    return {"message": "City updated successfully", "city": CityOut(**updated_row)}
+
 @router.get("/{city_id:int}", status_code=status.HTTP_200_OK)
-def get_ciy_by_id(
+def get_city_by_id(
     city_id: int,
     db: Session = Depends(database.get_db),
     current_user: User = Depends(get_current_user),
@@ -119,3 +159,59 @@ def get_ciy_by_id(
                 )
 
     return {"city": city}
+
+@router.get("", response_model=List[CityOut], status_code=status.HTTP_200_OK)
+def get_all_cities(
+    db: Session = Depends(database.get_db),
+    current_user = Depends(get_current_user)
+):
+    # ✅ Role check
+    if not current_user.roles.admin and not current_user.roles.broker and not current_user.roles.realtor:
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    sql = load_sql("city/get_all_cities.sql")
+    rows = db.execute(text(sql)).mappings().all()
+
+    # ✅ Restructure into nested format
+    cities_dict = {}
+    for row in rows:
+        city_id = row["city_id"]
+        if city_id not in cities_dict:
+            cities_dict[city_id] = CityOut(
+                city_id=city_id,
+                title=row["city_title"],
+                created_at=row["city_created_at"],
+                updated_at=row["city_updated_at"],
+                created_by=row["city_created_by"],
+                updated_by=row["city_updated_by"],
+                counties=[]
+            )
+
+        if row["county_id"]:
+            counties = cities_dict[city_id].counties
+            county = next((c for c in counties if c.county_id == row["county_id"]), None)
+            if not county:
+                county = CountyOut(
+                    county_id=row["county_id"],
+                    title=row["county_title"],
+                    created_at=row["county_created_at"],
+                    updated_at=row["county_updated_at"],
+                    created_by=row["county_created_by"],
+                    updated_by=row["county_updated_by"],
+                    areas=[]
+                )
+                counties.append(county)
+
+            if row["area_id"]:
+                county.areas.append(
+                    AreaOut(
+                        area_id=row["area_id"],
+                        title=row["area_title"],
+                        created_at=row["area_created_at"],
+                        updated_at=row["area_updated_at"],
+                        created_by=row["area_created_by"],
+                        updated_by=row["area_updated_by"]
+                    )
+                )
+
+    return list(cities_dict.values())

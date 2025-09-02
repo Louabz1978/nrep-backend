@@ -7,7 +7,7 @@ from app import database
 from ...utils.file_helper import load_sql
 from ...models.user_model import User
 from ...dependencies import get_current_user
-from ..roles.roles_create import RolesCreate
+from ..roles.roles_update import RolesUpdate
 
 router = APIRouter(
     prefix="/roles",
@@ -17,7 +17,7 @@ router = APIRouter(
 @router.put("/{user_id}", status_code=status.HTTP_200_OK)
 def update_role(
     user_id: int,
-    role_data: RolesCreate,
+    role_data: RolesUpdate,
     db: Session = Depends(database.get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -32,18 +32,12 @@ def update_role(
     if user is None:
         raise HTTPException(status_code=404, detail="User not found")
     
-    sql = load_sql("role/update_role.sql")
-    db.execute(
-        text(sql), 
-        {
-            "user_id": user.user_id,
-            "admin": role_data.admin,
-            "broker": role_data.broker,
-            "realtor": role_data.realtor,
-            "seller": role_data.seller,
-            "buyer": role_data.buyer,
-            "tenant": role_data.tenant
-        })
+    #update address
+    db_roles = role_data.model_dump(exclude_unset=True)
+    db_roles["user_id"] = user_id
+    set_clause = ", ".join(f"{k} = :{k}" for k in db_roles)
+    sql = f"UPDATE ROLES SET {set_clause} WHERE user_id = :user_id RETURNING user_id;"
+    updated_user_id = db.execute(text(sql), db_roles).scalar()
     
     db.commit()
-    return {"message": "Role updated successfully", "user_id": user_id}
+    return {"message": "Role updated successfully", "user_id": updated_user_id}
