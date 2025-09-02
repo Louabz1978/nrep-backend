@@ -12,8 +12,8 @@ class CountyOut(BaseModel):
     created_by: int
     created_at: datetime
 
-    updated_at: Optional[int]
-    updated_by: Optional[datetime]
+    updated_by: Optional[int]
+    updated_at: Optional[datetime]
 
     areas: Optional[List[AreaOut]] = None
 

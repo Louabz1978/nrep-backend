@@ -11,6 +11,7 @@ from ...dependencies import get_current_user
 
 from .county_create import CountyCreate
 from .county_out import CountyOut
+from .county_update import CountyUpdate
 
 from ..areas.area_out import AreaOut
 
@@ -57,6 +58,44 @@ def create_county(
         "message": "County created successfully",
         "county": county_details  
     }
+
+@router.put("/{county_id}", response_model=dict)
+def update_county_by_id(
+    county_id: int,
+    county_data: CountyUpdate,
+    db: Session = Depends(database.get_db),
+    current_user=Depends(get_current_user)
+):
+    sql = load_sql("county/get_county_by_id.sql")
+    county_row = db.execute(text(sql), {"county_id": county_id}).mappings().first()
+
+    if not county_row:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="County not found"
+        )
+
+    update_data = county_data.model_dump(exclude_unset=True)
+    if not update_data:
+        return {"message": "No changes provided", "county": CountyOut(**county_row)}
+
+    # Build SET clause dynamically
+    set_clause = ", ".join([f"{field} = :{field}" for field in update_data.keys()])
+
+    update_sql = f"""
+    UPDATE counties
+    SET {set_clause},
+        updated_at = NOW(),
+        updated_by = :updated_by
+    WHERE county_id = :county_id
+    """
+
+    update_data.update({"county_id": county_id, "updated_by": current_user.user_id})
+    db.execute(text(update_sql), update_data)
+    db.commit()
+
+    updated_row = db.execute(text(sql), {"county_id": county_id}).mappings().first()
+    return {"message": "County updated successfully", "county": CountyOut(**updated_row)}
 
 @router.get("/{county_id:int}", status_code=status.HTTP_200_OK)
 def get_county_by_id(
