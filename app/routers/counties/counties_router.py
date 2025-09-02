@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status
+from typing import List
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 
@@ -79,6 +80,18 @@ def update_county_by_id(
     if not update_data:
         return {"message": "No changes provided", "county": CountyOut(**county_row)}
 
+    if "city_id" in update_data:
+        city_check = db.execute(
+            text("SELECT city_id FROM cities WHERE city_id = :city_id"),
+            {"city_id": update_data["city_id"]}
+        ).first()
+
+        if not city_check:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"City with id {update_data['city_id']} does not exist"
+            )
+
     # Build SET clause dynamically
     set_clause = ", ".join([f"{field} = :{field}" for field in update_data.keys()])
 
@@ -139,3 +152,43 @@ def get_county_by_id(
             )
 
     return {"county": county}
+
+@router.get("", response_model=List[CountyOut], status_code=status.HTTP_200_OK)
+def get_all_counties(
+    db: Session = Depends(database.get_db),
+    current_user = Depends(get_current_user)
+):
+    # Role check
+    if not current_user.roles.admin and not current_user.roles.broker and not current_user.roles.realtor:
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    sql = load_sql("county/get_all_counties.sql")
+    rows = db.execute(text(sql)).mappings().all()
+
+    counties_dict = {}
+    for row in rows:
+        county_id = row["county_id"]
+        if county_id not in counties_dict:
+            counties_dict[county_id] = CountyOut(
+                county_id=county_id,
+                title=row["county_title"],
+                created_at=row["county_created_at"],
+                updated_at=row["county_updated_at"],
+                created_by=row["county_created_by"],
+                updated_by=row["county_updated_by"],
+                areas=[]
+            )
+
+        if row["area_id"]:
+            counties_dict[county_id].areas.append(
+                AreaOut(
+                    area_id=row["area_id"],
+                    title=row["area_title"],
+                    created_at=row["area_created_at"],
+                    updated_at=row["area_updated_at"],
+                    created_by=row["area_created_by"],
+                    updated_by=row["area_updated_by"]
+                )
+            )
+
+    return list(counties_dict.values())

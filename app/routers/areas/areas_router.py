@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status
+from typing import List
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 
@@ -80,6 +81,23 @@ def update_area_by_id(
     if not "admin" in current_user_role_list:
         raise HTTPException(status_code=403, detail="Not authorized to update this area")
 
+    update_data = area_data.model_dump(exclude_unset=True)
+    if not update_data:
+        return {"message": "No changes provided", "area": AreaOut(**area_row)}
+
+    # ✅ Validate county_id if provided
+    if "county_id" in update_data:
+        county_check = db.execute(
+            text("SELECT county_id FROM counties WHERE county_id = :county_id"),
+            {"county_id": update_data["county_id"]}
+        ).first()
+
+        if not county_check:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"County with id {update_data['county_id']} does not exist"
+            )
+    
     # 3. Prepare update data
     db_area_update = {
         k: v for k, v in area_data.model_dump(exclude_unset=True).items()
@@ -124,3 +142,17 @@ def get_area_by_id(
         raise HTTPException(status_code=404, detail="Area not found")
 
     return {"area": AreaOut(**row)}
+
+@router.get("/areas", response_model=List[AreaOut], status_code=status.HTTP_200_OK)
+def get_all_areas(
+    db: Session = Depends(database.get_db),
+    current_user = Depends(get_current_user)
+):
+    # Role check
+    if not current_user.roles.admin and not current_user.roles.broker and not current_user.roles.realtor:
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    sql = load_sql("area/get_all_areas.sql")
+    rows = db.execute(text(sql)).mappings().all()
+
+    return [AreaOut(**row) for row in rows]
