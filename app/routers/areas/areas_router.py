@@ -107,3 +107,20 @@ def update_area_by_id(
     area_out = AreaOut(**row)
 
     return {"message": "Area updated successfully", "area": area_out}
+
+@router.get("/{area_id:int}", status_code=status.HTTP_200_OK)
+def get_area_by_id(
+    area_id: int,
+    db: Session = Depends(database.get_db),
+    current_user: User = Depends(get_current_user),
+):
+    if not current_user.roles.admin and not current_user.roles.broker and not current_user.roles.realtor:
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    sql = load_sql("area/get_area_by_id.sql")
+    row = db.execute(text(sql), {"area_id": area_id}).mappings().first()
+
+    if row is None:
+        raise HTTPException(status_code=404, detail="Area not found")
+
+    return {"area": AreaOut(**row)}
