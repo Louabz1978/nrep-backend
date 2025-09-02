@@ -102,7 +102,7 @@ def update_city_by_id(
     return {"message": "City updated successfully", "city": CityOut(**updated_row)}
 
 @router.get("/{city_id:int}", status_code=status.HTTP_200_OK)
-def get_ciy_by_id(
+def get_city_by_id(
     city_id: int,
     db: Session = Depends(database.get_db),
     current_user: User = Depends(get_current_user),
