@@ -4,6 +4,7 @@ SELECT
     l.lic_status,
     l.lic_type,
     l.user_id,
+    -- l.agency_id,
 
     u.user_id AS broker_user_id,
     u.first_name AS broker_first_name,
@@ -22,5 +23,18 @@ FROM licenses l
 LEFT JOIN users u ON l.user_id = u.user_id
 LEFT JOIN agencies a ON l.agency_id = a.agency_id
 
-WHERE
-    l.user_id = :user_id
+WHERE 
+-- (
+--     :role = 'admin'
+--     OR (:role = 'broker' AND l.agency_id = (
+--         SELECT agency_id FROM users WHERE user_id = :user_id
+--     ))
+--     OR (:role = 'realtor' AND l.user_id = :user_id)
+-- )
+(:lic_status IS NULL OR l.lic_status = :lic_status)
+AND (:lic_type IS NULL OR l.lic_type = :lic_type)
+AND (:agency_id IS NULL OR l.agency_id = :agency_id)
+AND (:filter_user_id IS NULL OR l.user_id = :filter_user_id)
+
+ORDER BY {sort_by} {sort_order}
+LIMIT :limit OFFSET :offset;

@@ -1,5 +1,5 @@
-from pydantic import BaseModel, field_validator
-from datetime import datetime, date, time
+from pydantic import BaseModel
+
 from typing import Optional
 
 class LicenseOut(BaseModel):
@@ -7,8 +7,9 @@ class LicenseOut(BaseModel):
     lic_num: Optional[int]
     lic_status: Optional[str]
     lic_type: Optional[str]
-    user_id: Optional[int]
-    agency_id: Optional[int]
+    
+    user: Optional[object]
+    agency: Optional[object]
 
     model_config = {
         "from_attributes": True
