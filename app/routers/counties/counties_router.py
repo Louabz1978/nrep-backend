@@ -79,6 +79,18 @@ def update_county_by_id(
     if not update_data:
         return {"message": "No changes provided", "county": CountyOut(**county_row)}
 
+    if "city_id" in update_data:
+        city_check = db.execute(
+            text("SELECT city_id FROM cities WHERE city_id = :city_id"),
+            {"city_id": update_data["city_id"]}
+        ).first()
+
+        if not city_check:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"City with id {update_data['city_id']} does not exist"
+            )
+
     # Build SET clause dynamically
     set_clause = ", ".join([f"{field} = :{field}" for field in update_data.keys()])
 
