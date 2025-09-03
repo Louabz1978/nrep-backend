@@ -77,7 +77,7 @@ def get_consumer_by_id(
 @router.put("/{consumer_id}")
 def update_consumer_by_id(
     consumer_id: int,
-    consumer_data: ConsumerUpdate = Depends(ConsumerUpdate.as_form),
+    consumer_data: ConsumerUpdate,
     db: Session = Depends(database.get_db),
     current_user = Depends(get_current_user)
 ):
