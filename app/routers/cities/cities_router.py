@@ -215,3 +215,24 @@ def get_all_cities(
                 )
 
     return list(cities_dict.values())
+
+@router.delete("/{city_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_city(
+    city_id: int,
+    db: Session = Depends(database.get_db),
+    current_user: User = Depends(get_current_user)
+):
+    if not current_user.roles.admin and not current_user.roles.broker and not current_user.roles.realtor:
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    sql = load_sql("city/get_city_by_id.sql")
+    result = db.execute(text(sql), {"city_id": city_id})
+    city = result.mappings().first()
+    if not city:
+        raise HTTPException(status_code=404, detail="City not found")
+
+    delete_sql = load_sql("city/delete_city.sql")
+    db.execute(text(delete_sql), {"city_id": city_id})
+    
+    db.commit()
+    return {"message": "City deleted successfully"}
