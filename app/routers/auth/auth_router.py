@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from passlib.context import CryptContext
-
+import re
 import os
 from dotenv import load_dotenv
 
@@ -12,6 +12,7 @@ from app import database
 from ...models.user_model import User
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+email_pattern = re.compile(r'^[\w\.-]+@[\w\.-]+\.\w+$')
 
 load_dotenv()
 
@@ -31,7 +32,13 @@ def create_access_token(data: dict):
 
 @router.post("/login")
 async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(database.get_db)):
-    print("Login attempt:", form_data.username)
+    email = form_data.username
+    password = form_data.password
+    print("Login attempt:", email)
+    if not email_pattern.match(email):
+        raise HTTPException(status_code=400, detail="Incorrect username or password")
+    # if ( not re.search(r"\d", password) ) or ( not re.search(r"[A-Z]",password) ) or (len(password) < 8):
+    #     raise HTTPException(status_code=400, detail="Incorrect username or password")
     user = db.query(User).filter(User.email == form_data.username).first()
     print("Received password from frontend:", repr(form_data.password))
 

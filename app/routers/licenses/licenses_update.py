@@ -1,12 +1,13 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from fastapi import Form
 from typing import Optional
 
 class LicenseUpdate(BaseModel):
-    lic_num: Optional[int]
-    lic_status: Optional[str]
-    lic_type: Optional[str]
-    agency_id: Optional[int]
+    lic_num: Optional[int] = Field(None, gt=0, lt=100001)
+    lic_status: Optional[str] = None
+    lic_type: Optional[str] = None
+    user_id: Optional[int] = Field(None, gt=0)
+    agency_id: Optional[int] = Field(None, gt=0)
 
     @classmethod
     def as_form(

@@ -1,13 +1,12 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from fastapi import Form
-from typing import Optional
 
 class LicenseCreate(BaseModel):
-    lic_num: int
+    lic_num: int = Field(..., gt=0, lt=100001)
     lic_status: str
     lic_type: str
-    user_id: int
-    agency_id: int
+    user_id: int = Field(..., gt=0)
+    agency_id: int = Field(..., gt=0)
 
     @classmethod
     def as_form(
