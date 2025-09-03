@@ -1,0 +1,1 @@
+DELETE FROM cities WHERE city_id=:city_id
