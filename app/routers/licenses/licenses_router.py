@@ -35,6 +35,11 @@ def create_license(
     elif "broker" in user_result and user_result["broker"] == False:
         raise HTTPException(status_code=400, detail="User should be broker!")
     
+    sql = load_sql("agency/get_agency_by_id.sql")
+    agency_result = db.execute(text(sql), {"agency_id": license.agency_id}).mappings().first()
+    if not agency_result:
+        raise HTTPException(status_code=400, detail="No agency exist!")
+    
     existing_sql = load_sql("license/get_license_by_user.sql")  # make SQL that checks by user_id
     existing_license = db.execute(text(existing_sql), {"user_id": license.user_id}).mappings().first()
     if existing_license:

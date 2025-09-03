@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from sqlalchemy import Integer, String, ForeignKey, TIMESTAMP
+from sqlalchemy import BigInteger, String, ForeignKey, TIMESTAMP
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
 from app.database import Base
@@ -19,7 +19,7 @@ class Consumer(Base):
     place_birth: Mapped[str] = mapped_column(String, nullable=False)
     date_birth: Mapped[datetime.date] = mapped_column(Date, nullable=False)
     registry: Mapped[str] = mapped_column(String, nullable=False)
-    national_number: Mapped[int] = mapped_column(Integer)
+    national_number: Mapped[int] = mapped_column(BigInteger)
     
     email: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
     phone_number: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
