@@ -1,0 +1,1 @@
+DELETE FROM counties WHERE county_id=:county_id
