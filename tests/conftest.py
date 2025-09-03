@@ -18,6 +18,18 @@ DB_HOST = os.getenv("DATABASE_TEST_HOST")
 DB_PORT = os.getenv("DATABASE_TEST_PORT")
 DB_NAME = os.getenv("DATABASE_TEST_NAME")
 
+# فحص كل متغير
+for var_name, var_value in [("DB_USERNAME", DB_USERNAME), 
+                            ("DB_PASSWORD", DB_PASSWORD), 
+                            ("DB_HOST", DB_HOST), 
+                            ("DB_PORT", DB_PORT), 
+                            ("DB_NAME", DB_NAME)]:
+    if var_value is None:
+        raise ValueError(f"{var_name} is not set in .env")
+
+# تحويل DB_PORT لـ int
+DB_PORT = int(DB_PORT)
+
 DATABASE_URL = f"postgresql://{DB_USERNAME}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 
 # Create test DB if it doesn't exist
@@ -29,31 +41,29 @@ SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
 
 @pytest.fixture(scope="function")
 def override_db():
-    # Import models to register tables in Base.metadata
     import app.models
+    from sqlalchemy import text
 
-    # Drop and recreate all tables fresh
-    Base.metadata.drop_all(bind=engine)
-    Base.metadata.create_all(bind=engine)
-
-    # Run SQL seed file
-    test_dir = os.path.dirname(os.path.abspath(__file__))
-    sql_file_path = os.path.join(test_dir, "seed_data.sql")
-    with open(sql_file_path, "r") as f:
-        seed_sql = f.read()
-
+    # نفتح الاتصال
     with engine.connect() as connection:
+        # نعطل الـ FK checks مؤقتًا
+        connection.execute(text("TRUNCATE TABLE users, roles, properties, agencies, addresses RESTART IDENTITY CASCADE;"))
+        connection.commit()
+
+        # نضيف البيانات التجريبية
+        test_dir = os.path.dirname(os.path.abspath(__file__))
+        sql_file_path = os.path.join(test_dir, "seed_data.sql")
+        with open(sql_file_path, "r") as f:
+            seed_sql = f.read()
         connection.execute(text(seed_sql))
         connection.commit()
 
-    # Create a new session instance
     db = SessionLocal()
-
     try:
         yield db
     finally:
         db.close()
-        # Base.metadata.drop_all(bind=engine)
+
 
 # Override the get_db dependency in FastAPI to use the test session
 @pytest.fixture(scope="function")
