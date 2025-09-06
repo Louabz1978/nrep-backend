@@ -593,10 +593,9 @@ def get_property_status_options(
     current_user_role = [key for key, value in role_result.items() if value]
 
     if "realtor" in current_user_role or "broker" in current_user_role or "admin" in current_user_role:
-        pass
+        return [status.as_dict() for status in PropertyStatus]
     else:
         raise HTTPException(status_code=403, detail="Not authorized")
-    return [status.value for status in PropertyStatus]
 
 @router.get("types_option")
 def get_property_type_options(
