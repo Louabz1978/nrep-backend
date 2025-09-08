@@ -121,7 +121,7 @@ INSERT INTO properties (
     2019,
     34.7300,
     36.7150,
-    'available',
+    'closed',
     '2026-06-30',
     NULL,
     20002,
@@ -141,7 +141,7 @@ INSERT INTO properties (
     2021,
     34.7400,
     36.7200,
-    'sold',
+    'pending',
     '2027-01-15',
     NULL,
     20003,
@@ -152,7 +152,7 @@ INSERT INTO properties (
     'Office space downtown',
     'Call agent',
     100000.00,
-    'office',
+    'villa',
     0,
     1,
     2.0,
@@ -172,7 +172,7 @@ INSERT INTO properties (
     'Small studio apartment',
     'Available immediately',
     50000.00,
-    'apartment',
+    'store',
     1,
     1,
     1.0,
@@ -181,7 +181,7 @@ INSERT INTO properties (
     2020,
     34.7380,
     36.7180,
-    'available',
+    'active',
     '2026-08-20',
     NULL,
     20005,
@@ -189,6 +189,78 @@ INSERT INTO properties (
     1
 );
 
+INSERT INTO addresses (
+    floor,
+    apt,
+    area,
+    city,
+    county,
+    building_num,
+    street,
+    created_by,
+    property_id,
+    agency_id
+) VALUES
+(
+    1, 
+    2, 
+    'Inshaat', 
+    'Homs', 
+    'Homs County', 
+    '12', 
+    'Main St', 
+    1, 
+    1,  -- property_id from properties table
+    NULL
+),
+(
+    3, 
+    12, 
+    'Inshaat', 
+    'Homs', 
+    'Homs County', 
+    '24', 
+    'Freedom St', 
+    2, 
+    2, 
+    NULL
+),
+(
+    2, 
+    5, 
+    'Bab Tadmur', 
+    'Homs', 
+    'Central', 
+    '33', 
+    'Palm St', 
+    3, 
+    3, 
+    NULL
+),
+(
+    4, 
+    8, 
+    'Khaldiyeh', 
+    'Homs', 
+    'North Homs', 
+    '7', 
+    'Market Rd', 
+    1, 
+    4, 
+    NULL
+),
+(
+    5, 
+    21, 
+    'Inshaat', 
+    'Homs', 
+    'West Homs', 
+    '56', 
+    'River St', 
+    2, 
+    5, 
+    NULL
+);
 
 INSERT INTO consumers 
 (name, father_name, surname, mother_name_surname, place_birth, date_birth, registry, national_number, email, phone_number, created_by_type, created_by)

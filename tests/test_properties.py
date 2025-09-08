@@ -51,7 +51,7 @@ def test_get_property_by_id_roles(client: TestClient, token_by_email, email, pro
 
 ## MY properties
 def test_my_properties(client: TestClient, token_by_email):
-    token = token_by_email("test@broker.com")  
+    token = token_by_email("test@admin.com")  
     response = client.get("/property/my-properties", headers={"Authorization": f"Bearer {token}"})
 
     assert response.status_code == 200
@@ -59,7 +59,19 @@ def test_my_properties(client: TestClient, token_by_email):
     
     assert "pagination" in data , "No page detected"
     assert "data" in data , "The JSON was not formatted to include data"
+    print(len(data))
     assert all(p["created_by_user"]["user_id"] for p in data["data"])
+
+
+def test_my_properties_page(client: TestClient, token_by_email):
+    
+    token = token_by_email("test@broker.com")
+    response = client.get("/property/my-properties?page=1&per_page=2", headers={"Authorization": f"Bearer {token}"})
+
+    assert response.status_code == 200 , f"{response.text} found {response.status_code}"
+    data = response.json()
+    assert data["pagination"]["per_page"] == 2
+    assert len(data["data"]) <= 2
 
 
 def test_my_properties_unauthorized(client: TestClient):
@@ -67,16 +79,7 @@ def test_my_properties_unauthorized(client: TestClient):
     assert response.status_code == 401 , "Expected 401"
 
 
-def test_my_properties_pagination(client: TestClient, token_by_email):
-    token = token_by_email("test@admin.com")
-    response = client.get("/property/my-properties?page=1&per_page=2", headers={"Authorization": f"Bearer {token}"})
-
-    assert response.status_code == 200 , f"{response.text}"
-    data = response.json()
-    assert data["pagination"]["per_page"] == 2
-    assert len(data["data"]) <= 2
-
-def test_my_properties_sorting(client: TestClient, token_by_email):
+def test_my_properties_sort(client: TestClient, token_by_email):
     token = token_by_email("test@admin.com")
     response = client.get("/property/my-properties?sort_by=price&sort_order=asc", headers={"Authorization": f"Bearer {token}"})
 
@@ -84,23 +87,24 @@ def test_my_properties_sorting(client: TestClient, token_by_email):
     prices = [p["price"] for p in response.json()["data"]]
     assert prices == sorted(prices)
 
-
+@pytest.mark.testit
 @pytest.mark.parametrize(
     "query,check",
     [
         ("?city=Homs", lambda prop: "Homs" in prop["address"]["city"]),
         ("?area=Inshaat", lambda prop: "Inshaat" in prop["address"]["area"]),
-        ("?min_price=5000", lambda prop: prop["price"] >= 5000),
+        ("?min_price=100000", lambda prop: prop["price"] >= 100000),
         ("?max_price=200000", lambda prop: prop["price"] <= 200000),
         ("?mls_num=123", lambda prop: str(123) in str(prop["mls_num"])),
-        ("?status_filter=available", lambda prop: prop["status"] == "available"),
+        ("?status_filter=pending", lambda prop: prop["status"] == "pending"),
+        ("?status_filter=out of market", lambda prop: prop["status"] == "out of market"), # should be present
     
     ],
 )
 def test_my_properties_filters(client: TestClient, token_by_email, query, check):
  
-    token=token_by_email("test@admin.com")
-    response = client.get(f"/my-properties{query}", headers={"Authorization": f"Bearer {token}"})
+    token=token_by_email("test@broker.com")
+    response = client.get(f"property/my-properties{query}", headers={"Authorization": f"Bearer {token}"})
     assert response.status_code == 200, f"Query {query} failed with {response.text}"
 
     data = response.json()
@@ -111,7 +115,7 @@ def test_my_properties_filters(client: TestClient, token_by_email, query, check)
 def test_my_properties_sorting(client: TestClient, token_by_email):
     token=token_by_email("test@admin.com")
     response = client.get(
-        "/my-properties?sort_by=price&sort_order=asc",
+        "property/my-properties?sort_by=price&sort_order=asc",
         headers={"Authorization": f"Bearer {token}"},
     )
     assert response.status_code == 200
@@ -122,7 +126,7 @@ def test_my_properties_sorting(client: TestClient, token_by_email):
 
     # جرب نزولاً
     response = client.get(
-        "/my-properties?sort_by=price&sort_order=desc",
+        "property/my-properties?sort_by=price&sort_order=desc",
         headers={"Authorization": f"Bearer {token}"},
     )
     data = response.json()["data"]
@@ -136,7 +140,7 @@ def test_my_properties_complex_filter(client: TestClient, token_by_email):
     query = "?city=Homs&min_price=10000&max_price=200000"
     
     token=token_by_email("test@admin.com")
-    response = client.get(f"/my-properties{query}", headers={"Authorization": f"Bearer {token}"})
+    response = client.get(f"property/my-properties{query}", headers={"Authorization": f"Bearer {token}"})
 
     assert response.status_code == 200, f"Failed complex filter with {response.text}"
     data = response.json()["data"]
@@ -152,7 +156,7 @@ def test_my_properties_pagination(client: TestClient, token_by_email):
     per_page = 2
     token=token_by_email("test@admin.com")
     # الصفحة الأولى
-    response = client.get(f"/my-properties?page=1&per_page={per_page}", headers={"Authorization": f"Bearer {token}"})
+    response = client.get(f"property/my-properties?page=1&per_page={per_page}", headers={"Authorization": f"Bearer {token}"})
     assert response.status_code == 200
     data = response.json()
     pagination = data["pagination"]
