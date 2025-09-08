@@ -83,49 +83,124 @@ INSERT INTO properties (
     longitude,
     status,
     exp_date,
-    created_by,
-    owner_id,
     images_urls,
-    mls_num
-) VALUES
+    mls_num,
+    created_by,
+    owner_id
+) VALUES 
 (
-    'شقة حلوة مع إطلالة على المدينة',
-    'اتصل قبل بيوم لعرض العقار',
-    150000.00,
-    'apartment',
+    'Cozy house with small garden',
+    'Call for visit',
+    120000.00,
+    'house',
     3,
     2,
-    2.5,
     2.0,
-    120,
-    2015,
-    34.7306,
-    36.7097,
+    1.0,
+    180,
+    2012,
+    34.7325,
+    36.7131,
     'active',
-    '2026-01-01',
-    1,   -- user_id موجود بجدول users
-    2,   -- user_id موجود بجدول users
-    null,
-    123456
+    '2026-12-31',
+    NULL,
+    20001,
+    1,
+    1
 ),
 (
-    'فيلا واسعة مع حديقة وبركة سباحة',
-    'مفتوح طول الأسبوع',
-    750000.00,
+    'Modern apartment with balcony',
+    'Email to schedule',
+    85000.00,
+    'apartment',
+    2,
+    1,
+    1.5,
+    1.0,
+    95,
+    2019,
+    34.7300,
+    36.7150,
+    'available',
+    '2026-06-30',
+    NULL,
+    20002,
+    2,
+    1
+),
+(
+    'Luxury villa with private pool',
+    'By appointment only',
+    400000.00,
     'villa',
     5,
     4,
-    5.0,
     4.5,
-    600,
-    2020,
-    34.7320,
+    3.0,
+    550,
+    2021,
+    34.7400,
+    36.7200,
+    'sold',
+    '2027-01-15',
+    NULL,
+    20003,
+    3,
+    2
+),
+(
+    'Office space downtown',
+    'Call agent',
+    100000.00,
+    'office',
+    0,
+    1,
+    2.0,
+    1.5,
+    150,
+    2015,
+    34.7350,
     36.7100,
     'active',
-    '2026-05-15',
+    '2026-11-30',
+    NULL,
+    20004,
+    1,
+    2
+),
+(
+    'Small studio apartment',
+    'Available immediately',
+    50000.00,
+    'apartment',
+    1,
+    1,
+    1.0,
+    0.5,
+    45,
+    2020,
+    34.7380,
+    36.7180,
+    'available',
+    '2026-08-20',
+    NULL,
+    20005,
     2,
-    2,
-    null,
-    789012
+    1
 );
 
+
+INSERT INTO consumers 
+(name, father_name, surname, mother_name_surname, place_birth, date_birth, registry, national_number, email, phone_number, created_by_type, created_by)
+VALUES
+('Ahmad', 'Khaled', 'Al-Hamwi', 'Fatima Al-Sayed', 'Homs', '1995-04-12', 'Registry-001', 123456789, 'ahmad@example.com', '+963991234567', 'admin', 1);
+
+INSERT INTO consumers 
+(name, father_name, surname, mother_name_surname, place_birth, date_birth, registry, national_number, email, phone_number, created_by_type, created_by)
+VALUES
+('Sara', 'Omar', 'Al-Khatib', 'Layla Al-Ahmad', 'Damascus', '1998-09-30', 'Registry-002', 987654321, 'sara.khatib@example.com', '+963944556677', 'broker', 2);
+
+INSERT INTO consumers 
+(name, father_name, surname, mother_name_surname, place_birth, date_birth, registry, national_number, email, phone_number, created_by_type, created_by)
+VALUES
+('Hussein', 'Mahmoud', 'Al-Ali', 'Aisha Al-Sheikh', 'Aleppo', '1990-01-05', 'Registry-003', 456789123, 'hussein.ali@example.com', '+963933221144', 'realtor', 3);
