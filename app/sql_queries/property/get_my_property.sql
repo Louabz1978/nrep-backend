@@ -1,4 +1,4 @@
-SELECT DISTINCT ON (p.property_id)
+SELECT 
     p.property_id,
     p.description,
     p.show_inst,
