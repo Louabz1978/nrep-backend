@@ -1,14 +1,15 @@
-from sqlalchemy import String, Integer, ForeignKey
+from sqlalchemy import Integer, ForeignKey, String
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.database import Base
-
+from typing import Dict, Any
 class License(Base):
     __tablename__ = "licenses"
 
     license_id: Mapped[int] = mapped_column(primary_key=True, index=True, autoincrement=True)
-    lic_num: Mapped[int] = mapped_column(Integer)
-    lic_status: Mapped[str] = mapped_column(String(100))
-    lic_type : Mapped[str] = mapped_column(String, nullable=False)
+    lic_num: Mapped[str] = mapped_column(String(16))
+    lic_status: Mapped[Dict[str, Any]] = mapped_column(JSONB, nullable=False)
+    lic_type : Mapped[Dict[str, Any]] = mapped_column(JSONB, nullable=False)
 
     # ForeignKey
     user_id: Mapped[int] = mapped_column(ForeignKey("users.user_id"), unique=True)
