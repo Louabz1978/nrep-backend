@@ -10,6 +10,7 @@ from app import database
 
 from ...utils.file_helper import load_sql
 from ...utils.out_helper import build_user_out
+from ...utils.random_generator import generate_unique_mls_num
 from ...dependencies import get_current_user
 from ...utils.validate_photo import save_photos, update_photos
 
@@ -30,9 +31,9 @@ from .property_update import PropertyUpdate
 from ..additional.additional_create import AdditionalCreate
 from ..additional.additional_out import AdditionalOut
 from ..addresses.address_create import AddressCreate
-from .properties_status_enum import PropertyStatus
 
-from .properties_type_enum import PropertyTypes
+from ...utils.enums import PropertyStatus, PropertyTypes
+
 router = APIRouter(
     prefix="/property",
     tags=["Properties"]
@@ -63,7 +64,7 @@ async def create_property(
     if not owner_result :
         raise HTTPException(status_code=400, detail="invalid owner_id")
 
-    mls_num = random.randint(100000, 999999)
+    mls_num = generate_unique_mls_num(db)
     base_url = str(request.base_url)
     saved_files = save_photos(mls_num, photos, base_url, main_photo)
 
@@ -248,6 +249,7 @@ def get_all_properties(
             latitude=row["latitude"],
             longitude=row["longitude"],
             status=row["status"],
+            trans_type=row["trans_type"],
             exp_date=row["exp_date"],
             created_at=row["created_at"],
             last_updated=row["last_updated"],
@@ -387,6 +389,7 @@ def my_properties(
             latitude=row["latitude"],
             longitude=row["longitude"],
             status=row["status"],
+            trans_type=row["trans_type"],
             exp_date=row["exp_date"],
             created_at=row["created_at"],
             last_updated=row["last_updated"],
@@ -451,6 +454,49 @@ def get_property_by_id(
 
     return {"property": property}
 
+@router.get("/mls/{mls:int}", status_code=status.HTTP_200_OK)
+def get_property_by_mls(
+    mls: int,
+    db: Session = Depends(database.get_db),
+    current_user : User = Depends(get_current_user)
+):
+
+    role_sql = load_sql("role/get_user_roles.sql")
+    role_result = db.execute(text(role_sql), {"user_id": current_user.user_id}).mappings().first()
+    current_user_role = [key for key, value in role_result.items() if value]
+
+    if "realtor" in current_user_role or "broker" in current_user_role or "admin" in current_user_role:
+        pass
+    else:
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    sql = load_sql("property/get_property_by_mls.sql")
+    row = db.execute(text(sql), { "mls": mls}).mappings().first()
+
+    if row is None:
+        raise HTTPException(status_code=404, detail="Property not found")
+
+    nested_prefixes = ("created_by_", "address_")
+
+    property_data = {
+        k: v for k, v in row.items()
+        if not any(k.startswith(prefix) for prefix in nested_prefixes)
+    }
+    address_data = {k[len("address_"):]: v for k, v in row.items() if k.startswith("address_")}
+
+    consumer_sql = load_sql("consumer/get_consumer_by_id.sql")
+    owner = db.execute(text(consumer_sql), {"consumer_id": row.owner_consumer_id}).mappings().first()
+    
+    property = PropertyOut(
+        **property_data,
+        owner=owner,
+        created_by_user=build_user_out(row, "created_by_"),
+        address=AddressOut(**address_data) if address_data.get("address_id") else None,
+        additional=AdditionalOut(**row)
+    )
+
+    return {"property": property}
+
 @router.put("/{property_id}")
 def update_property_by_id(
     request: Request,
@@ -481,7 +527,7 @@ def update_property_by_id(
         raise HTTPException(status_code=403, detail="Not authorized")
     
     # owner_id check
-    if property_data.owner_id:
+    if property_data.owner_id or property_data.owner_id == 0:
         consumer_sql = load_sql("consumer/get_consumer_by_id.sql")
         owner_result = db.execute(text(consumer_sql), {"consumer_id": property_data.owner_id}).mappings().first()
         
@@ -613,53 +659,3 @@ def get_property_type_options(
         raise HTTPException(status_code=403, detail="Not authorized")
 
     return [types.value for types in PropertyTypes]
-
-@router.get("/mls", status_code=status.HTTP_200_OK)
-def filter_by_mls(
-    page: int = Query(1, ge=1),
-    per_page: int = Query(10, ge=1, le=100),
-    mls: str | None = Query(None, description="Filter by MLS number (contains)"),
-    db: Session = Depends(database.get_db),
-    current_user : User = Depends(get_current_user)
-):
-
-    role_sql = load_sql("role/get_user_roles.sql")
-    role_result = db.execute(text(role_sql), {"user_id": current_user.user_id}).mappings().first()
-    current_user_role = [key for key, value in role_result.items() if value]
-
-    if "realtor" in current_user_role or "broker" in current_user_role or "admin" in current_user_role:
-        pass
-    else:
-        raise HTTPException(status_code=403, detail="Not authorized")
-
-    offset = (page - 1) * per_page
-
-    base_query = """
-        SELECT p.*
-        FROM properties p
-        WHERE (:mls IS NULL OR CAST(p.mls_num AS TEXT) ILIKE :mls)
-        ORDER BY p.property_id
-        LIMIT :limit OFFSET :offset
-    """
-
-    count_query = """
-        SELECT COUNT(*)
-        FROM properties p
-        WHERE (:mls IS NULL OR CAST(p.mls_num AS TEXT) ILIKE :mls)
-    """
-
-    params = {
-        "mls": f"%{mls}%" if mls else None,
-        "limit": per_page,
-        "offset": offset
-    }
-
-    items = db.execute(text(base_query), params).mappings().all()
-    total = db.execute(text(count_query), {"mls": f"%{mls}%" if mls else None}).scalar()
-
-    return {
-        "page": page,
-        "per_page": per_page,
-        "total": total,
-        "items": items
-    }

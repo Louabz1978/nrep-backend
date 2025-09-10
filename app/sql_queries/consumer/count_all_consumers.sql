@@ -16,7 +16,7 @@ WHERE
     AND (:place_birth IS NULL OR c.place_birth ILIKE :place_birth)
     AND (:date_birth IS NULL OR c.date_birth = :date_birth)
     AND (:registry IS NULL OR c.registry ILIKE :registry)
-    AND (:national_number IS NULL OR c.national_number = :national_number)
+    AND (:national_number IS NULL OR c.national_number::TEXT ILIKE :national_number)
     AND (:email IS NULL OR c.email ILIKE :email)
     AND (:phone_number IS NULL OR c.phone_number ILIKE :phone_number)
     AND (:created_by IS NULL OR c.created_by = :created_by)

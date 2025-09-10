@@ -4,7 +4,7 @@ from typing import Optional, Annotated
 
 class AddressUpdate(BaseModel):
     floor: Optional[int] = Field(None, ge=0, le=200, description= "Floor must be >= 0 and <= 200")
-    apt: Optional[int] = Field(None, gt=0, le=100, description="apartment must be > 0 and <= 100")
+    apt: Optional[int] = Field(None, ge=0, le=100, description="apartment must be > 0 and <= 100")
     area: Annotated[
         Optional[str],
         Field(None),

@@ -10,8 +10,7 @@ from sqlalchemy import Numeric, Date
 from sqlalchemy import Enum
 from sqlalchemy.dialects.postgresql import JSONB
 
-from ..routers.properties.properties_status_enum import PropertyStatus
-from ..routers.properties.properties_type_enum import PropertyTypes
+from ..utils.enums import PropertyStatus, PropertyTypes, PropertyTransactionType
 
 from typing import TYPE_CHECKING
 
@@ -27,7 +26,7 @@ class Property(Base):
     price: Mapped[float] = mapped_column(Numeric(10, 2))
     property_type: Mapped[PropertyTypes] = mapped_column(
         Enum(PropertyTypes, name="property_type_enum"),
-        default=PropertyTypes.house,
+        default=PropertyTypes.apartment,
         nullable=False
     )
     bedrooms: Mapped[int] = mapped_column(Integer)
@@ -43,12 +42,21 @@ class Property(Base):
         default=PropertyStatus.active,
         nullable=False
     )
+    trans_type: Mapped[PropertyTransactionType] = mapped_column(
+        Enum(PropertyTransactionType, name="property_transaction_type_enum"),
+        default=PropertyTransactionType.sell,
+        nullable=False
+    )
     exp_date: Mapped[datetime.date] = mapped_column(Date, nullable=False)
     created_at: Mapped[datetime] = mapped_column(TIMESTAMP, server_default=func.now())
     last_updated: Mapped[datetime] = mapped_column(TIMESTAMP, server_default=func.now(), onupdate=func.now())
     images_urls: Mapped[Optional[list[dict]]] = mapped_column(JSONB)
-    mls_num: Mapped[Optional[int]] = mapped_column(Integer)
-    
+    mls_num: Mapped[Optional[int]] = mapped_column(
+        Integer,
+        unique=True,
+        nullable=False
+    )
+
     # ForeignKey
     created_by : Mapped[Optional[int]] = mapped_column(ForeignKey("users.user_id"), nullable=False)
     owner_id: Mapped[int] = mapped_column(ForeignKey("users.user_id"), nullable=False)

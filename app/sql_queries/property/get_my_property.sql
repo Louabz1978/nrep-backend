@@ -13,6 +13,7 @@ SELECT
     p.latitude,
     p.longitude,
     p.status,
+    p.trans_type,
     p.exp_date,
     p.created_at,
     p.last_updated,

@@ -13,6 +13,7 @@ UPDATE properties SET
     latitude = :latitude,
     longitude = :longitude,
     status = :status,
+    trans_type = :trans_type,
     exp_date = :exp_date,
     last_updated = CURRENT_TIMESTAMP,
     images_urls = :images_urls
