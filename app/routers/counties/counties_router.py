@@ -192,3 +192,25 @@ def get_all_counties(
             )
 
     return list(counties_dict.values())
+
+
+@router.delete("/{county_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_county(
+    county_id: int,
+    db: Session = Depends(database.get_db),
+    current_user: User = Depends(get_current_user)
+):
+    if not current_user.roles.admin and not current_user.roles.broker and not current_user.roles.realtor:
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    sql = load_sql("county/get_county_by_id.sql")
+    result = db.execute(text(sql), {"county_id": county_id})
+    county = result.mappings().first()
+    if not county:
+        raise HTTPException(status_code=404, detail="County not found")
+
+    delete_sql = load_sql("county/delete_county.sql")
+    db.execute(text(delete_sql), {"county_id": county_id})
+    
+    db.commit()
+    return {"message": "County deleted successfully"}
