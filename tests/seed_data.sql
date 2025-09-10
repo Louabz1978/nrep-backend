@@ -35,10 +35,17 @@ VALUES (5, TRUE, 5);
 
 -- Insert tenant test account
 INSERT INTO users(user_id, first_name, last_name, email, password_hash, phone_number, created_by)
-VALUES (6, 'tenant', 'test', 'test@tenant.com', '$2b$12$2h9HK/lHUQxA.YnNt3qKD.XEscVHESnYPp9LodVOHRNsBZO0CHjZG', '0933111222', 3);
+VALUES (6, 'tenant', 'test', 'test@tenant.com', '$2b$12$2h9HK/lHUQxA.YnNt3qKD.XEscVHESnYPp9LodVOHRNsBZO0CHjZG', '0933111222', 2);
 
 INSERT INTO roles(roles_id, tenant, user_id)
 VALUES (6, TRUE, 6);
+
+INSERT INTO users(user_id, first_name, last_name, email, password_hash, phone_number, created_by)
+VALUES (7, 'noRole', 'test', 'test@norole.com', '$2b$12$2h9HK/lHUQxA.YnNt3qKD.XEscVHESnYPp9LodVOHRNsBZO0CHjZG', '0933111222', 1);
+
+INSERT INTO roles(roles_id,user_id)
+VALUES (7, 7);
+
 
 -- Insert address test account
 INSERT INTO addresses (floor, apt, area, city, county, building_num, street, created_by)
@@ -59,3 +66,213 @@ VALUES
     (2, 5, 'Downtown', 'Amsterdam', 'Noord-Holland', '12B', 'Main Street', 1, 1),
     (3, 6, 'Uptown', 'Berlin', 'Berlin', '34C', 'Park Ave', 2, 2),
     (1, 4, 'Midtown', 'Paris', 'Paris', '78D', 'Rue St', 1, 3);
+
+--insert new properties 
+INSERT INTO properties (
+    description,
+    show_inst,
+    price,
+    property_type,
+    bedrooms,
+    bathrooms,
+    property_realtor_commission,
+    buyer_realtor_commission,
+    area_space,
+    year_built,
+    latitude,
+    longitude,
+    status,
+    exp_date,
+    images_urls,
+    mls_num,
+    created_by,
+    owner_id
+) VALUES 
+(
+    'Cozy house with small garden',
+    'Call for visit',
+    120000.00,
+    'house',
+    3,
+    2,
+    2.0,
+    1.0,
+    180,
+    2012,
+    34.7325,
+    36.7131,
+    'active',
+    '2026-12-31',
+    NULL,
+    20001,
+    1,
+    1
+),
+(
+    'Modern apartment with balcony',
+    'Email to schedule',
+    85000.00,
+    'apartment',
+    2,
+    1,
+    1.5,
+    1.0,
+    95,
+    2019,
+    34.7300,
+    36.7150,
+    'closed',
+    '2026-06-30',
+    NULL,
+    20002,
+    2,
+    1
+),
+(
+    'Luxury villa with private pool',
+    'By appointment only',
+    400000.00,
+    'villa',
+    5,
+    4,
+    4.5,
+    3.0,
+    550,
+    2021,
+    34.7400,
+    36.7200,
+    'pending',
+    '2027-01-15',
+    NULL,
+    20003,
+    3,
+    2
+),
+(
+    'Office space downtown',
+    'Call agent',
+    100000.00,
+    'villa',
+    0,
+    1,
+    2.0,
+    1.5,
+    150,
+    2015,
+    34.7350,
+    36.7100,
+    'active',
+    '2026-11-30',
+    NULL,
+    20004,
+    1,
+    2
+),
+(
+    'Small studio apartment',
+    'Available immediately',
+    50000.00,
+    'store',
+    1,
+    1,
+    1.0,
+    0.5,
+    45,
+    2020,
+    34.7380,
+    36.7180,
+    'active',
+    '2026-08-20',
+    NULL,
+    20005,
+    2,
+    1
+);
+
+INSERT INTO addresses (
+    floor,
+    apt,
+    area,
+    city,
+    county,
+    building_num,
+    street,
+    created_by,
+    property_id,
+    agency_id
+) VALUES
+(
+    1, 
+    2, 
+    'Inshaat', 
+    'Homs', 
+    'Homs County', 
+    '12', 
+    'Main St', 
+    1, 
+    1,  -- property_id from properties table
+    NULL
+),
+(
+    3, 
+    12, 
+    'Inshaat', 
+    'Homs', 
+    'Homs County', 
+    '24', 
+    'Freedom St', 
+    2, 
+    2, 
+    NULL
+),
+(
+    2, 
+    5, 
+    'Bab Tadmur', 
+    'Homs', 
+    'Central', 
+    '33', 
+    'Palm St', 
+    3, 
+    3, 
+    NULL
+),
+(
+    4, 
+    8, 
+    'Khaldiyeh', 
+    'Homs', 
+    'North Homs', 
+    '7', 
+    'Market Rd', 
+    1, 
+    4, 
+    NULL
+),
+(
+    5, 
+    21, 
+    'Inshaat', 
+    'Homs', 
+    'West Homs', 
+    '56', 
+    'River St', 
+    2, 
+    5, 
+    NULL
+);
+
+INSERT INTO consumers 
+(name, father_name, surname, mother_name_surname, place_birth, date_birth, registry, national_number, email, phone_number, created_by_type, created_by)
+VALUES
+('Ahmad', 'Khaled', 'Al-Hamwi', 'Fatima Al-Sayed', 'Homs', '1995-04-12', 'Registry-001', 123456789, 'ahmad@example.com', '+963991234567', 'admin', 1);
+
+INSERT INTO consumers 
+(name, father_name, surname, mother_name_surname, place_birth, date_birth, registry, national_number, email, phone_number, created_by_type, created_by)
+VALUES
+('Sara', 'Omar', 'Al-Khatib', 'Layla Al-Ahmad', 'Damascus', '1998-09-30', 'Registry-002', 987654321, 'sara.khatib@example.com', '+963944556677', 'broker', 2);
+
+INSERT INTO consumers 
+(name, father_name, surname, mother_name_surname, place_birth, date_birth, registry, national_number, email, phone_number, created_by_type, created_by)
+VALUES
+('Hussein', 'Mahmoud', 'Al-Ali', 'Aisha Al-Sheikh', 'Aleppo', '1990-01-05', 'Registry-003', 456789123, 'hussein.ali@example.com', '+963933221144', 'realtor', 3);

@@ -2,8 +2,8 @@ from fastapi import Form
 from pydantic import BaseModel, model_validator
 from typing import Optional, List
 from datetime import date
-from .properties_type_enum import PropertyTypes
-from .properties_status_enum import PropertyStatus
+
+from ...utils.enums import PropertyStatus, PropertyTypes, PropertyTransactionType
 
 from ..addresses.address_update import AddressUpdate
 from ..additional.additional_update import AdditionalUpdate
@@ -23,6 +23,7 @@ class PropertyUpdate(BaseModel):
     latitude: Optional[ float ] = None
     longitude: Optional[ float ] = None
     status: Optional[ PropertyStatus ] = None
+    trans_type: Optional[ PropertyTransactionType ] = None
     exp_date: Optional[ date ] = None
     preserve_images: Optional[ List[str] ] = None
     
@@ -46,6 +47,7 @@ class PropertyUpdate(BaseModel):
         latitude: Optional[float] = Form(None),
         longitude: Optional[float] = Form(None),
         status: Optional[PropertyStatus] = Form(None),
+        trans_type: Optional[PropertyTransactionType] = Form(None),
         exp_date: Optional[date] = Form(None),
         preserve_images: Optional[List[str]] = Form(None)
     ):
@@ -65,16 +67,17 @@ class PropertyUpdate(BaseModel):
             latitude=latitude,
             longitude=longitude,
             status=status,
+            trans_type=trans_type,
             exp_date=exp_date,
             preserve_images=preserve_images if preserve_images not in (None, "") else None
         )
 
-    @model_validator(mode='before')
-    def validate_roles(cls, values):
-        owner_id = values.get('owner_id')
-        # Treat 0 as no owner_id provided
-        if owner_id == 0:
-            owner_id = None
-            values['owner_id'] = None
+    # @model_validator(mode='before')
+    # def validate_roles(cls, values):
+    #     owner_id = values.get('owner_id')
+    #     # Treat 0 as no owner_id provided
+    #     if owner_id == 0:
+    #         owner_id = None
+    #         values['owner_id'] = None
         
-        return values
+    #     return values

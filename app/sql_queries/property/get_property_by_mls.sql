@@ -87,4 +87,4 @@ LEFT JOIN roles creator_roles ON creator.user_id = creator_roles.user_id
 LEFT JOIN addresses a ON p.property_id = a.property_id
 LEFT JOIN additional ad ON p.property_id = ad.property_id
 
-WHERE p.property_id = :property_id;
+WHERE p.mls_num = :mls;

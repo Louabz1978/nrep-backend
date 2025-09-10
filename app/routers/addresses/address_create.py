@@ -6,7 +6,7 @@ import re
 building_num_pattern = re.compile(r'^\d{7,15}$')
 class AddressCreate(BaseModel):
     floor: int = Field(..., ge=0, le=200, description= "Floor must be >= 0 and <= 200")
-    apt: int = Field(..., gt=0, le=100, description="apartment must be > 0 and <= 100")
+    apt: int = Field(..., ge=0, le=100, description="apartment must be > 0 and <= 100")
     area: Annotated[
         str,
         StringConstraints(strip_whitespace=True, min_length=2)
@@ -53,8 +53,8 @@ class AddressCreate(BaseModel):
         "from_attributes": True
     }
 
-    @field_validator("building_num")
-    def validate_building_num(cls, v: str) -> str:
-        if not building_num_pattern.match(v):
-            raise ValueError("Building number must be only digits")
-        return v
+    # @field_validator("building_num")
+    # def validate_building_num(cls, v: str) -> str:
+    #     if not building_num_pattern.match(v):
+    #         raise ValueError("Building number must be only digits")
+    #     return v

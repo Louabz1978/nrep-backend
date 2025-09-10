@@ -1,21 +1,21 @@
 from pydantic import BaseModel, Field, field_validator
 from fastapi import Form
-from typing import Optional, Dict, Any
-from .license_status_enum import LicenseStatus
-from .license_type_enum import LicenseType
+from typing import Optional
+
+from ...utils.enums import LicenseStatus, LicenseType
 
 class LicenseUpdate(BaseModel):
-    lic_status: Optional[Dict[str, Any]] = None
-    lic_type: Optional[Dict[str, Any]] = None
-    user_id: Optional[int] = Field(None, gt=0)
-    agency_id: Optional[int] = Field(None, gt=0)
+    lic_status: Optional[LicenseStatus] = None
+    lic_type: Optional[LicenseType] = None
+    user_id: Optional[int] = Field(None, ge=0)
+    agency_id: Optional[int] = Field(None, ge=0)
 
     @classmethod
     def as_form(
         cls,
-        lic_status: Optional[Dict[str, Any]] = Form(None),
-        lic_type: Optional[Dict[str, Any]] = Form(None),
-        user_id:Optional[int] = Form(None),
+        lic_status: Optional[LicenseStatus] = Form(None),
+        lic_type: Optional[LicenseType] = Form(None),
+        user_id: Optional[int] = Form(None),
         agency_id: Optional[int] = Form(None)
     ):
         return cls(

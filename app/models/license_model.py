@@ -1,15 +1,27 @@
-from sqlalchemy import Integer, ForeignKey, String
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy import String, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.database import Base
-from typing import Dict, Any
+from sqlalchemy import Enum
+
+from ..utils.enums import LicenseType, LicenseStatus
+
 class License(Base):
     __tablename__ = "licenses"
 
     license_id: Mapped[int] = mapped_column(primary_key=True, index=True, autoincrement=True)
-    lic_num: Mapped[str] = mapped_column(String(16))
-    lic_status: Mapped[Dict[str, Any]] = mapped_column(JSONB, nullable=False)
-    lic_type : Mapped[Dict[str, Any]] = mapped_column(JSONB, nullable=False)
+    lic_num: Mapped[str] = mapped_column(String(14), unique=True, nullable=False)
+
+    lic_status: Mapped[LicenseStatus] = mapped_column(
+        Enum(LicenseStatus, name="license_status_enum"),
+        default=LicenseStatus.active,
+        nullable=False
+    )
+
+    lic_type: Mapped[LicenseType] = mapped_column(
+        Enum(LicenseType, name="license_type_enum"),
+        default=LicenseType.company,
+        nullable=False
+    )
 
     # ForeignKey
     user_id: Mapped[int] = mapped_column(ForeignKey("users.user_id"), unique=True)
