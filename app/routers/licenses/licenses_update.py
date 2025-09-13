@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from fastapi import Form
 from typing import Optional
 
@@ -7,8 +7,8 @@ from ...utils.enums import LicenseStatus, LicenseType
 class LicenseUpdate(BaseModel):
     lic_status: Optional[LicenseStatus] = None
     lic_type: Optional[LicenseType] = None
-    user_id: Optional[int] = Field(None, ge=0)
-    agency_id: Optional[int] = Field(None, ge=0)
+    user_id: Optional[int] = Field(None, gt=0)
+    agency_id: Optional[int] = Field(None, gt=0)
 
     @classmethod
     def as_form(
