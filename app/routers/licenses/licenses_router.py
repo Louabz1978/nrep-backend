@@ -78,7 +78,7 @@ def create_license(
 @router.put("/{license_id}", status_code=status.HTTP_200_OK)
 def update_license(
     license_id: int,
-    license_in: LicenseUpdate = Depends(LicenseUpdate.as_form),
+    license_in: LicenseUpdate,
     db: Session = Depends(database.get_db),
     current_user: User = Depends(get_current_user)
 ):
