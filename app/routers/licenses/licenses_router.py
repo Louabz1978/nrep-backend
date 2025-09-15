@@ -49,19 +49,7 @@ def create_license(
     if existing_license:
         raise HTTPException(status_code=400, detail="User already has a license")
     
-    random_digits = random.randint(10**13,10**14-1)
-    first_char = (user_result["first_name"][0].upper() if user_result["first_name"] else "X")
-    last_char = (user_result["last_name"][0].upper() if user_result["last_name"] else "X")
-    lic_num = f"{first_char}{last_char}{random_digits}"
-
-    
     license_data = license.model_dump()
-    license_data["lic_num"] = lic_num
-    license_data["lic_status"] = json.dumps(license_data["lic_status"])
-    license_data["lic_type"] = json.dumps(license_data["lic_type"])
-
-    lic_num = generate_unique_license_num(db)
-    license_data["lic_num"] = lic_num
 
     lic_num = generate_unique_license_num(db)
     license_data["lic_num"] = lic_num
