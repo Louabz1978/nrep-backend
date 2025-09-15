@@ -21,22 +21,6 @@ SELECT
     p.mls_num,
     p.livable,
 
-    -- Owner user fields
-    owner.consumer_id AS owner_consumer_id,
-    owner.name AS owner_name,
-    owner.father_name AS owner_father_name,
-    owner.surname AS owner_surname,
-    owner.mother_name_surname AS owner_mother_name_surname,
-    owner.place_birth AS owner_place_birth,
-    owner.date_birth AS owner_date_birth,
-    owner.registry AS owner_registry,
-    owner.national_number AS owner_national_number,
-    owner.email AS owner_email,
-    owner.phone_number AS owner_phone_number,
-    owner.created_by AS owner_created_by,
-    owner.created_by_type AS owner_created_by_type,
-    owner.created_at AS owner_created_at,
-
     -- Created by user fields
     creator.user_id AS created_by_user_id,
     creator.first_name AS created_by_first_name,
@@ -79,7 +63,6 @@ SELECT
     ad.pool
 
 FROM properties p
-LEFT JOIN consumers owner ON p.owner_id = owner.consumer_id
 LEFT JOIN users creator ON p.created_by = creator.user_id
 LEFT JOIN roles creator_roles ON creator.user_id = creator_roles.user_id
 LEFT JOIN addresses a ON p.property_id = a.property_id

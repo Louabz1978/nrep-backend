@@ -34,4 +34,4 @@ class Consumer(Base):
 
     # Relationships
     created_by_user = relationship("User", back_populates="consumer_created", foreign_keys=[created_by])
-    owned_properties = relationship("Property", secondary=property_owners, back_populates="owners")
+    owned_properties = relationship("Property", secondary=property_owners, back_populates="sellers")

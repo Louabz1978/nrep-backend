@@ -38,22 +38,6 @@ SELECT DISTINCT ON (p.property_id)
     rcb.seller AS created_by_seller,
     rcb.tenant AS created_by_tenant,
 
-    -- Owner (property seller) fields
-    o.consumer_id AS owner_consumer_id,
-    o.name AS owner_name,
-    o.father_name AS owner_father_name,
-    o.surname AS owner_surname,
-    o.mother_name_surname AS owner_mother_name_surname,
-    o.place_birth AS owner_place_birth,
-    o.date_birth AS owner_date_birth,
-    o.registry AS owner_registry,
-    o.national_number AS owner_national_number,
-    o.email AS owner_email,
-    o.phone_number AS owner_phone_number,
-    o.created_by AS owner_created_by,
-    o.created_by_type AS owner_created_by_type,
-    o.created_at AS owner_created_at,
-
     -- Address fields
     a.address_id,
     a.floor,
@@ -81,8 +65,6 @@ SELECT DISTINCT ON (p.property_id)
 FROM properties p
 LEFT JOIN users cb ON p.created_by = cb.user_id
 LEFT JOIN roles rcb ON cb.user_id = rcb.user_id
-
-LEFT JOIN consumers o ON p.owner_id = o.consumer_id
 
 LEFT JOIN addresses a ON p.property_id = a.property_id
 LEFT JOIN additional ad ON p.property_id = ad.property_id

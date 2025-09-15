@@ -33,7 +33,7 @@ class PropertyOut(BaseModel):
     mls_num: Optional[int] = None
     livable: Optional[bool] = None
     created_by_user: Optional[UserOut]
-    owner: Optional[ConsumerOut]
+    sellers: Optional[List[ConsumerOut]]
     address: Optional[AddressOut] = None
     additional: Optional[AdditionalOut] = None
 

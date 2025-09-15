@@ -1,5 +1,4 @@
 INSERT INTO PROPERTIES (
-    owner_id,
     created_by,
     description,
     show_inst,
@@ -23,7 +22,6 @@ INSERT INTO PROPERTIES (
     livable
 )
 VALUES(
-    :owner_id,
     :created_by,
     :description,
     :show_inst,

@@ -1,5 +1,4 @@
 UPDATE properties SET 
-    owner_id = :owner_id,
     description = :description,
     show_inst = :show_inst,
     price = :price,

@@ -21,7 +21,7 @@ property_owners = Table(
     "property_owners",
     Base.metadata,
     Column("property_id", ForeignKey("properties.property_id", ondelete="CASCADE"), primary_key=True),
-    Column("owner_id", ForeignKey("consumers.consumer_id", ondelete="CASCADE"), primary_key=True),
+    Column("seller_id", ForeignKey("consumers.consumer_id", ondelete="CASCADE"), primary_key=True),
 )
 class Property(Base):
     __tablename__ = "properties"
@@ -71,7 +71,7 @@ class Property(Base):
     created_by_user = relationship("User", back_populates="property_created", foreign_keys=[created_by])
 
     #many_to_many relationship for owners
-    owners = relationship("Consumer", secondary=property_owners, back_populates="owned_properties")
+    sellers = relationship("Consumer", secondary=property_owners, back_populates="owned_properties")
 
     address: Mapped["Address"] = relationship(
         back_populates="properties",
