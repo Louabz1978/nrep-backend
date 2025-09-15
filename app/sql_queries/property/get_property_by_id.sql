@@ -19,6 +19,7 @@ SELECT
     p.last_updated,
     p.images_urls,
     p.mls_num,
+    p.livable,
     
     -- Owner user fields prefixed with owner_
     owner.consumer_id AS owner_consumer_id,

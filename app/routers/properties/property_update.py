@@ -25,6 +25,7 @@ class PropertyUpdate(BaseModel):
     status: Optional[ PropertyStatus ] = None
     trans_type: Optional[ PropertyTransactionType ] = None
     exp_date: Optional[ date ] = None
+    livable: Optional[ bool ] = None
     preserve_images: Optional[ List[str] ] = None
     
     address: Optional[ AddressUpdate ] = None
@@ -49,6 +50,7 @@ class PropertyUpdate(BaseModel):
         status: Optional[PropertyStatus] = Form(None),
         trans_type: Optional[PropertyTransactionType] = Form(None),
         exp_date: Optional[date] = Form(None),
+        livable: Optional[bool] = Form(None),
         preserve_images: Optional[List[str]] = Form(None)
     ):
 
@@ -69,6 +71,7 @@ class PropertyUpdate(BaseModel):
             status=status,
             trans_type=trans_type,
             exp_date=exp_date,
+            livable=livable,
             preserve_images=preserve_images if preserve_images not in (None, "") else None
         )
 

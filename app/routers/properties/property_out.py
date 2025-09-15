@@ -31,7 +31,7 @@ class PropertyOut(BaseModel):
     last_updated: datetime
     images_urls: Optional[List[Dict]]
     mls_num: Optional[int] = None
-
+    livable: Optional[bool] = None
     created_by_user: Optional[UserOut]
     owner: Optional[ConsumerOut]
     address: Optional[AddressOut] = None

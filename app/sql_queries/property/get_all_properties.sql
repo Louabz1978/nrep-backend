@@ -20,6 +20,7 @@ SELECT DISTINCT ON (p.property_id)
     p.last_updated,
     p.images_urls,
     p.mls_num,
+    p.livable,
 
     -- Created by user fields
     cb.user_id AS created_by_user_id,

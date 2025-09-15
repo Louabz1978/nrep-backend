@@ -22,6 +22,7 @@ class PropertyCreate(BaseModel):
     status: PropertyStatus
     trans_type: PropertyTransactionType
     exp_date: date
+    livable: Optional[bool]
 
     @classmethod
     def as_form(
@@ -41,7 +42,8 @@ class PropertyCreate(BaseModel):
         longitude: float = Form(...),
         status: PropertyStatus = Form(...),
         trans_type: PropertyTransactionType = Form(...),
-        exp_date: date = Form(...)
+        exp_date: date = Form(...),
+        livable: Optional[bool] = Form(None)
     ):
         return cls(
             owner_id = owner_id,
@@ -59,7 +61,8 @@ class PropertyCreate(BaseModel):
             longitude = longitude,
             status = status,
             trans_type = trans_type,
-            exp_date = exp_date
+            exp_date = exp_date, 
+            livable = livable
         )
     
     # @model_validator(mode='before')

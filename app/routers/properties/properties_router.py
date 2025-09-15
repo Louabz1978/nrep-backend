@@ -255,6 +255,7 @@ def get_all_properties(
             last_updated=row["last_updated"],
             images_urls=row["images_urls"],
             mls_num=row["mls_num"],
+            livable=row["livable"],
             
             created_by_user=created_by,
             owner=owner,
@@ -395,6 +396,7 @@ def my_properties(
             last_updated=row["last_updated"],
             images_urls=row["images_urls"],
             mls_num=row["mls_num"],
+            livable=row["livable"],
             owner=owner, 
             created_by_user=created_by,
             address=address,

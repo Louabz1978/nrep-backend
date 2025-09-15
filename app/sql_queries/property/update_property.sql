@@ -15,6 +15,7 @@ UPDATE properties SET
     status = :status,
     trans_type = :trans_type,
     exp_date = :exp_date,
+    livable = :livable,
     last_updated = CURRENT_TIMESTAMP,
     images_urls = :images_urls
 WHERE property_id = :property_id

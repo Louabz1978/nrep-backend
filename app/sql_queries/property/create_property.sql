@@ -19,7 +19,8 @@ INSERT INTO PROPERTIES (
     created_at,
     last_updated ,
     images_urls,
-    mls_num
+    mls_num,
+    livable
 )
 VALUES(
     :owner_id,
@@ -42,6 +43,7 @@ VALUES(
     :created_at,
     :last_updated ,
     :images_urls,
-    :mls_num
+    :mls_num,
+    :livable
 )
 RETURNING property_id;
