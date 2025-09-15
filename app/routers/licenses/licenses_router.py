@@ -63,6 +63,9 @@ def create_license(
     lic_num = generate_unique_license_num(db)
     license_data["lic_num"] = lic_num
 
+    lic_num = generate_unique_license_num(db)
+    license_data["lic_num"] = lic_num
+
     license_sql = load_sql("license/create_license.sql")
     license_result = db.execute(text(license_sql), license_data)
     new_license_id = license_result.scalar()
