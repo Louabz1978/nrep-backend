@@ -24,3 +24,13 @@ class LicenseUpdate(BaseModel):
             user_id=user_id,
             agency_id=agency_id
         )
+    
+    @field_validator("lic_status")
+    def validate_staus(cls, value):
+        LicenseStatus.validate_dict(value)
+        return value
+    
+    @field_validator("lic_type")
+    def validate_type(cls, value):
+        LicenseType.validate_dict(value)
+        return value
