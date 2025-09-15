@@ -13,6 +13,7 @@ from app.routers.licenses.licenses_router import router as license_router
 from app.routers.cities.cities_router import router as city_router
 from app.routers.counties.counties_router import router as county_router
 from app.routers.areas.areas_router import router as area_router
+from app.routers.contracts.contracts_routers import router as contract_routers
 
 from app.routers.market_watcher.market_watcher_route import router as market_watcher_route
 
@@ -51,3 +52,5 @@ app.include_router(county_router)
 app.include_router(area_router)
 
 app.include_router(market_watcher_route)
+
+app.include_router(contract_routers)
