@@ -9,6 +9,10 @@ from typing import Optional
 
 from typing import TYPE_CHECKING
 
+if TYPE_CHECKING:
+    from app.models.user_model import User
+    from app.models.consumer_model import  Consumer
+    from app.models.property_model import  Property
 
 
 class Rent(Base):
@@ -28,7 +32,7 @@ class Rent(Base):
     created_at: Mapped[datetime] = mapped_column(TIMESTAMP, server_default=func.now())
 
     # Relationships
-    #property: Mapped["Property"] = relationship("Property")
-    #buyer: Mapped["Consumer"] = relationship("consumers", foreign_keys=[buyer_id])
-    #seller: Mapped["Consumer"] = relationship("consumers", foreign_keys=[seller_id])
-    #closed_by: Mapped["User"] = relationship("User", foreign_keys=[closed_by_id])
+    property: Mapped["Property"] = relationship("Property",foreign_keys=[property_id])
+    buyer: Mapped["Consumer"] = relationship("Consumer", foreign_keys=[buyer_id])
+    seller: Mapped["Consumer"] = relationship("Consumer", foreign_keys=[seller_id])
+    closed_by: Mapped["User"] = relationship("User", foreign_keys=[closed_by_id])
