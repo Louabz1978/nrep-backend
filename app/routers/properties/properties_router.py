@@ -3,7 +3,6 @@ from datetime import datetime, timezone
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 from typing import List, Optional
-import random
 import json
 
 from app import database
@@ -667,32 +666,3 @@ def get_property_type_options(
         raise HTTPException(status_code=403, detail="Not authorized")
 
     return [types.value for types in PropertyTypes]
-
-@router.put("/contract/close/{mls}", status_code=status.HTTP_200_OK)
-def close_contract(
-    mls: int, 
-    db: Session = Depends(database.get_db),
-    current_user: User = Depends(get_current_user)
-):
-    
-    role_sql = load_sql("role/get_user_roles.sql")
-    roles = db.execute(text(role_sql), {"user_id": current_user.user_id}).mappings().first()
-    if roles["admin"] == False and roles["broker"] == False and roles["realtor"] == False:
-        raise HTTPException(status_code=403, detail="Not authorized")
-
-    # Check if mls_num exists
-    sql_check = load_sql("property/check_mls.sql")
-    result = db.execute(text(sql_check), {"mls": mls}).mappings().first()
-    if not result:
-        raise HTTPException(status_code=404, detail="Property with this MLS number not found")
-
-    # Update property status to 'closed'
-    sql_update = load_sql("property/close_contract.sql")
-    updated_property = db.execute(text(sql_update), {"mls": mls}).mappings().first()
-    if not updated_property:
-        raise HTTPException(status_code=404, detail="Failed to update property status")
-
-    # Commit the transaction
-    db.commit()
-
-    return "Contract closed successfully"
