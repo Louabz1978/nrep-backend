@@ -1,13 +1,12 @@
 import json
 import os
-from fastapi import APIRouter, Body, Depends, File, Form, HTTPException, Request, UploadFile, status
-from pathlib import Path
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
 from sqlalchemy import text
 from sqlalchemy.orm import Session
+from typing import Optional
 
 from app import database
 
-from pydantic import BaseModel
 from pytest import Session
 
 from app import database
@@ -22,14 +21,21 @@ router = APIRouter(
     tags=["Contracts"]
 )
 
-DATA_FILE = Path("static/contracts/data.json")
+UPLOAD_DIR = "static/contracts"
+
 STATIC_DIR = os.path.join(os.getcwd(), "static")
 CONTRACT_DIR = os.path.join(STATIC_DIR, "contracts")
 os.makedirs(CONTRACT_DIR, exist_ok=True)
 
-def load_data():
-    with open(DATA_FILE, "r") as f:
-        return json.load(f)
+def load_data(path):
+    if not os.path.exists(path):
+        raise HTTPException(status_code=400, detail=f"❌ The file at '{path}' does not exist.")
+
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except json.JSONDecodeError as e:
+        raise HTTPException(status_code=400, detail=f"Invalid JSON in file: {path}")
 
 @router.get("/{mls}")
 def get_contract_by_mls(
@@ -39,18 +45,21 @@ def get_contract_by_mls(
     if not current_user.roles.broker and not current_user.roles.realtor:
         raise HTTPException(status_code=404, detail="Not authorized")
     
-    data = load_data()
-    result = list(filter(lambda p: p["mls"] == mls, data))
+    folder_dir = os.path.join(UPLOAD_DIR, f"{mls}.json")
+
+    result = load_data(folder_dir)
+
     if not result:
-        raise HTTPException(status_code=404, detail="Contract not found")
-    return result[0]
+        raise HTTPException(status_code=404, detail="Contract is empty.")
+    
+    return result
 
 @router.post("/sign/{mls}/{receiver_id}", status_code=status.HTTP_201_CREATED)
 async def create_signed_contract(
     mls: str,
     receiver_id: int,
     contract_json: str = Form(...),
-    pdf_file: UploadFile = File(...),
+    pdf_file: Optional[UploadFile] = File(None),
     current_user: User = Depends(get_current_user)
 ):
     contract_data = json.loads(contract_json)
@@ -94,4 +103,6 @@ def close_contract(
     # Commit the transaction
     db.commit()
 
-    return "Contract closed successfully"
+    return {
+        "message": "Contract closed successfully"
+    }
