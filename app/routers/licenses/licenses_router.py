@@ -1,4 +1,6 @@
 from typing import Optional
+import random
+import json
 from fastapi import Depends, HTTPException, APIRouter, status, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import text
@@ -8,6 +10,8 @@ from app import database
 from ...dependencies import get_current_user
 from ...models.user_model import User
 from ...utils.file_helper import load_sql
+from ...utils.enums import LicenseStatus, LicenseType
+from ...utils.random_generator import generate_unique_license_num
 
 from ...routers.licenses.licenses_create import LicenseCreate
 from ...routers.licenses.licenses_out import LicenseOut
@@ -35,12 +39,20 @@ def create_license(
     elif "broker" in user_result and user_result["broker"] == False:
         raise HTTPException(status_code=400, detail="User should be broker!")
     
+    sql = load_sql("agency/get_agency_by_id.sql")
+    agency_result = db.execute(text(sql), {"agency_id": license.agency_id}).mappings().first()
+    if not agency_result or license.agency_id == 0:
+        raise HTTPException(status_code=400, detail="No agency exist!")
+    
     existing_sql = load_sql("license/get_license_by_user.sql")  # make SQL that checks by user_id
     existing_license = db.execute(text(existing_sql), {"user_id": license.user_id}).mappings().first()
     if existing_license:
         raise HTTPException(status_code=400, detail="User already has a license")
     
     license_data = license.model_dump()
+
+    lic_num = generate_unique_license_num(db)
+    license_data["lic_num"] = lic_num
 
     license_sql = load_sql("license/create_license.sql")
     license_result = db.execute(text(license_sql), license_data)
@@ -68,7 +80,7 @@ def create_license(
 @router.put("/{license_id}", status_code=status.HTTP_200_OK)
 def update_license(
     license_id: int,
-    license_in: LicenseUpdate = Depends(LicenseUpdate.as_form),
+    license_in: LicenseUpdate,
     db: Session = Depends(database.get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -85,8 +97,26 @@ def update_license(
     if not license_db:
         raise HTTPException(status_code=404, detail="License not found")
 
+    if license_in.user_id or license_in.user_id == 0:
+        sql = load_sql("user/get_user_by_id.sql")
+        user_result = db.execute(text(sql), {"user_id": license_in.user_id}).mappings().first()
+        if not user_result:
+            raise HTTPException(status_code=400, detail="No user exist!")
+        elif "broker" in user_result and user_result["broker"] == False:
+            raise HTTPException(status_code=400, detail="User should be broker!")
+    
+    if license_in.agency_id or license_in.agency_id == 0:
+        sql = load_sql("agency/get_agency_by_id.sql")
+        agency_result = db.execute(text(sql), {"agency_id": license_in.agency_id}).mappings().first()
+        if not agency_result:
+            raise HTTPException(status_code=400, detail="No agency exist!")
+    
     # Only update fields provided in form
     update_data = {k: v for k, v in license_in.model_dump().items() if v is not None}
+    if "lic_status" in update_data:
+        update_data["lic_status"] = json.dumps(update_data["lic_status"])
+    if "lic_type" in update_data:
+        update_data["lic_type"] = json.dumps(update_data["lic_type"])
     if not update_data:
         raise HTTPException(status_code=400, detail="No data provided to update")
     update_data["license_id"] = license_id
@@ -112,7 +142,7 @@ def update_license(
     return {"message": "License updated successfully", "license": license}
 
 @router.get("/me", response_model=LicenseOut, status_code=status.HTTP_200_OK)
-def get_license_by_id(
+def get_user_license(
     db: Session = Depends(database.get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -147,8 +177,8 @@ def get_all_licenses(
     sort_by: str = Query("license_id", regex="^(license_id|lic_num|lic_status|lic_type|user_id|agency_id)$"),
     sort_order: str = Query("asc", regex="^(asc|desc)$"),
 
-    lic_status: Optional[str] = Query(None),
-    lic_type: Optional[str] = Query(None),
+    lic_status: Optional[LicenseStatus] = Query(None),
+    lic_type: Optional[LicenseType] = Query(None),
     agency_id: Optional[int] = Query(None),
     filter_user_id: Optional[int] = Query(None),
 

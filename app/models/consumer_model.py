@@ -1,12 +1,13 @@
 from __future__ import annotations
 
-from sqlalchemy import Integer, String, ForeignKey, TIMESTAMP
+from sqlalchemy import BigInteger, String, ForeignKey, TIMESTAMP
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
 from app.database import Base
 from typing import Optional
 from datetime import datetime
 from sqlalchemy import Date
+from app.models.property_model import property_owners
 
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
@@ -23,7 +24,7 @@ class Consumer(Base):
     place_birth: Mapped[str] = mapped_column(String, nullable=False)
     date_birth: Mapped[datetime.date] = mapped_column(Date, nullable=False)
     registry: Mapped[str] = mapped_column(String, nullable=False)
-    national_number: Mapped[int] = mapped_column(Integer)
+    national_number: Mapped[int] = mapped_column(BigInteger)
     
     email: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
     phone_number: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
@@ -46,3 +47,4 @@ class Consumer(Base):
     rents: Mapped[list["Rent"]] = relationship("Rent", foreign_keys="Rent.buyer_id", back_populates="buyer")   # كمستأجر
     leases: Mapped[list["Rent"]] = relationship("Rent", foreign_keys="Rent.seller_id", back_populates="seller") # كمالك
 
+    owned_properties = relationship("Property", secondary=property_owners, back_populates="sellers")

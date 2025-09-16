@@ -1,5 +1,4 @@
 INSERT INTO PROPERTIES (
-    owner_id,
     created_by,
     description,
     show_inst,
@@ -14,14 +13,15 @@ INSERT INTO PROPERTIES (
     latitude,
     longitude,
     status,
+    trans_type,
     exp_date,
     created_at,
     last_updated ,
     images_urls,
-    mls_num
+    mls_num,
+    livable
 )
 VALUES(
-    :owner_id,
     :created_by,
     :description,
     :show_inst,
@@ -36,10 +36,12 @@ VALUES(
     :latitude,
     :longitude,
     :status,
+    :trans_type,
     :exp_date,
     :created_at,
     :last_updated ,
     :images_urls,
-    :mls_num
+    :mls_num,
+    :livable
 )
 RETURNING property_id;

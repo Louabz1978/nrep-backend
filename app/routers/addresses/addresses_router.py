@@ -43,6 +43,11 @@ def create_user_address(
     else:
         raise HTTPException(status_code=403, detail="Not authorized")
     
+    get_address_sql = load_sql("address/get_address_by_created_by.sql")
+    check_address = db.execute(text(get_address_sql), {"user_id": current_user.user_id}).mappings().first()
+    if check_address :
+        raise HTTPException(status_code=400,detail="User already have an address")
+    
     address_data = address.model_dump()
     address_data["created_by"] = current_user.user_id
     address_data["created_at"] = datetime.now(timezone.utc)

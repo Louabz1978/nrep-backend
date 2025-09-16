@@ -203,6 +203,8 @@ def update_agency(
         agency.email = agency_data.email
     if agency_data.phone_number is not None:
         agency.phone_number = agency_data.phone_number
+    if agency_data.broker_id is not None:
+        agency.broker_id = agency_data.broker_id
 
     # 3) update or create the address if provided
     if agency_data.address:
