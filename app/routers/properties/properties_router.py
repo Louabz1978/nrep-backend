@@ -3,7 +3,6 @@ from datetime import datetime, timezone
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 from typing import List, Optional
-import random
 import json
 
 from app import database

@@ -1,8 +1,9 @@
 from ..routers.users.user_out import UserOut
+from typing import Optional
 
 from ..routers.agencies.agency_out import AgencyOut
 
-def build_user_out(row: dict, prefix: str) -> UserOut | None:
+def build_user_out(row: dict, prefix: str) -> Optional[UserOut]:
     if not row.get(f"{prefix}first_name"):
         return None
     roles = []
