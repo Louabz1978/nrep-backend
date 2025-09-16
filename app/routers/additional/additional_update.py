@@ -3,7 +3,7 @@ from pydantic import BaseModel, Field
 from typing import Optional
 
 class AdditionalUpdate(BaseModel):
-    elevator: Optional[ bool| None ] = None
+    elevator: Optional[ bool ] = None
     balcony: Optional[ int ]  = Field(None, ge=0, lt=51)
     ac: Optional[ bool ] = None
     fan_number: Optional[ int ]  = Field(None, ge=0, lt=101)

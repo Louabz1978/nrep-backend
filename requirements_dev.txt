@@ -33,3 +33,4 @@ pytest
 httpx
 sqlalchemy-utils
 python-dateutil
+alembic
