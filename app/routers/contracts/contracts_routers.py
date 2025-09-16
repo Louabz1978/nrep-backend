@@ -50,20 +50,13 @@ async def create_signed_contract(
     if not current_user.roles.admin and not current_user.roles.broker and not current_user.roles.realtor:
         raise HTTPException(status_code=403, detail="Not authorized")
 
-    # File path: static/contracts/{mls}.txt
-    file_path = os.path.join(CONTRACT_DIR, f"{mls}.txt")
+    # File path: static/contracts/{mls}.json
+    file_path = os.path.join(CONTRACT_DIR, f"{mls}.json")
 
     # Save contract JSON to file
     with open(file_path, "w", encoding="utf-8") as f:
         json.dump(contract_data, f, ensure_ascii=False, indent=4)
 
-    # Public URL for static serving
-    file_url = f"/static/contracts/{mls}.txt"
-
     return {
-        "message": "Contract saved successfully",
-        "mls": mls,
-        "receiver_id": receiver_id,
-        "file_url": file_url,
-        "email": contract_data.get("email")
+        "message": "Contract saved successfully"
     }
