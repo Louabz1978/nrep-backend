@@ -14,8 +14,6 @@ from .county_create import CountyCreate
 from .county_out import CountyOut
 from .county_update import CountyUpdate
 
-from ..areas.area_out import AreaOut
-
 router = APIRouter(
     prefix="/counties",
     tags=["Counties"]
@@ -150,7 +148,6 @@ def get_all_counties(
             )
 
     return list(counties_dict.values())
-
 
 @router.delete("/{county_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_county(

@@ -63,7 +63,7 @@ def create_area(
         "area": area_details  
     }
 
-@router.put("/areas/{area_id}", status_code=status.HTTP_200_OK)
+@router.put("/{area_id}", status_code=status.HTTP_200_OK)
 def update_area_by_id(
     area_id: int,
     area_data: AreaUpdate,
@@ -148,7 +148,7 @@ def get_area_by_id(
 
     return {"area": AreaOut(**row)}
 
-@router.get("/areas", response_model=List[AreaOut], status_code=status.HTTP_200_OK)
+@router.get("/", response_model=List[AreaOut], status_code=status.HTTP_200_OK)
 def get_all_areas(
     db: Session = Depends(database.get_db),
     current_user = Depends(get_current_user)
@@ -162,6 +162,21 @@ def get_all_areas(
 
     return [AreaOut(**row) for row in rows]
 
+@router.get("/city/{city_id:int}", response_model=List[AreaOut], status_code=status.HTTP_200_OK)
+def get_areas_by_city_id(
+    city_id: int,
+
+    db: Session = Depends(database.get_db),
+    current_user = Depends(get_current_user)
+):
+    # Role check
+    if not current_user.roles.admin and not current_user.roles.broker and not current_user.roles.realtor:
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    sql = load_sql("area/get_areas_by_city_id.sql")
+    areas_dict = db.execute(text(sql), {"city_id": city_id}).mappings().all()
+
+    return [AreaOut(**row) for row in areas_dict]
 
 @router.delete("/{area_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_area(

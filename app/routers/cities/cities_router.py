@@ -14,12 +14,6 @@ from .city_create import CityCreate
 from .city_out import CityOut
 from .city_update import CityUpdate
 
-from ..counties.county_create import CountyCreate
-from ..counties.county_out import CountyOut
-
-from ..areas.area_create import AreaCreate
-from ..areas.area_out import AreaOut
-
 router = APIRouter(
     prefix="/cities",
     tags=["Cities"]
@@ -93,8 +87,8 @@ def update_city_by_id(
 
     #county check
     if "county_id" in update_data:
-        sql = load_sql("county/get_county_by_id.sql")
-        county_exists = db.execute(text(sql), {"county_id":update_data["county_id"]})
+        sql_county = load_sql("county/get_county_by_id.sql")
+        county_exists = db.execute(text(sql_county), {"county_id":update_data["county_id"]})
         if not county_exists:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="County not exist")
         
@@ -156,6 +150,33 @@ def get_all_cities(
     rows = db.execute(text(sql)).mappings().all()
 
     # ✅ Restructure into nested format
+    cities_dict = {}
+    for row in rows:
+        city_id = row["city_id"]
+        if city_id not in cities_dict:
+            cities_dict[city_id] = CityOut(
+                city_id=city_id,
+                title=row["city_title"],
+                created_at=row["city_created_at"],
+                updated_at=row["city_updated_at"],
+                created_by=row["city_created_by"],
+                updated_by=row["city_updated_by"],
+            )
+
+    return list(cities_dict.values())
+
+@router.get("/county/{county_id:int}", status_code=status.HTTP_200_OK)
+def get_cities_by_county_id(
+    county_id: int,
+    db: Session = Depends(database.get_db),
+    current_user: User = Depends(get_current_user),
+):
+    if not current_user.roles.admin and not current_user.roles.broker and not current_user.roles.realtor:
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    sql = load_sql("city/get_cities_by_county_id.sql")
+    rows = db.execute(text(sql), {"county_id": county_id}).mappings().all()
+
     cities_dict = {}
     for row in rows:
         city_id = row["city_id"]
