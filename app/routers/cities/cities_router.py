@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from sqlalchemy import text
-from typing import List, Optional
+from typing import List
 
 from app import database
 
@@ -38,14 +38,22 @@ def create_city(
     if "admin" not in current_user_roles:
         raise HTTPException(status_code=403, detail="Not authorized")
 
+    #check city
     sql = load_sql("city/get_city_by_title.sql")
     exist_city = db.execute(text(sql), {"title": city.title}).scalar()
     
     if exist_city:
         raise HTTPException(status_code=400, detail="City already exists!")
+    
+    #check county
+    sql = load_sql("county/get_county_by_id.sql")
+    exist_county = db.execute(text(sql), {"county_id": city.county}).mappings().first()
+    if not exist_county:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="County not exist")
 
     params = {
         "title": city.title,
+        "county_id": city.county,
         "created_by": current_user.user_id
     }
 
@@ -56,7 +64,7 @@ def create_city(
     sql = load_sql("city/get_city_by_id.sql")
     created_city = db.execute(text(sql), {"city_id": new_city}).mappings().first()
 
-    city_details = CityOut(**created_city, counties=None)
+    city_details = CityOut(**created_city)
 
     return {
         "message": "City created successfully",
@@ -83,6 +91,13 @@ def update_city_by_id(
     if not update_data:
         return {"message": "No changes provided", "city": CityOut(**city_row)}
 
+    #county check
+    if "county_id" in update_data:
+        sql = load_sql("county/get_county_by_id.sql")
+        county_exists = db.execute(text(sql), {"county_id":update_data["county_id"]})
+        if not county_exists:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="County not exist")
+        
     # Build SET clause dynamically
     set_clause = ", ".join([f"{field} = :{field}" for field in update_data.keys()])
 
@@ -124,39 +139,7 @@ def get_city_by_id(
         created_by=first["created_by"],
         updated_at=first["updated_at"],
         updated_by=first["updated_by"],
-        counties=[]
     )
-    counties_map = {}
-
-    for row in rows:
-        if row["county_id"] is not None:
-            if row["county_id"] not in counties_map:
-                county = CountyOut(
-                    county_id=row["county_id"],
-                    title=row["county_title"],
-                    city_id=city.city_id,
-                    created_at=row["county_created_at"],
-                    created_by=row["county_created_by"],
-                    updated_at=row["county_updated_at"],
-                    updated_by=row["county_updated_by"],
-                    areas=[]
-                )
-                counties_map[row["county_id"]] = county
-                city.counties.append(county)
-
-            # Add areas under the right county
-            if row["area_id"] is not None:
-                counties_map[row["county_id"]].areas.append(
-                    AreaOut(
-                        area_id=row["area_id"],
-                        title=row["area_title"],
-                        county_id=row["county_id"],
-                        created_at=row["area_created_at"],
-                        created_by=row["area_created_by"],
-                        updated_at=row["area_updated_at"],
-                        updated_by=row["area_updated_by"]
-                    )
-                )
 
     return {"city": city}
 
@@ -184,35 +167,7 @@ def get_all_cities(
                 updated_at=row["city_updated_at"],
                 created_by=row["city_created_by"],
                 updated_by=row["city_updated_by"],
-                counties=[]
             )
-
-        if row["county_id"]:
-            counties = cities_dict[city_id].counties
-            county = next((c for c in counties if c.county_id == row["county_id"]), None)
-            if not county:
-                county = CountyOut(
-                    county_id=row["county_id"],
-                    title=row["county_title"],
-                    created_at=row["county_created_at"],
-                    updated_at=row["county_updated_at"],
-                    created_by=row["county_created_by"],
-                    updated_by=row["county_updated_by"],
-                    areas=[]
-                )
-                counties.append(county)
-
-            if row["area_id"]:
-                county.areas.append(
-                    AreaOut(
-                        area_id=row["area_id"],
-                        title=row["area_title"],
-                        created_at=row["area_created_at"],
-                        updated_at=row["area_updated_at"],
-                        created_by=row["area_created_by"],
-                        updated_by=row["area_updated_by"]
-                    )
-                )
 
     return list(cities_dict.values())
 

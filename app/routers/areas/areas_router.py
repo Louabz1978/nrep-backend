@@ -32,15 +32,20 @@ def create_area(
     if "admin" not in current_user_roles:
         raise HTTPException(status_code=403, detail="Not authorized")
     
-    sql = load_sql("county/get_county_by_id.sql")
-    exist_county = db.execute(text(sql), {"county_id": area.county}).mappings().first()
+    sql = load_sql("area/get_area_by_title.sql")
+    exist_area = db.execute(text(sql), {"title": area.title}).mappings().first()
+    if exist_area:
+        raise HTTPException(status_code=400, detail="Area already exists!")
+    
+    sql = load_sql("city/get_city_by_id.sql")
+    exist_city = db.execute(text(sql), {"city_id": area.city}).mappings().first()
 
-    if not exist_county:
-        raise HTTPException(status_code=400, detail="County is not exist!")
+    if not exist_city:
+        raise HTTPException(status_code=400, detail="City not exist!")
 
     params = {
         "title": area.title,
-        "county_id": area.county,
+        "city_id": area.city,
         "created_by": current_user.user_id
     }
 
@@ -85,17 +90,17 @@ def update_area_by_id(
     if not update_data:
         return {"message": "No changes provided", "area": AreaOut(**area_row)}
 
-    # ✅ Validate county_id if provided
-    if "county_id" in update_data:
-        county_check = db.execute(
-            text("SELECT county_id FROM counties WHERE county_id = :county_id"),
-            {"county_id": update_data["county_id"]}
+    # ✅ Validate city_id if provided
+    if "city_id" in update_data:
+        city_check = db.execute(
+            text("SELECT city_id FROM cities WHERE city_id = :city_id"),
+            {"city_id": update_data["city_id"]}
         ).first()
 
-        if not county_check:
+        if not city_check:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"County with id {update_data['county_id']} does not exist"
+                detail=f"City with id {update_data['city_id']} does not exist"
             )
     
     # 3. Prepare update data
