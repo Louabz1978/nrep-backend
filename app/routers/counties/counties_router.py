@@ -14,8 +14,6 @@ from .county_create import CountyCreate
 from .county_out import CountyOut
 from .county_update import CountyUpdate
 
-from ..areas.area_out import AreaOut
-
 router = APIRouter(
     prefix="/counties",
     tags=["Counties"]
@@ -33,16 +31,15 @@ def create_county(
 
     if "admin" not in current_user_roles:
         raise HTTPException(status_code=403, detail="Not authorized")
-
-    sql = load_sql("city/get_city_by_id.sql")
-    exist_city = db.execute(text(sql), {"city_id": county.city}).mappings().first()
-
-    if not exist_city:
-        raise HTTPException(status_code=400, detail="City is not exist!")
+    
+    #check county
+    sql = load_sql("county/get_county_by_title.sql")
+    exist_county = db.execute(text(sql), {"title":county.title}).mappings().first()
+    if exist_county:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="County already exists")
 
     params = {
         "title": county.title,
-        "city_id": county.city,
         "created_by": current_user.user_id
     }
 
@@ -53,7 +50,7 @@ def create_county(
     sql = load_sql("county/get_county_by_id.sql")
     created_county = db.execute(text(sql), {"county_id": new_county}).mappings().first()
 
-    county_details = CountyOut(**created_county, areas=None)
+    county_details = CountyOut(**created_county)
 
     return {
         "message": "County created successfully",
@@ -79,18 +76,6 @@ def update_county_by_id(
     update_data = county_data.model_dump(exclude_unset=True)
     if not update_data:
         return {"message": "No changes provided", "county": CountyOut(**county_row)}
-
-    if "city_id" in update_data:
-        city_check = db.execute(
-            text("SELECT city_id FROM cities WHERE city_id = :city_id"),
-            {"city_id": update_data["city_id"]}
-        ).first()
-
-        if not city_check:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"City with id {update_data['city_id']} does not exist"
-            )
 
     # Build SET clause dynamically
     set_clause = ", ".join([f"{field} = :{field}" for field in update_data.keys()])
@@ -129,27 +114,11 @@ def get_county_by_id(
     county = CountyOut(
         county_id=first["county_id"],
         title=first["title"],
-        city_id=first["city_id"],
         created_at=first["created_at"],
         created_by=first["created_by"],
         updated_at=first["updated_at"],
         updated_by=first["updated_by"],
-        areas=[]
     )
-
-    for row in rows:
-        if row["area_id"] is not None:
-            county.areas.append(
-                AreaOut(
-                    area_id=row["area_id"],
-                    title=row["area_title"],
-                    county_id=county.county_id,
-                    created_at=row["area_created_at"],
-                    created_by=row["area_created_by"],
-                    updated_at=row["area_updated_at"],
-                    updated_by=row["area_updated_by"]
-                )
-            )
 
     return {"county": county}
 
@@ -176,23 +145,9 @@ def get_all_counties(
                 updated_at=row["county_updated_at"],
                 created_by=row["county_created_by"],
                 updated_by=row["county_updated_by"],
-                areas=[]
-            )
-
-        if row["area_id"]:
-            counties_dict[county_id].areas.append(
-                AreaOut(
-                    area_id=row["area_id"],
-                    title=row["area_title"],
-                    created_at=row["area_created_at"],
-                    updated_at=row["area_updated_at"],
-                    created_by=row["area_created_by"],
-                    updated_by=row["area_updated_by"]
-                )
             )
 
     return list(counties_dict.values())
-
 
 @router.delete("/{county_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_county(

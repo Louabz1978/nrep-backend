@@ -8,6 +8,7 @@ from typing import List, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from app.models.county_model import County
+    from app.models.area_model import Area
 
 class City(Base):
     __tablename__ = "cities"
@@ -21,7 +22,11 @@ class City(Base):
     updated_at: Mapped[datetime] = mapped_column(TIMESTAMP, nullable=True)
     updated_by : Mapped[int] = mapped_column(Integer, nullable=True)
 
+    # ForeignKey
+    county_id: Mapped[int] = mapped_column(ForeignKey("counties.county_id", ondelete="CASCADE"))
+
     # Relationships
-    counties: Mapped[List["County"]] = relationship(
-        "County", back_populates="city", cascade="all, delete-orphan"
+    county: Mapped["County"] = relationship("County", back_populates="cities")
+    areas: Mapped[List["Area"]] = relationship(
+        "Area", back_populates="city", cascade="all, delete-orphan"
     )

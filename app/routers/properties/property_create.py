@@ -1,12 +1,12 @@
-from pydantic import BaseModel, model_validator
-from typing import Optional
+from pydantic import BaseModel, field_validator
+from typing import Optional, List
 from fastapi import Form
 from datetime import date
 
 from ...utils.enums import PropertyStatus, PropertyTypes, PropertyTransactionType
 
 class PropertyCreate(BaseModel):
-    owner_id: int
+    sellers: List[int]
     description: str
     show_inst: str
     price: int
@@ -22,11 +22,19 @@ class PropertyCreate(BaseModel):
     status: PropertyStatus
     trans_type: PropertyTransactionType
     exp_date: date
+    livable: Optional[bool]
 
+    @field_validator("sellers", mode="before")
+    @classmethod
+    def parse_sellers(cls, value):
+        if isinstance(value, str):
+            return [int(v) for v in value.split(",") if v.strip()]
+        return value
+    
     @classmethod
     def as_form(
         cls,
-        owner_id: int = Form(...),
+        sellers: str = Form(...),
         description: str = Form(...),
         show_inst: str = Form(...),
         price: int = Form(...),
@@ -41,10 +49,11 @@ class PropertyCreate(BaseModel):
         longitude: float = Form(...),
         status: PropertyStatus = Form(...),
         trans_type: PropertyTransactionType = Form(...),
-        exp_date: date = Form(...)
+        exp_date: date = Form(...),
+        livable: Optional[bool] = Form(None)
     ):
         return cls(
-            owner_id = owner_id,
+            sellers = sellers,
             description = description,
             show_inst = show_inst,
             price = price,
@@ -59,7 +68,8 @@ class PropertyCreate(BaseModel):
             longitude = longitude,
             status = status,
             trans_type = trans_type,
-            exp_date = exp_date
+            exp_date = exp_date, 
+            livable = livable
         )
     
     # @model_validator(mode='before')

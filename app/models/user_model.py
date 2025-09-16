@@ -12,6 +12,8 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from app.models.role_model import Role
     from app.models.addresses_model import Address
+    from app.models.sales_model import Sale
+    from app.models.rents_model import Rent
 
 class User(Base):
     __tablename__ = "users"
@@ -53,6 +55,17 @@ class User(Base):
     )
 
     property_created = relationship("Property", back_populates="created_by_user", foreign_keys="[Property.created_by]")
-    property = relationship("Property", back_populates="owner", foreign_keys="[Property.owner_id]")
 
     consumer_created = relationship("Consumer", back_populates="created_by_user", foreign_keys="[Consumer.created_by]")
+
+    closed_sales: Mapped[list["Sale"]] = relationship(
+    "Sale",
+    back_populates="closed_by",
+    foreign_keys="Sale.closed_by_id"
+)
+    closed_rents: Mapped[list["Rent"]] = relationship(
+    "Rent",
+    back_populates="closed_by",
+    foreign_keys="Rent.closed_by_id"
+)
+

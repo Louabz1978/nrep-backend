@@ -7,7 +7,12 @@ from app.database import Base
 from typing import Optional
 from datetime import datetime
 from sqlalchemy import Date
+from app.models.property_model import property_owners
 
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from app.models.sales_model import Sale
+    from app.models.rents_model import Rent
 class Consumer(Base):
     __tablename__ = "consumers"
 
@@ -33,3 +38,13 @@ class Consumer(Base):
 
     # Relationships
     created_by_user = relationship("User", back_populates="consumer_created", foreign_keys=[created_by])
+
+    #Sales
+    purchases: Mapped[list["Sale"]] = relationship("Sale", foreign_keys="Sale.buyer_id", back_populates="buyer")
+    sales: Mapped[list["Sale"]] = relationship("Sale", foreign_keys="Sale.seller_id", back_populates="seller")
+
+    #Rents
+    rents: Mapped[list["Rent"]] = relationship("Rent", foreign_keys="Rent.buyer_id", back_populates="buyer")   # كمستأجر
+    leases: Mapped[list["Rent"]] = relationship("Rent", foreign_keys="Rent.seller_id", back_populates="seller") # كمالك
+
+    owned_properties = relationship("Property", secondary=property_owners, back_populates="sellers")

@@ -1,4 +1,6 @@
 from typing import Optional
+import random
+import json
 from fastapi import Depends, HTTPException, APIRouter, status, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import text
@@ -78,7 +80,7 @@ def create_license(
 @router.put("/{license_id}", status_code=status.HTTP_200_OK)
 def update_license(
     license_id: int,
-    license_in: LicenseUpdate = Depends(LicenseUpdate.as_form),
+    license_in: LicenseUpdate,
     db: Session = Depends(database.get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -111,6 +113,10 @@ def update_license(
     
     # Only update fields provided in form
     update_data = {k: v for k, v in license_in.model_dump().items() if v is not None}
+    if "lic_status" in update_data:
+        update_data["lic_status"] = json.dumps(update_data["lic_status"])
+    if "lic_type" in update_data:
+        update_data["lic_type"] = json.dumps(update_data["lic_type"])
     if not update_data:
         raise HTTPException(status_code=400, detail="No data provided to update")
     update_data["license_id"] = license_id
