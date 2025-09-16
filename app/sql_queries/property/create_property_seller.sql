@@ -1,0 +1,1 @@
+INSERT INTO property_owners (property_id, seller_id) VALUES (:property_id, :seller_id);

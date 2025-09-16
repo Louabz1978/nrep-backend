@@ -59,10 +59,15 @@ async def create_property(
     else:
         raise HTTPException(status_code=403, detail="Not authorized")
 
-    sql = load_sql("consumer/get_consumer_by_id.sql")
-    owner_result = db.execute(text(sql), {"consumer_id": property.owner_id}).mappings().first()
-    if not owner_result :
-        raise HTTPException(status_code=400, detail="invalid owner_id")
+    consumer_sql = load_sql("consumer/get_consumer_by_id.sql")
+    sellers = []
+    for seller in property.sellers:
+        seller_result = db.execute(text(consumer_sql), {"consumer_id": seller}).mappings().first()
+        if not seller_result:
+            raise HTTPException(status_code=400, detail="invalid seller")
+        seller_data = dict(seller_result)
+        sellers.append(ConsumerOut(**seller_data))
+        
 
     mls_num = generate_unique_mls_num(db)
     base_url = str(request.base_url)
@@ -75,10 +80,16 @@ async def create_property(
     db_property["last_updated"] = datetime.now(timezone.utc)
     db_property["images_urls"] = json.dumps(saved_files)
     db_property["mls_num"] = mls_num
+    db_property.pop("sellers", None)
 
     property_sql = load_sql("property/create_property.sql")
     property_result = db.execute(text(property_sql), db_property)
     new_property_id = property_result.scalar()
+
+    #create sellers relationship
+    property_sellers_sql = load_sql("property/create_property_seller.sql")
+    for seller in property.sellers:
+        db.execute(text(property_sellers_sql), {"property_id": new_property_id, "seller_id":seller})
 
     # Create property address
     address_data = address.model_dump()
@@ -100,6 +111,7 @@ async def create_property(
 
     db.commit()
     
+
     sql = load_sql("property/get_property_by_id.sql")
     created_property = db.execute(text(sql), {"property_id": new_property_id}).mappings().first()
 
@@ -117,15 +129,9 @@ async def create_property(
     }
     address_obj = AddressOut(**address_dict) if address_dict else None
     
-    consumer_sql = load_sql("consumer/get_consumer_by_id.sql")
     user_sql = load_sql("user/get_user_by_id.sql")
     role_sql = load_sql("role/get_user_roles.sql")
     additional_sql = load_sql("additional/get_additional_by_id.sql")
-
-    owner_id = property.owner_id
-    owner_result = db.execute(text(consumer_sql), {"consumer_id": owner_id}).mappings().first()
-    owner_data = dict(owner_result)
-    owner_obj = ConsumerOut(**owner_data)
 
     created_by_id = current_user.user_id
     created_by_result = db.execute(text(user_sql), {"user_id": created_by_id}).mappings().first()
@@ -144,7 +150,7 @@ async def create_property(
 
     property_out_data = dict(created_property)
     property_out_data["address"] = address_obj
-    property_out_data["owner"] = owner_obj
+    property_out_data["sellers"] = sellers
     property_out_data["created_by_user"] = created_by_obj
 
     created_additional = db.execute(text(additional_sql), {"property_id": new_property_id}).mappings().first()
@@ -199,6 +205,8 @@ def get_all_properties(
     sql = sql.format(sort_by=sort_by, sort_order=sort_order)
     result = db.execute(text(sql), params)
 
+    sellers_sql = load_sql("property/get_property_sellers.sql")
+
     properties = []
     for row in result.mappings():
         created_by_roles = [
@@ -216,23 +224,11 @@ def get_all_properties(
             created_by=row["created_by_created_by"], 
             created_at=row["created_by_created_at"] 
         )
-
-        owner = ConsumerOut(
-            consumer_id=row["owner_consumer_id"],
-            name=row["owner_name"],
-            father_name=row["owner_father_name"],
-            surname=row["owner_surname"],
-            mother_name_surname=row["owner_mother_name_surname"],
-            place_birth=row["owner_place_birth"],
-            date_birth=row["owner_date_birth"],
-            registry=row["owner_registry"],
-            national_number=row["owner_national_number"],
-            email=row["owner_email"],
-            phone_number=row["owner_phone_number"],
-            created_by=row["owner_created_by"],
-            created_at=row["owner_created_at"],
-            created_by_type=row["owner_created_by_type"]
-        )
+        sellers = []
+        sellers_result = db.execute(text(sellers_sql), {"property_id": row["property_id"]})
+        for seller in sellers_result.mappings():
+            seller_data = dict(seller)
+            sellers.append(ConsumerOut(**seller_data))
             
         property = PropertyOut(
             property_id=row["property_id"],
@@ -255,9 +251,10 @@ def get_all_properties(
             last_updated=row["last_updated"],
             images_urls=row["images_urls"],
             mls_num=row["mls_num"],
+            livable=row["livable"],
             
             created_by_user=created_by,
-            owner=owner,
+            sellers=sellers,
             address= AddressOut (
                 address_id=row["address_id"],
                 floor=row["floor"],
@@ -326,6 +323,7 @@ def my_properties(
     sql = load_sql("property/get_my_property.sql")
     sql = sql.format(sort_by=sort_by, sort_order=sort_order)
     result = db.execute(text(sql), params)
+    sellers_sql = load_sql("property/get_property_sellers.sql")
 
     properties = []
     for row in result.mappings():
@@ -344,22 +342,12 @@ def my_properties(
             created_by=row["created_by_created_by"],
             created_at=row["created_by_created_at"]
         )
-        owner = ConsumerOut(
-            consumer_id=row["owner_consumer_id"],
-            name=row["owner_name"],
-            father_name=row["owner_father_name"],
-            surname=row["owner_surname"],
-            mother_name_surname=row["owner_mother_name_surname"],
-            place_birth=row["owner_place_birth"],
-            date_birth=row["owner_date_birth"],
-            registry=row["owner_registry"],
-            national_number=row["owner_national_number"],
-            email=row["owner_email"],
-            phone_number=row["owner_phone_number"],
-            created_by=row["owner_created_by"],
-            created_at=row["owner_created_at"],
-            created_by_type=row["owner_created_by_type"]
-        )
+        sellers = []
+        sellers_result = db.execute(text(sellers_sql), {"property_id": row["property_id"]})
+        for seller in sellers_result.mappings():
+            seller_data = dict(seller)
+            sellers.append(ConsumerOut(**seller_data))
+
         address = AddressOut(
             address_id=row["address_address_id"],
             floor=row["floor"],
@@ -395,7 +383,8 @@ def my_properties(
             last_updated=row["last_updated"],
             images_urls=row["images_urls"],
             mls_num=row["mls_num"],
-            owner=owner, 
+            livable=row["livable"],
+            sellers=sellers, 
             created_by_user=created_by,
             address=address,
             additional=additional
@@ -441,12 +430,16 @@ def get_property_by_id(
     }
     address_data = {k[len("address_"):]: v for k, v in row.items() if k.startswith("address_")}
 
-    consumer_sql = load_sql("consumer/get_consumer_by_id.sql")
-    owner = db.execute(text(consumer_sql), {"consumer_id": row.owner_consumer_id}).mappings().first()
+    sellers_sql = load_sql("property/get_property_sellers.sql")    
+    sellers = []
+    sellers_result = db.execute(text(sellers_sql), {"property_id": property_id})
+    for seller in sellers_result.mappings():
+        seller_data = dict(seller)
+        sellers.append(ConsumerOut(**seller_data))
     
     property = PropertyOut(
         **property_data,
-        owner=owner,
+        sellers=sellers,
         created_by_user=build_user_out(row, "created_by_"),
         address=AddressOut(**address_data) if address_data.get("address_id") else None,
         additional=AdditionalOut(**row)
@@ -484,12 +477,16 @@ def get_property_by_mls(
     }
     address_data = {k[len("address_"):]: v for k, v in row.items() if k.startswith("address_")}
 
-    consumer_sql = load_sql("consumer/get_consumer_by_id.sql")
-    owner = db.execute(text(consumer_sql), {"consumer_id": row.owner_consumer_id}).mappings().first()
+    sellers_sql = load_sql("property/get_property_sellers.sql")    
+    sellers = []
+    sellers_result = db.execute(text(sellers_sql), {"property_id": row["property_id"]})
+    for seller in sellers_result.mappings():
+        seller_data = dict(seller)
+        sellers.append(ConsumerOut(**seller_data))
     
     property = PropertyOut(
         **property_data,
-        owner=owner,
+        sellers=sellers,
         created_by_user=build_user_out(row, "created_by_"),
         address=AddressOut(**address_data) if address_data.get("address_id") else None,
         additional=AdditionalOut(**row)
@@ -527,14 +524,15 @@ def update_property_by_id(
         raise HTTPException(status_code=403, detail="Not authorized")
     
     # owner_id check
-    if property_data.owner_id or property_data.owner_id == 0:
+    if property_data.sellers:
         consumer_sql = load_sql("consumer/get_consumer_by_id.sql")
-        owner_result = db.execute(text(consumer_sql), {"consumer_id": property_data.owner_id}).mappings().first()
-        
-        if not owner_result:
-            raise HTTPException(status_code=404, detail="Owner not found")
-        
-        owner = ConsumerOut(**owner_result)
+        sellers = []
+        for seller in property_data.sellers:
+            seller_result = db.execute(text(consumer_sql), {"consumer_id": seller}).mappings().first()
+            if not seller_result:
+                raise HTTPException(status_code=400, detail="invalid seller")
+            seller_data = dict(seller_result)
+            sellers.append(ConsumerOut(**seller_data))
 
     base_url = str(request.base_url)
     saved_files = update_photos(property.mls_num, property['images_urls'], photos, property_data.preserve_images, base_url, main_photo)
@@ -570,6 +568,7 @@ def update_property_by_id(
         if v is not None
     }
     db_property["property_id"] = property_id
+    db_property.pop("sellers", None)
     if property_data.status != property["status"]:
         db_property["last_updated"] = datetime.now()
     if saved_files:
@@ -579,6 +578,19 @@ def update_property_by_id(
     
     sql = f"UPDATE PROPERTIES SET {set_clause} WHERE property_id= :property_id RETURNING property_id;"
     updated_property_id = db.execute(text(sql), db_property).scalar()
+
+    current_sellers = db.execute(text("SELECT seller_id FROM property_owners WHERE property_id= :property_id"),{"property_id": updated_property_id}).scalars().all()
+    to_add = set(property_data.sellers) - set(current_sellers)
+    to_remove = set(current_sellers) - set(property_data.sellers)
+    if to_remove:
+        db.execute(
+        text("DELETE FROM property_owners WHERE property_id = :property_id AND seller_id = ANY(:ids)"),
+        {"property_id": property_id, "ids": list(to_remove)}
+    )
+    property_seller_sql = load_sql("property/create_property_seller.sql")
+    for seller in to_add:
+        db.execute(text(property_seller_sql),{"property_id":property_id, "seller_id":seller})
+        
     db.commit()
 
     # Fetch property data
@@ -590,13 +602,10 @@ def update_property_by_id(
         if not any(k.startswith(prefix) for prefix in nested_prefixes)
     }
     address_data = {k[len("address_"):]: v for k, v in row.items() if k.startswith("address_")}
-
-    consumer_sql = load_sql("consumer/get_consumer_by_id.sql")
-    owner = db.execute(text(consumer_sql), {"consumer_id": row.owner_consumer_id}).mappings().first()
     
     property_details = PropertyOut(
         **property_data,
-        owner=owner,
+        sellers=sellers,
         created_by_user=build_user_out(row, "created_by_"),
         address=AddressOut(**address_data) if address_data.get("address_id") else None,
         additional=AdditionalOut(**row)

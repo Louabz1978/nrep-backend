@@ -53,6 +53,5 @@ class User(Base):
     )
 
     property_created = relationship("Property", back_populates="created_by_user", foreign_keys="[Property.created_by]")
-    property = relationship("Property", back_populates="owner", foreign_keys="[Property.owner_id]")
 
     consumer_created = relationship("Consumer", back_populates="created_by_user", foreign_keys="[Consumer.created_by]")

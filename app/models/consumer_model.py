@@ -7,6 +7,7 @@ from app.database import Base
 from typing import Optional
 from datetime import datetime
 from sqlalchemy import Date
+from app.models.property_model import property_owners
 
 class Consumer(Base):
     __tablename__ = "consumers"
@@ -33,3 +34,4 @@ class Consumer(Base):
 
     # Relationships
     created_by_user = relationship("User", back_populates="consumer_created", foreign_keys=[created_by])
+    owned_properties = relationship("Property", secondary=property_owners, back_populates="sellers")
