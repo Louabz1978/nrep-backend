@@ -1,9 +1,7 @@
 from pydantic import BaseModel
 
-from typing import Optional, List
+from typing import Optional
 from datetime import datetime
-
-from ..areas.area_out import AreaOut
 
 class CountyOut(BaseModel):
     county_id: int
@@ -14,8 +12,6 @@ class CountyOut(BaseModel):
 
     updated_by: Optional[int]
     updated_at: Optional[datetime]
-
-    areas: Optional[List[AreaOut]] = None
 
     model_config = {
         "from_attributes": True
