@@ -1,6 +1,6 @@
 import json
 import os
-from fastapi import APIRouter, Body, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Body, Depends, File, Form, HTTPException, Request, UploadFile, status
 from pathlib import Path
 
 from pydantic import BaseModel
@@ -44,9 +44,11 @@ def get_contract_by_mls(
 async def create_signed_contract(
     mls: str,
     receiver_id: int,
-    contract_data: dict = Body(...),
+    contract_json: str = Form(...),
+    pdf_file: UploadFile = File(...),
     current_user: User = Depends(get_current_user)
 ):
+    contract_data = json.loads(contract_json)
     if not current_user.roles.admin and not current_user.roles.broker and not current_user.roles.realtor:
         raise HTTPException(status_code=403, detail="Not authorized")
 
