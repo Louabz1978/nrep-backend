@@ -16,6 +16,7 @@ from app.routers.areas.areas_router import router as area_router
 from app.routers.contracts.contracts_routers import router as contract_routers
 
 from app.routers.market_watcher.market_watcher_route import router as market_watcher_route
+from app.routers.activities.activities import router as activities
 
 from app.database import engine, Base
 from fastapi.middleware.cors import CORSMiddleware
@@ -52,5 +53,6 @@ app.include_router(county_router)
 app.include_router(area_router)
 
 app.include_router(market_watcher_route)
+app.include_router(activities)
 
 app.include_router(contract_routers)
