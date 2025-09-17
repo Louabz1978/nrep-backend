@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from typing import List
 from sqlalchemy.orm import Session
 from sqlalchemy import text
@@ -13,6 +13,7 @@ from ...dependencies import get_current_user
 from .county_create import CountyCreate
 from .county_out import CountyOut
 from .county_update import CountyUpdate
+from .counties_pagination import PaginatedCounties
 
 from ..areas.area_out import AreaOut
 
@@ -153,17 +154,24 @@ def get_county_by_id(
 
     return {"county": county}
 
-@router.get("", response_model=List[CountyOut], status_code=status.HTTP_200_OK)
+@router.get("", response_model=PaginatedCounties, status_code=status.HTTP_200_OK)
 def get_all_counties(
+    page: int = Query(1, ge=1),
+    per_page: int = Query(10, ge=1),
     db: Session = Depends(database.get_db),
     current_user = Depends(get_current_user)
 ):
     # Role check
     if not current_user.roles.admin and not current_user.roles.broker and not current_user.roles.realtor:
         raise HTTPException(status_code=403, detail="Not authorized")
+    
+    total_sql = load_sql("county/count_all_counties.sql")
+    total = db.execute(text(total_sql)).scalar()
+    total_pages = (total + per_page - 1) // per_page
 
     sql = load_sql("county/get_all_counties.sql")
-    rows = db.execute(text(sql)).mappings().all()
+    rows = db.execute(text(sql),{  "limit": per_page,
+                                    "offset": (page - 1) * per_page}).mappings().all()
 
     counties_dict = {}
     for row in rows:
@@ -191,7 +199,18 @@ def get_all_counties(
                 )
             )
 
-    return list(counties_dict.values())
+    counties=list(counties_dict.values())
+    return {
+        "pagination": {
+            "total": total,
+            "page": page,
+            "per_page": per_page,
+            "total_pages": total_pages,
+            "has_next": page < total_pages,
+            "has_prev": page > 1
+        },
+        "data": counties
+    }
 
 
 @router.delete("/{county_id}", status_code=status.HTTP_204_NO_CONTENT)
