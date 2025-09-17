@@ -38,7 +38,7 @@ class ConsumerUpdate(BaseModel):
         StringConstraints(strip_whitespace=True, min_length=2, max_length=50),
         Field(None)
     ]
-    national_number: Optional[int] = None
+    national_number: Optional[str] = None
     email: Optional[EmailStr] = None
     phone_number: Annotated[
         Optional[str], 
@@ -56,7 +56,7 @@ class ConsumerUpdate(BaseModel):
         place_birth: Optional[str] = Form(None),
         date_birth: Optional[date] = Form(None),
         registry: Optional[str] = Form(None),
-        national_number: Optional[int] = Form(None),
+        national_number: Optional[str] = Form(None),
         email: Optional[EmailStr] = Form(None),
         phone_number: Optional[str] = Form(None),
     ):
@@ -92,7 +92,7 @@ class ConsumerUpdate(BaseModel):
         return v
 
     @field_validator("national_number")
-    def validate_national_number(cls, v: int) -> int:
+    def validate_national_number(cls, v: str) -> str:
         s=str(v)
         if len(s) != 11:
             raise ValueError("National number must be exactly 11 digits")

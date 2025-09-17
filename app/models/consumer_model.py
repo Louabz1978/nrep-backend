@@ -24,7 +24,7 @@ class Consumer(Base):
     place_birth: Mapped[str] = mapped_column(String, nullable=False)
     date_birth: Mapped[datetime.date] = mapped_column(Date, nullable=False)
     registry: Mapped[str] = mapped_column(String, nullable=False)
-    national_number: Mapped[int] = mapped_column(BigInteger)
+    national_number: Mapped[str] = mapped_column(String(11))
     
     email: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
     phone_number: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)

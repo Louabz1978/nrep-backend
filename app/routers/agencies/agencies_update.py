@@ -34,7 +34,7 @@ class AgencyUpdate(BaseModel):
         if not phone_number_pattern.match(v):
             raise ValueError("must be a valid phone number")
 
-        return int(v)
+        return v
     
     @model_validator(mode='before')
     def validate_broker(cls, values):
