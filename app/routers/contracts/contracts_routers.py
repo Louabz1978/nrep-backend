@@ -121,12 +121,12 @@ def close_contract(
 
     insert_data = {
         "property_id": property_result["property_id"],
-        "sold_price": contract_data.get("sold_price"),
-        "buyer_agent_commission": contract_data.get("buyer_agent_commission"),
-        "seller_agent_commission": contract_data.get("seller_agent_commission"),
+        "sold_price": contract_data.get("final_price"),
+        "buyer_agent_commission": contract_data.get("buyer_commission"),
+        "seller_agent_commission": contract_data.get("seller_commission"),
         "date": current_date,
-        "buyer_id": contract_data.get("buyer_id"),
-        "seller_id": contract_data.get("seller_id"),
+        "buyer_id": contract_data.get("buyer_agent_id"),
+        "seller_id": contract_data.get("sellers")[0].get("id"),
         "closed_by_id": current_user.user_id
     }
 
