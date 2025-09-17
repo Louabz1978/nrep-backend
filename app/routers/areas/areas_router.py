@@ -1,8 +1,7 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from typing import List
 from sqlalchemy.orm import Session
 from sqlalchemy import text
-
 from app import database
 
 from ...models.user_model import User
@@ -13,6 +12,9 @@ from ...dependencies import get_current_user
 from .area_create import AreaCreate
 from .area_out import AreaOut
 from .area_update import AreaUpdate
+
+from .area_pagination import PaginatedAreas
+
 
 router = APIRouter(
     prefix="/areas",
@@ -143,19 +145,39 @@ def get_area_by_id(
 
     return {"area": AreaOut(**row)}
 
-@router.get("/areas", response_model=List[AreaOut], status_code=status.HTTP_200_OK)
+@router.get("/areas", response_model=PaginatedAreas, status_code=status.HTTP_200_OK)
 def get_all_areas(
+    page: int = Query(1, ge=1),
+    per_page: int = Query(10, ge=1),
     db: Session = Depends(database.get_db),
     current_user = Depends(get_current_user)
 ):
     # Role check
     if not current_user.roles.admin and not current_user.roles.broker and not current_user.roles.realtor:
         raise HTTPException(status_code=403, detail="Not authorized")
+    
+    total_sql = load_sql("area/count_all_areas.sql")
+    total = db.execute(text(total_sql)).scalar()
+    total_pages = (total + per_page - 1) // per_page
+
 
     sql = load_sql("area/get_all_areas.sql")
-    rows = db.execute(text(sql)).mappings().all()
+    rows = db.execute(text(sql),{  "limit": per_page,
+                                    "offset": (page - 1) * per_page}).mappings().all()
+    areas=[AreaOut(**row) for row in rows]
 
-    return [AreaOut(**row) for row in rows]
+    return {
+        "pagination": {
+            "total": total,
+            "page": page,
+            "per_page": per_page,
+            "total_pages": total_pages,
+            "has_next": page < total_pages,
+            "has_prev": page > 1
+        },
+        "data": areas
+    }
+    
 
 
 @router.delete("/{area_id}", status_code=status.HTTP_204_NO_CONTENT)
