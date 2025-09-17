@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 from typing import List, Optional
@@ -13,12 +13,15 @@ from ...dependencies import get_current_user
 from .city_create import CityCreate
 from .city_out import CityOut
 from .city_update import CityUpdate
+from .city_pagination import PaginatedCities
 
 from ..counties.county_create import CountyCreate
 from ..counties.county_out import CountyOut
 
+
 from ..areas.area_create import AreaCreate
 from ..areas.area_out import AreaOut
+
 
 router = APIRouter(
     prefix="/cities",
@@ -160,17 +163,24 @@ def get_city_by_id(
 
     return {"city": city}
 
-@router.get("", response_model=List[CityOut], status_code=status.HTTP_200_OK)
+@router.get("", response_model=PaginatedCities, status_code=status.HTTP_200_OK)
 def get_all_cities(
+    page: int = Query(1, ge=1),
+    per_page: int = Query(10, ge=1),
     db: Session = Depends(database.get_db),
     current_user = Depends(get_current_user)
 ):
     # ✅ Role check
     if not current_user.roles.admin and not current_user.roles.broker and not current_user.roles.realtor:
         raise HTTPException(status_code=403, detail="Not authorized")
+    
+    total_sql = load_sql("city/count_all_cities.sql")
+    total = db.execute(text(total_sql)).scalar()
+    total_pages = (total + per_page - 1) // per_page
 
     sql = load_sql("city/get_all_cities.sql")
-    rows = db.execute(text(sql)).mappings().all()
+    rows = db.execute(text(sql),{  "limit": per_page,
+                                    "offset": (page - 1) * per_page}).mappings().all()
 
     # ✅ Restructure into nested format
     cities_dict = {}
@@ -214,7 +224,19 @@ def get_all_cities(
                     )
                 )
 
-    return list(cities_dict.values())
+    cities= list(cities_dict.values())
+    print(len(cities))
+    return {
+        "pagination": {
+            "total": total,
+            "page": page,
+            "per_page": per_page,
+            "total_pages": total_pages,
+            "has_next": page < total_pages,
+            "has_prev": page > 1
+        },
+        "data": cities
+    }
 
 @router.delete("/{city_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_city(

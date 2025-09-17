@@ -1,3 +1,9 @@
+WITH limited_cities AS (
+    SELECT *
+    FROM cities
+    ORDER BY city_id
+    LIMIT :limit OFFSET :offset
+)
 SELECT
     c.city_id,
     c.title AS city_title,
@@ -20,7 +26,7 @@ SELECT
     a.created_by AS area_created_by,
     a.updated_by AS area_updated_by
 
-FROM cities c
+FROM limited_cities c
 LEFT JOIN counties co ON c.city_id = co.city_id
 LEFT JOIN areas a ON co.county_id = a.county_id
 ORDER BY c.city_id, co.county_id, a.area_id;
