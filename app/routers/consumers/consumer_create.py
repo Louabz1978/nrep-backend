@@ -31,7 +31,7 @@ class ConsumerCreate(BaseModel):
         str, 
         StringConstraints(strip_whitespace=True, min_length=2, max_length=50)
     ]
-    national_number: Optional[int] = None
+    national_number: Optional[str] = None
     email: Optional[EmailStr] = None
     phone_number: Annotated[
         Optional[str], 
@@ -67,7 +67,7 @@ class ConsumerCreate(BaseModel):
         return v
 
     @field_validator("national_number")
-    def validate_national_number(cls, v: int) -> int:
+    def validate_national_number(cls, v: str) -> str:
         s=str(v)
         if len(s) != 11:
             raise ValueError("National number must be exactly 11 digits")

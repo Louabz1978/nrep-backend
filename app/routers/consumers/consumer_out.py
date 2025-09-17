@@ -12,7 +12,7 @@ class ConsumerOut(BaseModel):
     place_birth: str
     date_birth: datetime
     registry: str
-    national_number: int
+    national_number: str
     email: Optional[ EmailStr ]
     phone_number: Optional[ str ]
     created_at: datetime

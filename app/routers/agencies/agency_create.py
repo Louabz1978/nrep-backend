@@ -26,4 +26,5 @@ class AgencyCreate(BaseModel):
         if not phone_number_pattern.match(v):
             raise ValueError("must be a valid phone number")
 
-        return int(v)
+        return v
+    
