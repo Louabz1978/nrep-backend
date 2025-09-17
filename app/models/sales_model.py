@@ -18,7 +18,7 @@ if TYPE_CHECKING:
 
 
 class Sale(Base):
-    __tablename__ = "sales"
+    __tablename__ = "sales_trans"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     property_id: Mapped[int] = mapped_column(ForeignKey("properties.property_id"), nullable=False)

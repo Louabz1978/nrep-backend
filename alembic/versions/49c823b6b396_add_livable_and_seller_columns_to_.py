@@ -19,24 +19,16 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade():
-    op.add_column("properties", sa.Column("livable", sa.Boolean(), nullable=True, server_default=sa.sql.expression.true()))
+    # --- Add new column livable to properties table ---
+    op.add_column("properties", sa.Column("livable", sa.Boolean(), nullable=False, server_default=sa.sql.expression.true()))
 
-    op.create_table(
-        "property_owners",
-        sa.Column("property_id", sa.Integer(), sa.ForeignKey("properties.property_id", ondelete="CASCADE"), primary_key=True),
-        sa.Column("seller_id", sa.Integer(), sa.ForeignKey("consumers.consumer_id", ondelete="CASCADE"), primary_key=True),
-    )
-
+    # --- Drop owner_id from properties table ---
     op.drop_column("properties", "owner_id")
 
-
 def downgrade():
-    op.drop_table("property_owners")
-
     op.drop_column("properties", "livable")
 
     op.add_column(
         "properties",
-        sa.Column("owner_id", sa.Integer(), sa.ForeignKey("users.user_id"), nullable=False)
+        sa.Column("owner_id", sa.Integer(), sa.ForeignKey("users.user_id"), nullable=False, server_default=sa.text("1"))
     )
-    

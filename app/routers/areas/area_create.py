@@ -2,7 +2,7 @@ from pydantic import BaseModel
 
 class AreaCreate(BaseModel):
     title: str
-    county: int
+    city: int
 
     model_config = {
         "from_attributes": True
