@@ -523,15 +523,23 @@ def update_property_by_id(
         raise HTTPException(status_code=403, detail="Not authorized")
     
     # owner_id check
+    sellers = []
+    consumer_sql = load_sql("consumer/get_consumer_by_id.sql")
     if property_data.sellers:
-        consumer_sql = load_sql("consumer/get_consumer_by_id.sql")
-        sellers = []
         for seller in property_data.sellers:
             seller_result = db.execute(text(consumer_sql), {"consumer_id": seller}).mappings().first()
             if not seller_result:
                 raise HTTPException(status_code=400, detail="invalid seller")
             seller_data = dict(seller_result)
             sellers.append(ConsumerOut(**seller_data))
+    else :
+        sellers_sql = load_sql("property/get_property_sellers.sql")
+        property_sellers = db.execute(text(sellers_sql), {"property_id": property_id})
+        for seller in property_sellers.mappings():
+            seller_result = db.execute(text(consumer_sql), {"consumer_id": seller["consumer_id"]}).mappings().first()
+            seller_data = dict(seller_result)
+            sellers.append(ConsumerOut(**seller_data))
+
 
     base_url = str(request.base_url)
     saved_files = update_photos(property.mls_num, property['images_urls'], photos, property_data.preserve_images, base_url, main_photo)
@@ -578,17 +586,18 @@ def update_property_by_id(
     sql = f"UPDATE PROPERTIES SET {set_clause} WHERE property_id= :property_id RETURNING property_id;"
     updated_property_id = db.execute(text(sql), db_property).scalar()
 
-    current_sellers = db.execute(text("SELECT seller_id FROM property_owners WHERE property_id= :property_id"),{"property_id": updated_property_id}).scalars().all()
-    to_add = set(property_data.sellers) - set(current_sellers)
-    to_remove = set(current_sellers) - set(property_data.sellers)
-    if to_remove:
-        db.execute(
-        text("DELETE FROM property_owners WHERE property_id = :property_id AND seller_id = ANY(:ids)"),
-        {"property_id": property_id, "ids": list(to_remove)}
-    )
-    property_seller_sql = load_sql("property/create_property_seller.sql")
-    for seller in to_add:
-        db.execute(text(property_seller_sql),{"property_id":property_id, "seller_id":seller})
+    if property_data.sellers:
+        current_sellers = db.execute(text("SELECT seller_id FROM property_owners WHERE property_id= :property_id"),{"property_id": updated_property_id}).scalars().all()
+        to_add = set(property_data.sellers) - set(current_sellers)
+        to_remove = set(current_sellers) - set(property_data.sellers)
+        if to_remove:
+            db.execute(
+            text("DELETE FROM property_owners WHERE property_id = :property_id AND seller_id = ANY(:ids)"),
+            {"property_id": property_id, "ids": list(to_remove)}
+        )
+        property_seller_sql = load_sql("property/create_property_seller.sql")
+        for seller in to_add:
+            db.execute(text(property_seller_sql),{"property_id":property_id, "seller_id":seller})
         
     db.commit()
 
