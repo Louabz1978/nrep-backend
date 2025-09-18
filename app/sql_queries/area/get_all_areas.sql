@@ -7,4 +7,5 @@ SELECT
     a.created_by,
     a.updated_by
 FROM areas a
-ORDER BY a.area_id;
+ORDER BY a.area_id
+LIMIT :limit OFFSET :offset;
