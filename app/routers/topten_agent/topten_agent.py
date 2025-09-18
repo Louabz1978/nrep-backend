@@ -42,8 +42,8 @@ def get_closed_properties(
             l.lic_num AS license_number,
             COALESCE(SUM(p.price),0) AS total_price
         FROM properties p
-        JOIN users u ON u.user_id = p.created_by
-        JOIN licenses l ON l.user_id = u.user_id
+        LEFT JOIN users u ON u.user_id = p.created_by
+        LEFT JOIN licenses l ON l.user_id = u.user_id
         WHERE p.status = 'closed'
         AND EXTRACT(MONTH FROM p.created_at) = :month
         AND EXTRACT(YEAR FROM p.created_at) = :year
@@ -72,3 +72,4 @@ def get_closed_properties(
         "previous_month": prev_month,
         "previous_results": [dict(r) for r in prev_res],
     }
+
