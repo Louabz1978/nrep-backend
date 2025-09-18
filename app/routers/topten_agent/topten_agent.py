@@ -72,3 +72,4 @@ def get_closed_properties(
         "previous_month": prev_month,
         "previous_results": [dict(r) for r in prev_res],
     }
+
