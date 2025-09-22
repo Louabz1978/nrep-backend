@@ -1,5 +1,5 @@
 INSERT INTO
-    areas (title, county_id, created_by)
+    areas (title, city_id, created_by)
 VALUES
-    (:title, :county_id, :created_by)
+    (:title, :city_id, :created_by)
 RETURNING *;

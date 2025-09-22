@@ -1,7 +1,7 @@
 SELECT
     a.area_id,
     a.title,
-    a.county_id,
+    a.city_id,
     a.created_at,
     a.updated_at,
     a.created_by,

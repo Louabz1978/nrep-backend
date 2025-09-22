@@ -17,6 +17,7 @@ from app.routers.contracts.contracts_routers import router as contract_routers
 
 from app.routers.market_watcher.market_watcher_route import router as market_watcher_route
 from app.routers.activities.activities import router as activities
+from app.routers.topten_agent.topten_agent import router as topten_agent
 
 from app.database import engine, Base
 from fastapi.middleware.cors import CORSMiddleware
@@ -48,11 +49,12 @@ app.include_router(addresses_router)
 app.include_router(consumer_router)
 app.include_router(license_router)
 
+app.include_router(contract_routers)
+
 app.include_router(city_router)
 app.include_router(county_router)
 app.include_router(area_router)
 
 app.include_router(market_watcher_route)
 app.include_router(activities)
-
-app.include_router(contract_routers)
+app.include_router(topten_agent)

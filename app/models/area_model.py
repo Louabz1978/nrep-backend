@@ -7,7 +7,7 @@ from sqlalchemy.sql import func
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from app.models.county_model import County
+    from app.models.city_model import City
 
 class Area(Base):
     __tablename__ = "areas"
@@ -22,7 +22,7 @@ class Area(Base):
     updated_by : Mapped[int] = mapped_column(Integer, nullable=True)
 
     # ForeignKey
-    county_id: Mapped[int] = mapped_column(ForeignKey("counties.county_id", ondelete="CASCADE"))
+    city_id: Mapped[int] = mapped_column(ForeignKey("cities.city_id", ondelete="CASCADE"))
 
     # Relationships
-    county: Mapped["County"] = relationship("County", back_populates="areas")
+    city: Mapped["City"] = relationship("City", back_populates="areas")

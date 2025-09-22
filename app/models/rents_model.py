@@ -16,7 +16,7 @@ if TYPE_CHECKING:
 
 
 class Rent(Base):
-    __tablename__ = "rents"
+    __tablename__ = "rents_trans"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     property_id: Mapped[int] = mapped_column(ForeignKey("properties.property_id"), nullable=False)
