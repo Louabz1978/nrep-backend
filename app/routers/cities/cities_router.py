@@ -23,6 +23,10 @@ from ..counties.county_out import CountyOut
 from ..areas.area_create import AreaCreate
 from ..areas.area_out import AreaOut
 
+from typing import Optional
+from fastapi import APIRouter, Depends, Query
+
+
 
 router = APIRouter(
     prefix="/cities",
