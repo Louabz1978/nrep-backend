@@ -1,7 +1,7 @@
 WITH limited_cities AS (
     SELECT *
     FROM cities
-    ORDER BY city_id
+    WHERE (:title IS NULL OR title ILIKE :title)
     LIMIT :limit OFFSET :offset
 )
 SELECT
@@ -29,4 +29,4 @@ SELECT
 FROM limited_cities c
 LEFT JOIN counties co ON c.city_id = co.city_id
 LEFT JOIN areas a ON co.county_id = a.county_id
-ORDER BY c.city_id, co.county_id, a.area_id;
+ORDER BY c.{sort_by} {sort_order},c.city_id, co.county_id, a.area_id ;

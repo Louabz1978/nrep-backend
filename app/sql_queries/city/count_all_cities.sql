@@ -1,2 +1,3 @@
 SELECT COUNT(*) As total
-FROM cities;
+FROM cities
+WHERE (:title IS NULL OR title ILIKE :title);
