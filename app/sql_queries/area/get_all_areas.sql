@@ -7,4 +7,6 @@ SELECT
     a.created_by,
     a.updated_by
 FROM areas a
-ORDER BY a.area_id;
+WHERE (:title IS NULL OR title ILIKE :title)
+ORDER BY a.{sort_by} {sort_order}
+LIMIT :limit OFFSET :offset;
