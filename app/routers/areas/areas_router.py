@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from typing import List
+from typing import List, Optional
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 from app import database
@@ -149,6 +149,9 @@ def get_area_by_id(
 def get_all_areas(
     page: int = Query(1, ge=1),
     per_page: int = Query(10, ge=1),
+    sort_by: str = Query("area_id", regex="^(area_id|title|updated_at|created_at)$"),
+    sort_order: str = Query("asc", regex="^(asc|desc)$"),
+    title : Optional[str]=Query(None),
     db: Session = Depends(database.get_db),
     current_user = Depends(get_current_user)
 ):
@@ -156,14 +159,21 @@ def get_all_areas(
     if not current_user.roles.admin and not current_user.roles.broker and not current_user.roles.realtor:
         raise HTTPException(status_code=403, detail="Not authorized")
     
+    filtering ={
+         "title": f"%{title}%" if title else None,
+    }
+    params={  
+        "limit": per_page,
+        "offset": (page - 1) * per_page
+        }
+    params={**filtering,**params}
     total_sql = load_sql("area/count_all_areas.sql")
-    total = db.execute(text(total_sql)).scalar()
+    total = db.execute(text(total_sql),filtering).scalar()
     total_pages = (total + per_page - 1) // per_page
 
 
-    sql = load_sql("area/get_all_areas.sql")
-    rows = db.execute(text(sql),{  "limit": per_page,
-                                    "offset": (page - 1) * per_page}).mappings().all()
+    sql = load_sql("area/get_all_areas.sql").format(sort_by=sort_by,sort_order=sort_order)
+    rows = db.execute(text(sql),params).mappings().all()
     areas=[AreaOut(**row) for row in rows]
 
     return {
