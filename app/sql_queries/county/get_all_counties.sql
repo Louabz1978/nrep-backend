@@ -1,7 +1,8 @@
 WITH limited_counties AS (
     SELECT *
     FROM counties
-    ORDER BY county_id
+    WHERE (:title IS NULL OR title ILIKE :title)
+    ORDER by {sort_by} {sort_order}
     LIMIT :limit OFFSET :offset
 )
 SELECT
@@ -21,4 +22,4 @@ SELECT
 
 FROM limited_counties co
 LEFT JOIN areas a ON co.county_id = a.county_id
-ORDER BY co.county_id, a.area_id;
+ORDER BY co.{sort_by} {sort_order}, a.area_id;
