@@ -6,6 +6,7 @@ from sqlalchemy.sql import func
 from app.database import Base
 from typing import Optional
 from datetime import datetime
+from app.models.agency_model import agency_brokers
 
 from typing import TYPE_CHECKING
 
@@ -42,7 +43,7 @@ class User(Base):
     licenses = relationship("License", back_populates="user", uselist=False)
 
     agency_created = relationship("Agency", back_populates="created_by_user", foreign_keys="[Agency.created_by]")
-    agency_broker = relationship("Agency", back_populates="broker", foreign_keys="[Agency.broker_id]")
+    agency_brokers = relationship("Agency", secondary=agency_brokers, back_populates="brokers")
 
     favorites = relationship("Favorite", back_populates="user")
 

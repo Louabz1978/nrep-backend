@@ -1,9 +1,10 @@
 from pydantic import BaseModel, EmailStr, model_validator, Field, StringConstraints, field_validator
-from typing import Optional, Annotated
+from typing import Optional, Annotated, List
 import re
 from app.routers.addresses.address_update import AddressUpdate
 
 phone_number_pattern = re.compile(r'^\d{7,15}$')
+positiveInt = Annotated[int , Field(None, gt=0)]
 class AgencyUpdate(BaseModel):
     name: Annotated[
         Optional[str],
@@ -17,11 +18,7 @@ class AgencyUpdate(BaseModel):
         Field(None)
     ]
     address: Optional[AddressUpdate] = None
-    broker_id: Optional[int] = Field(
-        None,
-        gt=0,
-        description="Optional broker user_id to assign as agency broker"
-    )
+    brokers_id: Optional[List[positiveInt]] = None
 
     @field_validator("phone_number")
     def validate_and_convert_phone(cls, v):

@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 from typing import Optional
 from sqlalchemy import text
 from datetime import datetime, timezone
@@ -10,7 +10,7 @@ from app.utils.file_helper import load_sql
 from ...dependencies import get_current_user
 
 from ...models.user_model import User
-from ...models.agency_model import Agency
+from ...models.agency_model import Agency, agency_brokers
 from ...models.addresses_model import Address
 
 from .agency_create import AgencyCreate
@@ -35,35 +35,49 @@ def create_agency(
     if roles["admin"] == False:
         raise HTTPException(status_code=403, detail="Not authorized")
 
-    # Validate broker_id if provided
-    if agency.broker_id:
-        broker = db.execute(text(role_sql), {"user_id" : agency.broker_id}).mappings().first()
-        if not broker:
-            raise HTTPException(status_code=400, detail="Broker not found")
-        if broker["broker"] == False:
-            raise HTTPException(status_code=400, detail="Assigned broker must have role 'broker'")
+    # Validate brokers_id if provided
+    brokers_id = []
+    for broker in agency.brokers_id:
+        broker_exist = db.execute(text(role_sql), {"user_id" : broker}).mappings().first()
+        if not broker_exist:
+            raise HTTPException(status_code=400, detail=f"Broker{broker} not found")
+        if broker_exist["broker"] == False:
+            raise HTTPException(status_code=400, detail="Assigned brokers must have role 'broker'")
+        brokers_id.append(broker)
+        
+        
 
     db_agency = agency.model_dump()
     db_agency["created_at"] = datetime.now(timezone.utc)
     db_agency["created_by"] = current_user.user_id
+    db_agency.pop("brokers_id", None)
 
     sql = load_sql("agency/create_agency.sql")
     result = db.execute(text(sql), db_agency)
     new_agency_id = result.scalar()
 
+    sql = load_sql("agency/create_agency_brokers.sql")
+    for broker in set(brokers_id):
+        result = db.execute(text(sql), {"agency_id": new_agency_id, "broker_id":broker})
+
     db.commit()
 
     sql = load_sql("agency/get_agency_by_id.sql")
     row = db.execute(text(sql), {"agency_id": new_agency_id}).mappings().first()
+    brokers_sql = load_sql("agency/get_agency_brokers.sql")
+    brokers_result = db.execute(text(brokers_sql), {"agency_id": new_agency_id})
+    brokers = []
+    for broker in brokers_result.mappings():
+        broker_data = dict(broker)
+        brokers.append(broker_data)
 
     created_by_data = {k.replace("created_by_", ""): v for k, v in row.items() if k.startswith("created_by")}
-    broker_data = {k.replace("broker_", ""): v for k, v in row.items() if k.startswith("broker_")}
     address_data = {k[len("address_"):]: v for k, v in row.items() if k.startswith("address_")}
 
     agency_details = AgencyOut(
         **row,
         created_by=created_by_data,
-        broker=broker_data,
+        brokers=brokers,
         address=AddressOut(**address_data) if address_data.get("address_id") else None,
     )
 
@@ -110,17 +124,22 @@ def get_all_agencies(
     # load agencies
     sql = load_sql("agency/get_all_agencies.sql").format(sort_by=sort_by, sort_order=sort_order)
     result = db.execute(text(sql), params)
+    brokers_sql = load_sql("agency/get_agency_brokers.sql")
 
     agencies = []
     for row in result.mappings():
         created_by_data = {k.replace("created_by_", ""): v for k, v in row.items() if k.startswith("created_by")}
-        broker_data = {k.replace("broker_", ""): v for k, v in row.items() if k.startswith("broker_")}
         address_data = {k[len("address_"):]: v for k, v in row.items() if k.startswith("address_")}
+        brokers_result = db.execute(text(brokers_sql), {"agency_id": row["agency_id"]})
+        brokers = []
+        for broker in brokers_result.mappings():
+            broker_data = dict(broker)
+            brokers.append(broker_data)
 
         agency = AgencyOut(
             **row,
             created_by=created_by_data,
-            broker=broker_data,
+            brokers=brokers,
             address=AddressOut(**address_data) if address_data.get("address_id") else None,
         )
         
@@ -159,16 +178,22 @@ def get_agency_by_id(
     if not row:
         raise HTTPException(status_code=404, detail="Agency not found")
     
+    brokers_sql = load_sql("agency/get_agency_brokers.sql")
+    brokers_result = db.execute(text(brokers_sql), {"agency_id": row["agency_id"]})
+    brokers = []
+    for broker in brokers_result.mappings():
+        broker_data = dict(broker)
+        brokers.append(broker_data)
+
     # Parse data
     created_by_data = {k.replace("created_by_", ""): v for k, v in row.items() if k.startswith("created_by")}
-    broker_data = {k.replace("broker_", ""): v for k, v in row.items() if k.startswith("broker_")}
     address_data = {k[len("address_"):]: v for k, v in row.items() if k.startswith("address_")}
 
     # Build response
     agency = AgencyOut(
         **row,
         created_by=created_by_data,
-        broker=broker_data,
+        brokers=brokers,
         address=AddressOut(**address_data) if address_data.get("address_id") else None,
     )
     
@@ -190,7 +215,12 @@ def update_agency(
         raise HTTPException(status_code=403, detail="Not authorized")
     
     # 1) get the agency
-    agency = db.query(Agency).filter(Agency.agency_id == agency_id).first()
+    agency = (
+        db.query(Agency)
+        .options(selectinload(Agency.brokers))
+        .filter(Agency.agency_id == agency_id)
+        .first()
+    )
     if not agency:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Agency not found"
@@ -203,8 +233,13 @@ def update_agency(
         agency.email = agency_data.email
     if agency_data.phone_number is not None:
         agency.phone_number = agency_data.phone_number
-    if agency_data.broker_id is not None:
-        agency.broker_id = agency_data.broker_id
+    if agency_data.brokers_id is not None:
+        new_brokers_id = set(agency_data.brokers_id)
+        new_brokers = db.query(User).filter(User.user_id.in_(new_brokers_id)).all()
+        if len(new_brokers) != len(new_brokers_id):
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="One or more brokers not found")
+        agency.brokers = new_brokers
+        
 
     # 3) update or create the address if provided
     if agency_data.address:
@@ -237,8 +272,31 @@ def update_agency(
 
     db.commit()
     db.refresh(agency)
+    brokers_data = (
+            db.query(
+                User.user_id.label("broker_user_id"),
+                User.first_name.label("broker_first_name"),
+                User.last_name.label("broker_last_name"),
+                User.email.label("broker_email"),
+                User.phone_number.label("broker_phone_number"),
+                User.created_by.label("broker_created_by"),
+                User.created_at.label("broker_created_at"),
+            )
+            .join(agency_brokers, agency_brokers.c.broker_id == User.user_id)
+            .filter(agency_brokers.c.agency_id == agency.agency_id)
+            .all()
+        )
+    agency_dict = {
+    "agency_id": agency.agency_id,
+    "name": agency.name,
+    "email": agency.email,
+    "phone_number": agency.phone_number,
+    "brokers": [dict(row._mapping) for row in brokers_data],
+    "address": {k: getattr(agency.address, k) for k in ["floor","apt","area","city","county","building_num","street"]} 
+               if agency.address else None,
+    }
 
-    return {"message": "Agency updated successfully", "agency": agency}
+    return {"message": "Agency updated successfully", "agency": agency_dict}
 
 @router.delete("/{agency_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_agency(

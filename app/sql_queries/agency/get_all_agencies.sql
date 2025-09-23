@@ -1,4 +1,4 @@
-SELECT
+SELECT DISTINCT ON (a.agency_id)
     a.agency_id,
     a.name,
     a.email,
@@ -19,29 +19,26 @@ SELECT
     u.first_name AS created_by_first_name,
     u.last_name AS created_by_last_name,
     u.email AS created_by_email,
-    u.phone_number AS created_by_phone_number,
-
-    b.user_id AS broker_user_id,
-    b.first_name AS broker_first_name,
-    b.last_name AS broker_last_name,
-    b.email AS broker_email,
-    b.phone_number AS broker_phone_number,
-    b.created_by AS broker_created_by,
-    b.created_at AS broker_created_at
+    u.phone_number AS created_by_phone_number
 
 FROM agencies a
 
 LEFT JOIN users u ON u.user_id = a.created_by
-LEFT JOIN users b ON a.broker_id = b.user_id
 LEFT JOIN addresses addr ON addr.agency_id = a.agency_id
+LEFT JOIN agency_brokers ab ON ab.agency_id = a.agency_id
 
 WHERE
     (:name IS NULL OR a.name ILIKE :name)
     AND (:email IS NULL OR a.email ILIKE :email)
     AND (:phone_number IS NULL OR a.phone_number ILIKE :phone_number)
-    AND (:broker_id IS NULL OR a.broker_id = :broker_id)
     AND (:created_by IS NULL OR a.created_by = :created_by)
     AND (:city IS NULL OR addr.city ILIKE :city)
+    AND (:broker_id IS NULL OR a.agency_id IN (
+      SELECT DISTINCT ab.agency_id
+      FROM agency_brokers ab
+      WHERE ab.broker_id = :broker_id
+  ))
+
 
 ORDER BY {sort_by} {sort_order}
 LIMIT :limit OFFSET :offset;
