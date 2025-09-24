@@ -1,8 +1,9 @@
 from pydantic import BaseModel, EmailStr, field_validator, StringConstraints, Field
-from typing import Annotated
+from typing import Annotated, List
 import re
 
 phone_number_pattern = re.compile(r'^\d{7,15}$')
+positiveInt = Annotated[int , Field(..., gt=0)]
 class AgencyCreate(BaseModel):
     name: Annotated[
         str,
@@ -13,7 +14,7 @@ class AgencyCreate(BaseModel):
         str,
         StringConstraints(strip_whitespace=True)
     ]
-    broker_id: int = Field(..., gt=0)
+    brokers_id: List[positiveInt]
 
     @field_validator("phone_number")
     def validate_and_convert_phone(cls, v):

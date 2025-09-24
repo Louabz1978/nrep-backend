@@ -60,7 +60,7 @@ async def create_property(
 
     consumer_sql = load_sql("consumer/get_consumer_by_id.sql")
     sellers = []
-    for seller in property.sellers:
+    for seller in set(property.sellers):
         seller_result = db.execute(text(consumer_sql), {"consumer_id": seller}).mappings().first()
         if not seller_result:
             raise HTTPException(status_code=400, detail="invalid seller")
@@ -87,7 +87,7 @@ async def create_property(
 
     #create sellers relationship
     property_sellers_sql = load_sql("property/create_property_seller.sql")
-    for seller in property.sellers:
+    for seller in set(property.sellers):
         db.execute(text(property_sellers_sql), {"property_id": new_property_id, "seller_id":seller})
 
     # Create property address
@@ -526,7 +526,7 @@ def update_property_by_id(
     sellers = []
     consumer_sql = load_sql("consumer/get_consumer_by_id.sql")
     if property_data.sellers:
-        for seller in property_data.sellers:
+        for seller in set(property_data.sellers):
             seller_result = db.execute(text(consumer_sql), {"consumer_id": seller}).mappings().first()
             if not seller_result:
                 raise HTTPException(status_code=400, detail="invalid seller")
