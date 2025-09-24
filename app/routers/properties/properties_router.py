@@ -177,6 +177,7 @@ def get_all_properties(
     max_price: Optional[float] = Query(None, ge=0),
     mls_num: Optional[int] = Query(None),
     status_filter: Optional[PropertyStatus] = Query(None),
+    trans_type: Optional[str] = Query(None, enum=["rent", "sell"]),
 
     db: Session = Depends(database.get_db),
     current_user: User = Depends(get_current_user)
@@ -192,6 +193,7 @@ def get_all_properties(
         "max_price": max_price,
         "mls_num": f"%{mls_num}%" if mls_num else None,
         "status": status_filter.value if status_filter else None,
+        "trans_type": trans_type,
         "limit": per_page,
         "offset": (page - 1) * per_page
     }
@@ -298,6 +300,7 @@ def my_properties(
     max_price: Optional[float] = Query(None, ge=0),
     mls_num: Optional[int] = Query(None),
     status_filter: Optional[PropertyStatus] = Query(None),
+    trans_type: Optional[str] = Query(None, enum=["rent", "sell"]),
 
     db: Session = Depends(database.get_db),
     current_user: User = Depends(get_current_user)
@@ -310,6 +313,7 @@ def my_properties(
         "max_price": max_price,
         "mls_num": f"%{mls_num}%" if mls_num else None,
         "status": status_filter.value if status_filter else None,
+        "trans_type": trans_type,
         "limit": per_page,
         "offset": (page - 1) * per_page
     }

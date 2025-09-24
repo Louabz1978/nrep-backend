@@ -8,4 +8,5 @@ WHERE
     AND (:min_price IS NULL OR p.price >= :min_price)
     AND (:max_price IS NULL OR p.price <= :max_price)
     AND (:mls_num IS NULL OR p.mls_num::TEXT ILIKE :mls_num)
-    AND (:status IS NULL OR p.status = :status);
+    AND (:status IS NULL OR p.status = :status)
+    AND (:trans_type IS NULL OR p.trans_type = :trans_type);
