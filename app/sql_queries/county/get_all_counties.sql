@@ -1,3 +1,10 @@
+WITH limited_counties AS (
+    SELECT *
+    FROM counties
+    WHERE (:title IS NULL OR title ILIKE :title)
+    ORDER by {sort_by} {sort_order}
+    LIMIT :limit OFFSET :offset
+)
 SELECT
     co.county_id,
     co.title AS county_title,
@@ -6,5 +13,8 @@ SELECT
     co.created_by AS county_created_by,
     co.updated_by AS county_updated_by
 
-FROM counties co
-ORDER BY co.county_id;
+
+FROM limited_counties co
+LEFT JOIN areas a ON co.county_id = a.county_id
+ORDER BY co.{sort_by} {sort_order}, a.area_id;
+

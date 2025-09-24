@@ -196,8 +196,8 @@ def get_all_properties(
         "offset": (page - 1) * per_page
     }
 
-    total_sql = "SELECT COUNT(*) FROM properties"
-    total = db.execute(text(total_sql)).scalar()
+    total_sql = load_sql("property/count_properties.sql")
+    total = db.execute(text(total_sql), params).scalar()
     total_pages = (total + per_page - 1) // per_page
     
     sql = load_sql("property/get_all_properties.sql")
