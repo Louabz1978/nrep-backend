@@ -194,7 +194,18 @@ def get_all_cities(
                 updated_by=row["city_updated_by"],
             )
 
-    return list(cities_dict.values())
+    cities= list(cities_dict.values())
+    return {
+        "pagination": {
+            "total": total,
+            "page": page,
+            "per_page": per_page,
+            "total_pages": total_pages,
+            "has_next": page < total_pages,
+            "has_prev": page > 1
+        },
+        "data": cities
+    }
 
 @router.get("/county/{county_id:int}", status_code=status.HTTP_200_OK)
 def get_cities_by_county_id(
@@ -222,18 +233,8 @@ def get_cities_by_county_id(
             )
 
     cities= list(cities_dict.values())
-    print(len(cities))
-    return {
-        "pagination": {
-            "total": total,
-            "page": page,
-            "per_page": per_page,
-            "total_pages": total_pages,
-            "has_next": page < total_pages,
-            "has_prev": page > 1
-        },
-        "data": cities
-    }
+    
+    return cities
 
 @router.delete("/{city_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_city(

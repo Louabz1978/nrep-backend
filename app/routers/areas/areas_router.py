@@ -150,7 +150,6 @@ def get_area_by_id(
 
     return {"area": AreaOut(**row)}
 
-
 @router.get("/", response_model=PaginatedAreas, status_code=status.HTTP_200_OK)
 def get_all_areas(
     page: int = Query(1, ge=1),
@@ -164,7 +163,7 @@ def get_all_areas(
     # Role check
     if not current_user.roles.admin and not current_user.roles.broker and not current_user.roles.realtor:
         raise HTTPException(status_code=403, detail="Not authorized")
-    
+  
     filtering ={
          "title": f"%{title}%" if title else None,
     }
@@ -193,7 +192,6 @@ def get_all_areas(
         },
         "data": areas
     }
-    
 
 @router.get("/city/{city_id:int}", response_model=List[AreaOut], status_code=status.HTTP_200_OK)
 def get_areas_by_city_id(
